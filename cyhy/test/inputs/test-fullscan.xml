@@ -1,0 +1,139 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 6.01 scan initiated Fri Sep 14 12:12:56 2012 as: nmap -iL PORTSCAN-20120914T161251.056821.txt -d2 -&#45;stats-every 60 -oN debug.out -oX - -n -Pn -T4 -sV -O -sS -p1-65535 -->
+<nmaprun scanner="nmap" args="nmap -iL PORTSCAN-20120914T161251.056821.txt -d2 -&#45;stats-every 60 -oN debug.out -oX - -n -Pn -T4 -sV -O -sS -p1-65535" start="1347639176" startstr="Fri Sep 14 12:12:56 2012" version="6.01" xmloutputversion="1.04">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="2"/>
+<debugging level="2"/>
+<taskbegin task="SYN Stealth Scan" time="1347639176"/>
+<taskprogress task="SYN Stealth Scan" time="1347639207" percent="16.00" remaining="163" etc="1347639370"/>
+<taskprogress task="SYN Stealth Scan" time="1347639235" percent="51.47" remaining="56" etc="1347639291"/>
+<taskprogress task="SYN Stealth Scan" time="1347639265" percent="59.04" remaining="62" etc="1347639327"/>
+<taskprogress task="SYN Stealth Scan" time="1347639295" percent="62.83" remaining="71" etc="1347639365"/>
+<taskprogress task="SYN Stealth Scan" time="1347639295" percent="62.86" remaining="71" etc="1347639365"/>
+<taskprogress task="SYN Stealth Scan" time="1347639325" percent="66.61" remaining="75" etc="1347639400"/>
+<taskprogress task="SYN Stealth Scan" time="1347639355" percent="70.40" remaining="76" etc="1347639430"/>
+<taskprogress task="SYN Stealth Scan" time="1347639355" percent="70.44" remaining="76" etc="1347639430"/>
+<taskprogress task="SYN Stealth Scan" time="1347639385" percent="74.18" remaining="73" etc="1347639458"/>
+<taskprogress task="SYN Stealth Scan" time="1347639415" percent="77.97" remaining="68" etc="1347639483"/>
+<taskprogress task="SYN Stealth Scan" time="1347639415" percent="78.00" remaining="68" etc="1347639482"/>
+<taskprogress task="SYN Stealth Scan" time="1347639445" percent="81.75" remaining="61" etc="1347639505"/>
+<taskprogress task="SYN Stealth Scan" time="1347639475" percent="85.53" remaining="51" etc="1347639526"/>
+<taskprogress task="SYN Stealth Scan" time="1347639475" percent="85.57" remaining="51" etc="1347639525"/>
+<taskprogress task="SYN Stealth Scan" time="1347639505" percent="89.32" remaining="40" etc="1347639544"/>
+<taskprogress task="SYN Stealth Scan" time="1347639535" percent="93.14" remaining="27" etc="1347639561"/>
+<taskend task="SYN Stealth Scan" time="1347639590" extrainfo="131070 total ports"/>
+<taskbegin task="Service scan" time="1347639590"/>
+<taskprogress task="Service scan" time="1347639596" percent="17.39" remaining="29" etc="1347639625"/>
+<taskprogress task="Service scan" time="1347639656" percent="91.30" remaining="7" etc="1347639662"/>
+<taskprogress task="Service scan" time="1347639716" percent="100.00" remaining="0" etc="1347639716"/>
+<taskend task="Service scan" time="1347639716" extrainfo="23 services on 2 hosts"/>
+<host starttime="1347639176" endtime="1347639720"><status state="up" reason="user-set"/>
+<address addr="173.66.73.61" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="65517">
+<extrareasons reason="no-responses" count="59117"/>
+<extrareasons reason="admin-prohibiteds" count="6400"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="ssh" product="OpenSSH" version="5.6" extrainfo="protocol 2.0" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:5.6</cpe></service></port>
+<port protocol="tcp" portid="25"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="smtp" product="Postfix smtpd" hostname="-appa.geekpad.com" method="probed" conf="10"><cpe>cpe:/a:postfix:postfix</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="http" product="Apache httpd" version="2.2.21" extrainfo="(Unix) mod_ssl/2.2.21 OpenSSL/0.9.8r DAV/2" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.2.21</cpe></service></port>
+<port protocol="tcp" portid="88"><state state="closed" reason="reset" reason_ttl="56"/><service name="kerberos-sec" method="table" conf="3"/></port>
+<port protocol="tcp" portid="143"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="imap" product="Dovecot imapd" method="probed" conf="10"><cpe>cpe:/a:dovecot:dovecot</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="http" product="Apache httpd" version="2.2.21" extrainfo="(Unix) mod_ssl/2.2.21 OpenSSL/0.9.8r DAV/2" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.2.21</cpe></service></port>
+<port protocol="tcp" portid="587"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="smtp" product="Postfix smtpd" hostname=" appa.geekpad.com" method="probed" conf="10"><cpe>cpe:/a:postfix:postfix</cpe></service></port>
+<port protocol="tcp" portid="993"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="imap" product="Dovecot imapd" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:dovecot:dovecot</cpe></service></port>
+<port protocol="tcp" portid="995"><state state="closed" reason="reset" reason_ttl="56"/><service name="pop3s" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5060"><state state="closed" reason="reset" reason_ttl="56"/><service name="sip" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5222"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="jabber" product="Jabber instant messaging server" extrainfo="Protocol 1.0" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5223"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="jabber" product="Jabber instant messaging server" extrainfo="Protocol 1.0" tunnel="ssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5269"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="jabber" product="Jabber instant messaging server" extrainfo="Protocol 1.0" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="7777"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="socks5" extrainfo="No authentication; connection failed" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8008"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="http" servicefp="SF-Port8008-TCP:V=6.01%I=7%D=9/14%Time=5053592C%P=x86_64-pc-linux-gnu%r(GetRequest,134,&quot;HTTP/1\.1\x20301\x20Moved\x20Permanently\r\nContent-Length:\x20153\r\nContent-Type:\x20text/html;charset=utf-8\r\nLocation:\x20https://appa\.geekpad\.com:8443/\r\nConnection:\x20close\r\n\r\n&lt;html&gt;&lt;head&gt;&lt;title&gt;Moved\x20Permanently&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Moved\x20Permanently&lt;/h1&gt;&lt;p&gt;Document\x20moved\x20to\x20https://appa\.geekpad\.com:8443/\.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;)%r(FourOhFourRequest,17A,&quot;HTTP/1\.1\x20301\x20Moved\x20Permanently\r\nContent-Length:\x20188\r\nContent-Type:\x20text/html;charset=utf-8\r\nLocation:\x20https://appa\.geekpad\.com:8443/nice%20ports%2C/Tri%6Eity\.txt%2ebak\r\nConnection:\x20close\r\n\r\n&lt;html&gt;&lt;head&gt;&lt;title&gt;Moved\x20Permanently&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Moved\x20Permanently&lt;/h1&gt;&lt;p&gt;Document\x20moved\x20to\x20https://appa\.geekpad\.com:8443/nice%20ports%2C/Tri%6Eity\.txt%2ebak\.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;)%r(Socks5,7B,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Length:\x2056\r\nConnection:\x20close\r\n\r\nBad\x20request\x20line:\x20\x05\x04\0\x01\x02\x80\x05\x01\0\x03\ngoogle\.com\0PGET\x20/\x20HTTP/1\.0\n&quot;)%r(GenericLines,56,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Length:\x2019\r\nConnection:\x20close\r\n\r\nBad\x20request\x20line:\x20\n&quot;)%r(HTTPOptions,134,&quot;HTTP/1\.1\x20301\x20Moved\x20Permanently\r\nContent-Length:\x20153\r\nContent-Type:\x20text/html;charset=utf-8\r\nLocation:\x20https://appa\.geekpad\.com:8443/\r\nConnection:\x20close\r\n\r\n&lt;html&gt;&lt;head&gt;&lt;title&gt;Moved\x20Permanently&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Moved\x20Permanently&lt;/h1&gt;&lt;p&gt;Document\x20moved\x20to\x20https://appa\.geekpad\.com:8443/\.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;)%r(RTSPRequest,5E,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Length:\x2027\r\nConnection:\x20close\r\n\r\nUnknown\x20protocol:\x20RTSP/1\.0\n&quot;)%r(Help,99,&quot;&lt;html&gt;&lt;head&gt;&lt;title&gt;Moved\x20Permanently&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Moved\x20Permanently&lt;/h1&gt;&lt;p&gt;Document\x20moved\x20to\x20https://appa\.geekpad\.com:8443/\.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;&quot;)%r(SIPOptions,5D,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Length:\x2026\r\nConnection:\x20close\r\n\r\nUnknown\x20protocol:\x20SIP/2\.0\n&quot;);" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8443"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="https-alt" tunnel="ssl" method="table" conf="3"/></port>
+<port protocol="tcp" portid="10542"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="unknown" servicefp="SF-Port10542-TCP:V=6.01%I=7%D=9/14%Time=50535960%P=x86_64-pc-linux-gnu%r(Kerberos,159,&quot;\x98\?\x03\xd0\xb0\x84\xfc\xae\xa5\x96\x89T_d\x17\x87\&quot;\\\x1b\x0f\xbe\xab\xdf\x02,\xcb\xcc\xe5\xd4\x9d\xe9c\x0fx\xcaX\x92\xd6j\xeed\xc9D\x9a\.{\xd3\xb3Od\x15Cq,\x7f\x8d\xb6\xf4\xad6\x86F\xb0\|\x15\x18\x1a\x0cjR\xe8Qp\xc4\xdeQw\xd6\xa3a\xca\xa2&apos;\x14I\x90K_\xc9\xc7\x1c\x99\^D\xf9\x0c\x83\xc2\x20\xe6sAl\xf7\x14\x9a\xcc\xd8\x1f\xab\xe0Z\&quot;\xaay\xce1{0\xfa\x02\r\xb3\xc7\xb3\xe2\xa9/\x034\xf0\xbf\xf8\xcfV\x1c\xbe\xf0\xb5;\xbba\xc4\xbf/\x02\xf0\x0b\x94i\x7f\xd1~\xe2\x8e\xe7&apos;2\xb1K\&quot;\xc6\x07~\xde2:\xf97si\x90\xd3O\\\xa0T\x1e,\xb3/x\x07\xbd\xd4\x06\xd8\x1e\x9c\x1bg42\xeeu\xdf\xa4\x20i\|\xd5\xd7t5\xd9\x08\x97\x084\xf9\x14\xcf\xa7%@\[\xcdD\xac\xbfH:\xdb\xff\xc8\xcfS&apos;\xcb\]\xe7yA\x07}\tO&lt;\xd8{\x86\xee\x02\x98A;\xed\xd0K\xb9\xdbk\xb4,\x8cx,4\xa9\)j#\x9e\x80\xa5&gt;\xb6\xf9\xd2\xc5\]\xba&lt;\xb2\x1a\xdb\xf0\xc4A\xe2\x16I\xbb\x07\x94\xe0Iw\x92LT\x8e\x1b\x8b\x20\xdf\xe0Y\xa3\x9f\x01yvLY\xcb\x97\x96\xb4\x7f\x11\x1a\]c\xe1\xd3v\x05\x88/6MX\x85\xdbN\x9cq\xc6\xaca\xe9\xa2\nw6\xb6=un{\x95\x93\[\xa9&quot;)%r(SMBProgNeg,113,&quot;\xf1\xeca!\xfe\x89\x935\x15\x16\x9b\|#\xc3\x1c\x94n\\\xe0\x92\+~=\xfc\xa3\?\x9d\xf7\xe0\x88\x96gw\xba\xce\xee1\xf0\xd4\xe5_\x88\x99\x15\x96\x98m\xae~\x9c\x9f\x0bh\x82\xa7z\x1eLK\xc5\x89\x1a\x8at\xd2\xe7C5\x9d%\xd8Nje\x8f10\x87\xcf\x11,k\)\xc3{Eg\xedY\x186~k\x0fc\xc9\xadB\xba\x1d\xcd\xb3\xd4\xddW\xd6%\xae\xa2:\x90&lt;_\x1f5w\xc5\xb67\rt\xa4&lt;\xfd\xf1\x939\xa0\xcao0\x14!v\xb4\xc0\x8f\xa3\x0c\xc4d\xeb\)\r\x1a\x94Po\xb9`\x87\xc3\x7fb\x90\xf42&gt;7\xd8\x93\xfaCy\xf6\)\x1d\xa4w\x13\x82\x96\x8d\x02\xb9b\xfd6;\xd0a\(f5\xdf\xb6\xb7\&quot;\x91\xda\x90\x12f\xdb\xc8\xaf\xc4d\xb1\xb2\xce\\\x8c\xf5\x1e\x15\x92\xe6\xb2\xf9\x0f\x80s\x81\x19\x98\xa8\xf3Zx\xce\xb0;`\xc8\(v\xac\xa5\\\x9f\xd5\x0c\xc9\xebD\)Xnvk\x20\.\x18&lt;Za\x1d\xe7\xd9\xf21l\x18\x19\xcbj\xbb@d\x13\x85\x16\xd3\x95\x1f\x14=\xf8\x903\x9aY&apos;W&quot;)%r(SIPOptions,128,&quot;R\xad\x8feO\xaa;_\x8dEe&amp;9\xf0\xe1Qr\0P\xbd7\x0bL/\xc1\xa3\x9c;\xd8\x1d\x8bl\xdc\xbd\xb45\x0c\x05JJ\x14\$\xa9O\xfd\xc1\xd0\xa6r\x83\[\xa4Cd\xed\xe8T\xf3\x01\xd9\xcf\xc0\xe8\xc7\nKr\x12\x0f0:p\xad\xae\xbf\xd4\x96:%\xa8g\xdd\x0c\+\x0e\x08,\xd4\xeaAn\x02\xf5L`L\xc4\xf7\xb2\x87\xbb\xcf\xe5\xaa\xbe\x82a\xbd\xcc\xae\xad@\x1a\xfe\xcc\x0b9\xd8\x820s\x87\xf5\xa0\xc1V\xbf&apos;\xafj\xcc\x80\x9dX\x0b\$\xe52\x81LD\x94\xa0\xb0\(\x9e\xb3\xe8\|\x0f\xe3\xb6G\x88ou\x7f\x9c\x0f\x87Lh\x8e\x9c4\x9a2\x0f\xc3\xff\x82\xfc\x94\xa8\xde\xeb\(\xbf\xfa\xcef\x7f\xf0\xce\xae{I\xb3i6~\x02G\xe1ci\xeeH\x10\x11\x8aO\x80-%W\xfe,Uma\xb7\x01!\xe8\*T\x8e\x12\xda\xb6\xe5\x02B\xcc\xad\xa7\xc3\*\xfd#\x0e\x89\xd9\xa2\xe4\xf6\xdf\&quot;\xabz}\x7f\xd5G\x85\x9f\n\x8c\\4\x89\x15\x8f\xfc\xb5\xfe\x14\x1d\xca&apos;q\x1b\xaf\xb8\x9e\xd9V\xa1\xfe\xcfWEQ\x8b\)\x9b~v\x8f\xd2\xa6{\xcfkf\xae\xee8\xe0P7\xc5\xc9U\x8b&quot;)%r(WMSRequest,9A,&quot;\xa7\xb1r/tF\xf6\xc4\x19\xcc&gt;\.\x08&apos;\\#\0\xba\xc3\xc39\xeb\x81&gt;`\x99\xff\x9b\*\x16\x88\xb9\xfc\xc6k\xe4K\)8\x11S\xeb\xc67\x1b\xcc\x86\xb2U\x06\xab\x12R\\\xfa-\+h\x9c\xd6\xe0`P\xaf\x86\x82&amp;0\xde\)\x8b\xaeV\x1e4\xd5\xa1\xd1I\x0f\xcd\xf1\xd5@\xa9\n\x14X,Kt\xf9\xa9H\xb8\xa5\xfe\xd8\x91\x14zI;j\x1f\xac\xc9a\x8a\xcd\xde\x8a\xdb\x87\xbb\xb2\x84\)\xf6\xe8\xb6\x08\xc3\x1f\xe1\xe4\xa4\xa8\x10\?\x93\x8b\x90\xd7\x1b\xc0\xd7M\x84\xc0\xfb\x0e\xae\xd4\x02\xc1\x99\xbf\x15\xea#\xba\x17\x80&quot;);" method="table" conf="3"/></port>
+<port protocol="tcp" portid="25565"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="minecraft" method="table" conf="3"/></port>
+</ports>
+<os><portused state="open" proto="tcp" portid="22"/>
+<portused state="closed" proto="tcp" portid="88"/>
+<osmatch name="Apple TV (iOS 4.3)" accuracy="95" line="3048">
+<osclass type="media device" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="95"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple Mac OS X 10.7.0 - 10.7.2 (Lion) (Darwin 11.0.0 - 11.2.0) or iOS 4.2 - 4.3.5" accuracy="92" line="5281">
+<osclass type="media device" vendor="Apple" osfamily="Mac OS X" osgen="10.7.X" accuracy="92"><cpe>cpe:/o:apple:mac_os_x:10.7</cpe></osclass>
+<osclass type="media device" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="92"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+<osclass type="phone" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="92"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple Mac OS X 10.5.2 - 10.6.7 (Leopard - Snow Leopard) (Darwin 9.2.0 - 10.7.0) or iOS 4.0.1 - 4.2.1" accuracy="92" line="4541">
+<osclass type="general purpose" vendor="Apple" osfamily="Mac OS X" osgen="10.5.X" accuracy="92"><cpe>cpe:/o:apple:mac_os_x:10.5</cpe></osclass>
+<osclass type="general purpose" vendor="Apple" osfamily="Mac OS X" osgen="10.6.X" accuracy="92"><cpe>cpe:/o:apple:mac_os_x:10.6</cpe></osclass>
+<osclass type="general purpose" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="92"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple iPhone mobile phone (iOS 4.3.3)" accuracy="90" line="3181">
+<osclass type="phone" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="90"><cpe>cpe:/o:apple:iphone_os:4.3.3</cpe></osclass>
+</osmatch>
+<osmatch name="OpenBSD 4.3" accuracy="89" line="56709">
+<osclass type="general purpose" vendor="OpenBSD" osfamily="OpenBSD" osgen="4.X" accuracy="89"><cpe>cpe:/o:openbsd:openbsd:4.3</cpe></osclass>
+</osmatch>
+<osmatch name="Apple iOS 4.3.3 - 4.3.5" accuracy="88" line="2926">
+<osclass type="media device" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+<osclass type="phone" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple iPad tablet computer (iOS 4.3.2)" accuracy="88" line="2993">
+<osclass type="media device" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple iPad tablet computer or iPhone mobile phone (iOS 4.0 - 4.1)" accuracy="88" line="3126">
+<osclass type="phone" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+</osmatch>
+<osmatch name="Apple Mac OS X 10.5 - 10.6.8 (Leopard - Snow Leopard) (Darwin 9.0.0b5 - 10.8.0) or iOS 4.0 - 4.2.1" accuracy="88" line="3221">
+<osclass type="phone" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+<osclass type="media device" vendor="Apple" osfamily="iOS" osgen="4.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:4</cpe></osclass>
+<osclass type="general purpose" vendor="Apple" osfamily="Mac OS X" osgen="10.6.X" accuracy="88"><cpe>cpe:/o:apple:mac_os_x:10.6</cpe></osclass>
+</osmatch>
+<osmatch name="Apple iPad tablet computer (iPhone OS 3.2)" accuracy="88" line="3634">
+<osclass type="general purpose" vendor="Apple" osfamily="iPhone OS" osgen="3.X" accuracy="88"><cpe>cpe:/o:apple:iphone_os:3</cpe></osclass>
+</osmatch>
+<osfingerprint fingerprint="SCAN(V=6.01%E=4%D=9/14%OT=22%CT=88%CU=%PV=N%G=N%TM=505359A8%P=x86_64-pc-linux-gnu)&#xa;SEQ(SP=F7%GCD=1%ISR=FF%TI=RD%CI=RI%II=RI%TS=A)&#xa;OPS(O1=M5B4NW2NNT11SLL%O2=M5B4NW2NNT11SLL%O3=M5B4NW2NNT11%O4=M5B4NW2NNT11SLL%O5=M5B4NW2NNT11SLL%O6=M5B4NNT11SLL)&#xa;WIN(W1=FFFF%W2=FFFF%W3=FFFF%W4=FFFF%W5=FFFF%W6=FFFF)&#xa;ECN(R=Y%DF=Y%TG=40%W=FFFF%O=M5B4NW2SLL%CC=N%Q=)&#xa;T1(R=Y%DF=Y%TG=40%S=O%A=S+%F=AS%RD=0%Q=)&#xa;T2(R=N)&#xa;T3(R=N)&#xa;T4(R=Y%DF=N%TG=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)&#xa;T5(R=Y%DF=N%TG=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)&#xa;T6(R=Y%DF=N%TG=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)&#xa;T7(R=N)&#xa;U1(R=N)&#xa;IE(R=Y%DFI=N%TG=FF%CD=S)&#xa;"/>
+</os>
+<uptime seconds="2490080" lastboot="Thu Aug 16 16:40:40 2012"/>
+<tcpsequence index="257" difficulty="Good luck!" values="1DB08DBF,5F55E607,45B98338,3F2D02CF,3EE4CFCC,6A5B03E"/>
+<ipidsequence class="Randomized" values="36D3,6DD0,11ED,83D,66FE,6C3F"/>
+<tcptssequence class="1000HZ" values="946B9830,946B9885,946B98DF,946B993D,946B9996,946B99EE"/>
+<times srtt="7952" rttvar="1375" to="100000"/>
+</host>
+<host starttime="1347639176" endtime="1347639717"><status state="up" reason="user-set"/>
+<address addr="66.207.132.2" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="65526">
+<extrareasons reason="resets" count="65526"/>
+</extraports>
+<port protocol="tcp" portid="21"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="ftp" product="WU-FTPD or MIT Kerberos ftpd" version="6.00LS" hostname="web1.nidhog.com" ostype="Unix" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="ssh" product="OpenSSH" version="4.5p1" extrainfo="FreeBSD 20061110; protocol 2.0" ostype="FreeBSD" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:4.5p1</cpe><cpe>cpe:/o:freebsd:freebsd</cpe></service></port>
+<port protocol="tcp" portid="25"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="smtp" product="Sendmail" method="probed" conf="10"><cpe>cpe:/a:sendmail:sendmail</cpe></service></port>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="domain" product="ISC BIND" version="9.3.6-P1" method="probed" conf="10"><cpe>cpe:/a:isc:bind:9.3.6-p1</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="http" product="Apache httpd" version="2.2.3" extrainfo="(FreeBSD) mod_ssl/2.2.3 OpenSSL/0.9.7e-p1 DAV/2 PHP/4.4.4 with Suhosin-Patch" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.2.3</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="http" product="Apache httpd" version="2.2.3" extrainfo="(FreeBSD) mod_ssl/2.2.3 OpenSSL/0.9.7e-p1 DAV/2 PHP/4.4.4 with Suhosin-Patch" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.2.3</cpe></service></port>
+<port protocol="tcp" portid="587"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="smtp" product="Sendmail" method="probed" conf="10"><cpe>cpe:/a:sendmail:sendmail</cpe></service></port>
+<port protocol="tcp" portid="1434"><state state="filtered" reason="admin-prohibited" reason_ttl="248" reason_ip="4.49.120.54"/><service name="ms-sql-m" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="56"/><service name="mysql" product="MySQL" version="4.1.22" method="probed" conf="10"><cpe>cpe:/a:mysql:mysql:4.1.22</cpe></service></port>
+</ports>
+<os><portused state="open" proto="tcp" portid="21"/>
+<portused state="closed" proto="tcp" portid="1"/>
+<portused state="closed" proto="udp" portid="37066"/>
+<osmatch name="FreeBSD 6.2-STABLE - 6.4-STABLE" accuracy="100" line="18259">
+<osclass type="general purpose" vendor="FreeBSD" osfamily="FreeBSD" osgen="6.X" accuracy="100"><cpe>cpe:/o:freebsd:freebsd:6</cpe></osclass>
+</osmatch>
+<osfingerprint fingerprint="OS:SCAN(V=6.01%E=4%D=9/14%OT=21%CT=1%CU=37066%PV=N%DS=9%DC=I%G=N%TM=505359A&#xa;OS:8%P=x86_64-pc-linux-gnu)SEQ(SP=107%GCD=1%ISR=10B%TI=I%CI=I%II=I%SS=S%TS=&#xa;OS:A)OPS(O1=M5B4NW1NNT11SLL%O2=M5B4NW1NNT11SLL%O3=M5B4NW1NNT11%O4=M5B4NW1NN&#xa;OS:T11SLL%O5=M5B4NW1NNT11SLL%O6=M5B4NNT11SLL)WIN(W1=FFFF%W2=FFFF%W3=FFFF%W4&#xa;OS:=FFFF%W5=FFFF%W6=FFFF)ECN(R=Y%DF=Y%T=41%W=FFFF%O=M5B4NW1SLL%CC=N%Q=)T1(R&#xa;OS:=Y%DF=Y%T=41%S=O%A=S+%F=AS%RD=0%Q=)T2(R=N)T3(R=Y%DF=Y%T=41%W=FFFF%S=O%A=&#xa;OS:S+%F=AS%O=M5B4NW1NNT11SLL%RD=0%Q=)T4(R=Y%DF=Y%T=41%W=0%S=A%A=Z%F=R%O=%RD&#xa;OS:=0%Q=)T5(R=Y%DF=Y%T=41%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=41%W=0&#xa;OS:%S=A%A=Z%F=R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=41%W=0%S=Z%A=S%F=AR%O=%RD=0%Q=)U1(&#xa;OS:R=Y%DF=N%T=41%IPL=38%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=S&#xa;OS:%T=41%CD=S)&#xa;"/>
+</os>
+<uptime seconds="2521044" lastboot="Thu Aug 16 08:04:36 2012"/>
+<distance value="9"/>
+<tcpsequence index="263" difficulty="Good luck!" values="A66D3479,58D01CDE,56B6F85F,CA84619C,ED8D8A9D,82573053"/>
+<ipidsequence class="Incremental" values="D7BE,D7BF,D7C1,D7C2,D7C3,D7C4"/>
+<tcptssequence class="1000HZ" values="96440712,96440776,964407DA,9644083E,964408A2,96440907"/>
+<times srtt="9929" rttvar="384" to="100000"/>
+</host>
+<runstats><finished time="1347639720" timestr="Fri Sep 14 12:22:00 2012" elapsed="545.23" summary="Nmap done at Fri Sep 14 12:22:00 2012; 2 IP addresses (2 hosts up) scanned in 545.23 seconds" exit="success"/><hosts up="2" down="0" total="2"/>
+</runstats>
+</nmaprun>

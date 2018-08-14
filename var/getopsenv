@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# $1 can be a name to use, otherwise use hostname
+DOCKER_HOSTNAME=${1-${HOSTNAME}}
+
+cd /usr/local/bin
+# create aliases for scripts that the Ops team use
+for f in cyhy-export cyhy-import cyhy-ip cyhy-sched cyhy-simple cyhy-suborg cyhy-ticket cyhy-tool
+do
+  echo alias $f=\"docker exec -it ${DOCKER_HOSTNAME} $f\"
+done

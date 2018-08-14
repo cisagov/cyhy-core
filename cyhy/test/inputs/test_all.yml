@@ -1,0 +1,24 @@
+version: '1'
+
+redis:
+  local: &default-redis
+    uri: redis://localhost:6379/
+
+  example-section-name:
+    uri: redis://:password@localhost:6379/
+
+  default: *default-redis
+
+mongo:
+  local: &default-mongo
+    name: localuser
+    uri: mongodb://dbuser:dbpass@localhost:27017/local
+
+  example-mongo:
+    name: example
+    uri: mongodb://localhost:27017/all
+
+  default: *default-mongo
+
+core:
+  setting: 'ABCdef123'

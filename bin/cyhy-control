@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+'''Cyber Hygiene system control.
+
+Usage:
+  cyhy-control [options] pause [--wait] <sender> <reason>
+  cyhy-control [options] list
+  cyhy-control [options] delete <id>
+
+  cyhy-control (-h | --help)
+  cyhy-control --version
+
+Options:
+  -h --help                      Show this screen.
+  --version                      Show version.
+  -q --quiet                     Just the data.
+  -s SECTION --section=SECTION   Configuration section to use.
+'''
+
+import sys
+from docopt import docopt
+from cyhy.db import database, CHDatabase
+from bson import ObjectId
+import time
+    
+def pause_commander(db, sender, reason, wait=False, quiet=False):
+    ch = CHDatabase(db)
+    doc = ch.pause_commander(sender, reason)
+    if quiet:
+        print doc['_id']
+    else:
+        print 'Command sent with ID: {_id}'.format(**doc)
+    while wait and not doc['completed']:
+        if not quiet:
+            print 'Waiting for completion...'
+        time.sleep(5)
+        doc.reload()
+    return True
+
+def list_control_docs(db, quiet=False):
+    docs = db.SystemControlDoc.find()
+    if docs.count() == 0:
+        if not quiet:
+            print 'There are currently no system control documents.'
+        return False
+    if not quiet:
+        print '{:<26}{:<18}{:<16}{:}'.format('ID','Time (UTC)','Sender','Reason')
+    for doc in docs:
+        if not quiet:
+            print '{_id:<26}{time:%Y-%m-%d %H:%M  }{sender:<16}{reason}'.format(**doc)
+        else:
+            print doc['_id']
+    return True
+    
+def delete_control_doc(db, doc_id, quiet=False):
+    doc = db.SystemControlDoc.find_one({'_id':ObjectId(doc_id)})
+    if not doc:
+        if not quiet:
+            print 'Could not find a control document with ID {}'.format(doc_id)
+        return False
+    doc.delete()
+    return True
+
+def main():
+    args = docopt(__doc__, version='v0.0.1')
+    db = database.db_from_config(args['--section'])
+
+    if args['pause']:
+        success = pause_commander(db, args['<sender>'], args['<reason>'], args['--wait'], args['--quiet'])
+    elif args['list']:
+        success = list_control_docs(db, args['--quiet'])
+    elif args['delete']:
+        success = delete_control_doc(db, args['<id>'], args['--quiet'])
+        
+    if not success:
+        sys.exit(-1)
+
+if __name__=='__main__':
+    main()

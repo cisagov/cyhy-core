@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# $1 can be a name to use, otherwise use hostname
+DOCKER_HOSTNAME=${1-${HOSTNAME}}
+
+cd /usr/local/bin
+# create aliases for everything but cyhy-mongo
+GLOBIGNORE="cyhy-mongo"
+for f in cyhy-*
+do
+  echo alias $f=\"docker exec -it ${DOCKER_HOSTNAME} $f\"
+done
+unset GLOBIGNORE
+
+# create a function for cyhy-mongo
+echo 'cyhy-mongo() { source <(docker exec '${DOCKER_HOSTNAME}' cyhy-mongo -p "$@") ; }'

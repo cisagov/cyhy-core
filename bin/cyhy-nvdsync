@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+
+'''Parse NVD CVE feed XML from stdin and upsert a mongo collection.
+
+Usage:
+  cyhy-nvdsync [--section SECTION] --use-network
+  cyhy-nvdsync [--section SECTION] [--gzipped] <file> ...
+  cyhy-nvdsync (-h | --help)
+  cyhy-nvdsync --version
+
+Options:
+  -g --gzipped                   Input file is gzipped.
+  -h --help                      Show this screen.
+  -n --use-network               Fetch NVD using the network.
+  --version                      Show version.
+  -s SECTION --section=SECTION   Configuration section to use.
+
+'''
+
+import sys
+import os
+import gzip
+from xml.sax import ContentHandler, parse, SAXNotRecognizedException
+from xml.parsers.expat import ExpatError
+from StringIO import StringIO
+import urllib
+
+from docopt import docopt
+import netaddr
+import datetime
+from cyhy.db import database
+from cyhy.util import util
+
+NVD_URL = 'http://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-{year}.xml.gz'
+NVD_FIRST_YEAR = 2002
+
+class NVDCVEContentHander(ContentHandler):
+    def __init__(self, entry_callback, end_callback):
+        ContentHandler.__init__(self)
+        self.entry_callback = entry_callback
+        self.end_callback = end_callback
+        self.chars = ''
+        self.xmloutputversion = None
+        self.isNVDFile = False
+        self.current_entry = None
+
+    def startElement(self, name, attrs):
+        #print '>>>', name
+        # clear characters buffer
+        self.chars = ''
+        if not self.isNVDFile:
+            if name == 'nvd':
+                self.isNVDFile = True
+                self.xmloutputversion = attrs['nvd_xml_version']
+            else:
+                raise SAXNotRecognizedException('XML does not look like NVD data.')
+        elif name == 'entry':
+            self.current_entry = {'_id':attrs['id']}
+
+    def endElement(self, name):
+        #print '<<<', name
+        if name == 'entry':
+            self.entry_callback(self.current_entry)
+        elif name == 'cvss:score':
+            self.current_entry['cvss_score'] = float(self.chars)
+        elif name == 'nvd':
+            self.end_callback()
+
+    def characters(self, content):
+        self.chars += content
+
+
+class Inserter(object):
+    def __init__(self, db):
+        self.db = db
+
+    def entry_callback(self, entry):
+        if not entry.has_key('cvss_score'):
+            # NVD Rejects have no cvss.
+            # Make sure they are removed from our db.
+            self.db.CVEDoc.collection.remove({'_id':entry['_id']}, safe=False)
+            print 'x',
+            return
+        print '.',
+        entry_doc = self.db.CVEDoc(entry)
+        entry_doc.save(safe=False)
+
+    def end_callback(self):
+        print '\n\n'
+ 
+def process_file(handler, filename, gzipped=False):
+    if gzipped:
+        stream = gzip.GzipFile(filename)
+    else:
+        stream = open(filename,'rb')
+    parse(stream, handler)
+
+def process_url(handler, url):
+    socket = urllib.urlopen(url)
+    buf = StringIO(socket.read())
+    f = gzip.GzipFile(fileobj=buf)
+    parse(f, handler)
+
+def generate_urls():
+    urls = list()
+    current_year = util.utcnow().year
+    years = range(NVD_FIRST_YEAR, current_year + 1)
+    return [NVD_URL.format(**{'year':year}) for year in years]
+
+def main():
+    args = docopt(__doc__, version='v0.0.1')
+
+    db = database.db_from_config(args['--section'])
+    inserter = Inserter(db)
+    handler = NVDCVEContentHander(inserter.entry_callback, inserter.end_callback)
+
+    if args['--use-network']:
+        urls = generate_urls()
+        for url in urls:
+            print '-'*10, url, '-'*10
+            process_url(handler, url)
+    else:
+        for filename in args['<file>']:
+            print '-'*10, filename, '-'*10
+            process_file(handler, filename, gzipped=args['--gzipped'])
+
+
+
+if __name__=='__main__':
+    main()

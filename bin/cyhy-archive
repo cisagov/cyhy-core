@@ -1,0 +1,216 @@
+#!/usr/bin/env python
+'''Archive CyHy data to file and delete archived data from the CyHy database
+
+Usage:
+  cyhy-archive [options]
+  cyhy-archive (-h | --help)
+  cyhy-archive --version
+
+Options:
+  -d --debug                     Enable debug logging
+  -h --help                      Show this screen.
+  -n --no-commander-pause        Do not attempt to pause the CyHy commander
+  --version                      Show version.
+  -s SECTION --section=SECTION   Configuration section to use.
+'''
+
+import sys
+import os
+from docopt import docopt
+import datetime
+from cyhy.core.config import Config
+from cyhy.db import database, CHDatabase
+from cyhy.util import util
+import logging
+import time
+import subprocess
+import re
+from bson import ObjectId
+from urlparse import urlparse
+
+logger = logging.getLogger('cyhy-archive')
+LOG_FILE = '/var/log/cyhy/archive.log'
+DEFAULT_LOGGER_LEVEL = logging.INFO
+COLLECTIONS_TO_ARCHIVE = [{'name': 'HostScanDoc', 'age_limit_days': 548},
+                          {'name': 'PortScanDoc', 'age_limit_days': 90},
+                          {'name': 'VulnScanDoc', 'age_limit_days': 548}]
+ARCHIVE_DIR = '/mnt/data/cyhy_archive'
+#ARCHIVE_DIR = '/tmp/cyhy_archive'
+
+def logging_setup(debug_logging):
+    if debug_logging:
+        level = logging.DEBUG
+    else:
+        level = DEFAULT_LOGGER_LEVEL
+    util.setup_logging(level, filename=LOG_FILE)
+    logger.debug('Debug logging enabled')       # Only output if debug in enabled.  Skipped outwise.
+
+def get_db_info_from_config(config_section=None):
+    # NOTE: ConfigParser will choke if special characters ('%' or '?') appear in the URI
+    config = Config(config_section)
+    # encode special character '#' that could be in a password, otherwise urlparse will parse incorrectly
+    # ASSUMPTION: '#' is only ever going to appear in the password portion of the URI
+    parsed_db_uri = urlparse(config.db_uri.replace('#', '%23'))
+    return parsed_db_uri
+
+def pause_commander(db):
+    PAUSE_ITERATION_LIMIT = 24          # number of iterations to wait before giving up
+    PAUSE_ITERATION_WAIT_SECONDS = 5    # number of seconds to wait between each check to see if the commander has paused
+    pause_iteration_count = 0
+
+    ch = CHDatabase(db)
+    doc = ch.pause_commander('cyhy-archive', 'archive in progress')
+    if not doc.get('_id'):
+        logger.error('Commander pause control document _id not found! Is the database up?')
+        return None
+    logger.info('Requesting commander pause (control doc id = {_id})'.format(**doc))
+    while not doc['completed']:
+        pause_iteration_count += 1
+        logger.info('  Waiting for commander to pause... (#{})'.format(pause_iteration_count))
+        time.sleep(PAUSE_ITERATION_WAIT_SECONDS)
+        if pause_iteration_count == PAUSE_ITERATION_LIMIT:
+            logger.warning('Commander failed to pause! It may not be running, running in a long cycle, or hung.')
+            return doc['_id']
+        doc.reload()
+    return doc['_id']
+
+def resume_commander(db, pause_doc_id):
+    doc = db.SystemControlDoc.find_one({'_id':ObjectId(pause_doc_id)})
+    if not doc:
+        logger.error('Could not find a control doc with id {}'.format(pause_doc_id))
+        return False
+    doc.delete()
+    logger.info('Commander control doc {} successfully deleted (commander should resume unless other control docs exist)'.format(pause_doc_id))
+    return True
+
+def archive_and_delete(db, curr_date, parsed_db_uri):
+    doc_counts = { 'pre-archiving': dict(), 'post-archiving': dict() }
+    results = { 'export_success': False, 'exported_counts': dict(),
+                'delete_success': False, 'deleted_counts': dict() }
+    today_str = curr_date.strftime('%Y%m%d')
+
+    for collection_info in COLLECTIONS_TO_ARCHIVE:
+        db_collection = db[collection_info['name']]         # e.g. db_collection == db['HostScanDoc'] == db.HostScanDoc
+        collection_name = db_collection.collection.name     # e.g. collection_name == 'host_scans'
+
+        # count documents in collection before archiving
+        doc_counts['pre-archiving'][collection_name] = db_collection.find({}).count()
+        logger.info('{}: {:,} documents exist before archiving'.format(collection_name, doc_counts['pre-archiving'][collection_name]))
+
+        cutoff_date = curr_date - datetime.timedelta(days = collection_info['age_limit_days'])
+        # check to see if at least one document is eligible to be archived
+        if db_collection.find_one({'latest':False, 'time':{'$lt':cutoff_date}}):
+            # use mongodump to create an archive for this collection
+            archive_file = '{}/cyhy_archive_{}_{}.gz'.format(ARCHIVE_DIR, collection_name, today_str)
+            query = '{{latest:false, time:{{$lt:{}}}}}'.format(cutoff_date.strftime('ISODate("%Y-%m-%dT%H:%M:%S.%fZ")'))
+
+            if parsed_db_uri.port:
+                db_host_port = '{}:{}'.format(parsed_db_uri.hostname, parsed_db_uri.port)
+            else:
+                db_host_port = parsed_db_uri.hostname
+
+            mongodump_command = ['mongodump', '-v', '--gzip', '--archive={}'.format(archive_file), '--host={}'.format(db_host_port), '--db={}'.format(db.name), '--collection={}'.format(collection_name), "--query={}".format(query)]
+
+            if parsed_db_uri.username:
+                # unencode special characters in password (see get_db_info_from_config)
+                mongodump_command += ['--username={}'.format(parsed_db_uri.username), '--password={}'.format(parsed_db_uri.password.replace('%23', '#'))]
+
+            auth_db = parsed_db_uri.path.lstrip('/')
+            if auth_db:
+                mongodump_command += ['--authenticationDatabase={}'.format(auth_db)]
+
+            p = subprocess.Popen(mongodump_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.info('{}: exporting documents older than {} to {}'.format(collection_name, cutoff_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ'), archive_file))
+            stdout_data, stderr_data = p.communicate()
+            if p.returncode != 0:
+                logger.error('{}: mongodump failed with return code {}'.format(collection_name, p.returncode))
+                logger.debug('mongodump command:\n{}'.format(' '.join(mongodump_command)))
+                logger.error('mongodump error:\n{}'.format(stderr_data))
+                return results
+
+            # check that at least one document was exported
+            regex = re.compile('\d+ document')
+            results['exported_counts'][collection_name] = int(regex.findall(stderr_data)[0].split(' ')[0])
+            if results['exported_counts'][collection_name] < 1:
+                logger.error('{}: no documents exported'.format(collection_name))
+                return results
+            results['export_success'] = True
+            logger.info('{}: {:,} documents successfully exported'.format(collection_name, results['exported_counts'][collection_name]))
+
+            # delete documents in the database, now that we have confirmed successful export to archive
+            delete_output = db_collection.collection.remove({'latest':False, 'time':{'$lt':cutoff_date}})
+            delete_success = delete_output.get('ok')
+            results['deleted_counts'][collection_name] = delete_output.get('n')
+
+            # check that number of deleted documents matches the number of exported/archived documents
+            if results['deleted_counts'][collection_name] != results['exported_counts'][collection_name]:
+                logger.error('{}: count of exported documents ({:,}) does not match count of deleted documents ({:,})'.format(collection_name, results['exported_counts'][collection_name], results['deleted_counts'][collection_name]))
+                return results
+            results['delete_success'] = True
+            logger.info('{}: {:,} documents successfully deleted'.format(collection_name, results['deleted_counts'][collection_name]))
+
+            # count documents in collection after archiving
+            doc_counts['post-archiving'][collection_name] = db_collection.find({}).count()
+            logger.info('{}: {:,} documents exist after archiving'.format(collection_name, doc_counts['post-archiving'][collection_name]))
+        else:   # no documents to archive
+            logger.warning('{}: no documents are old enough to be archived (cutoff date: {})'.format(collection_name, cutoff_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')))
+            results['exported_counts'][collection_name] = results['deleted_counts'][collection_name] = 0
+            results['export_success'] = results['delete_success'] = True
+    return results
+
+def main():
+    start_time = util.utcnow()
+    args = docopt(__doc__, version='v0.0.1')
+    logging_setup(args['--debug'])
+    logger.info('cyhy-archive started')
+    db = database.db_from_config(args['--section'])
+    parsed_db_uri = get_db_info_from_config(args['--section'])  # creds needed in subprocess call to mongodump
+    if parsed_db_uri.port:
+        db_host_port_name = '{}:{}/{}'.format(parsed_db_uri.hostname, parsed_db_uri.port, db.name)
+    else:
+        db_host_port_name = '{}/{}'.format(parsed_db_uri.hostname, db.name)
+
+    logger.info('='*60)
+    logger.info('Database to be archived: {}'.format(db_host_port_name))
+    logger.info('Directory to archive to: {}'.format(ARCHIVE_DIR))
+    logger.info('Data to be archived:')
+    for collection_info in COLLECTIONS_TO_ARCHIVE:
+        logger.info('  {} older than {:,} days'.format(db[collection_info['name']].collection.name, collection_info['age_limit_days']))
+    logger.info('='*60)
+
+    if not args['--no-commander-pause']:
+        commander_pause_id = pause_commander(db)
+        if not commander_pause_id:
+            logger.fatal('Exiting; no data was archived!')
+            sys.exit(-1)
+
+    results = archive_and_delete(db, start_time, parsed_db_uri)
+    if not results['export_success']:
+        logger.fatal('Exiting; data export failed, no data was deleted from database!')
+        logger.fatal('Clean up any exported data in {}'.format(ARCHIVE_DIR))
+        for collection_info in COLLECTIONS_TO_ARCHIVE:
+            collection_name = db[collection_info['name']].collection.name
+            logger.fatal('  {}: exported {:,} documents'.format(collection_name, results['exported_counts'].get(collection_name, 0)))
+        if not args['--no-commander-pause']:
+            if not resume_commander(db, commander_pause_id):    # start commander back up
+                logger.error('Exiting abnormally- verify that commander has resumed!')
+        sys.exit(-1)
+
+    if not results['delete_success']:
+        logger.fatal('Exiting; data delete failed, but some data may have been successfully exported, then deleted from the db:')
+        for collection_info in COLLECTIONS_TO_ARCHIVE:
+            collection_name = db[collection_info['name']].collection.name
+            logger.fatal('  {}: exported {:,} documents'.format(collection_name, results['exported_counts'].get(collection_name, 0)))
+            logger.fatal('  {}: deleted {:,} documents'.format(collection_name, results['deleted_counts'].get(collection_name, 0)))
+
+    if not args['--no-commander-pause']:
+        if not resume_commander(db, commander_pause_id):
+            logger.error('Exiting abnormally- verify that commander has resumed!')
+            sys.exit(-1)
+
+    duration = util.utcnow() - start_time
+    logger.info('cyhy-archive successfully completed in {:0,.3f} seconds ({:0.1f} minutes)'.format(duration.seconds + duration.microseconds / 1000000.0, duration.seconds / 60.0))
+    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
+
+if __name__=='__main__':
+    main()

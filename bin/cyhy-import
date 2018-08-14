@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+'''Import a scan request document.
+
+Usage:
+  cyhy-import [--section SECTION] [--force] [--init-stage STAGE] [FILE]
+  cyhy-import (-h | --help)
+  cyhy-import --version
+
+Options:
+  -h --help                      Show this screen.
+  --version                      Show version.
+  
+  -i STAGE --init-stage STAGE    Override the init-stage specified in file
+  -f --force                     Force import of existing request, destroying original
+  -s SECTION --section=SECTION   Configuration section to use.
+  
+Notes:
+  If no FILE is specified, the document will be read from standard in.
+'''
+
+import sys
+from docopt import docopt
+import progressbar as pb
+import json
+import dateutil
+import netaddr
+ 
+from cyhy.core import Config, STATUS, STAGE
+from cyhy.db import database
+from cyhy.util import util
+
+PB_INIT_WIDGETS = ['Importing: ', pb.SimpleProgress(),' ', pb.Bar(marker=unichr(0x25B6)),' ', pb.ETA()]
+
+def already_exists(db, request):
+    owner = request['_id']
+    db_request = db.RequestDoc.get_by_owner(owner)
+    if db_request:
+        return True
+    
+def print_intersections(intersections):
+    for request,cidrs in intersections.iteritems():
+        print '%s (%s): %d' % (request['agency']['name'], request['_id'], len(cidrs))
+        for i in cidrs.iter_cidrs():
+            print '\t', i
+
+def has_intersections(db, nets, filename, owner):
+    intersections = db.RequestDoc.get_all_intersections(nets)
+    if len(intersections) == 0:
+        return False
+    if len(intersections) == 1 and intersections.keys()[0]['_id'] == owner: 
+        return False
+    else:
+        print 'Cannot import %s\nSome addresses already allocated:' % filename
+        print_intersections(intersections)
+        return True
+
+def import_request(db, request, source, force=False, init_stage=None):
+    owner = request['_id']
+    if not force and already_exists(db, request):
+        print 'Cannot import, owner already exists:', owner
+        print 'Use --force to destroy the currently stored document'
+        print 'and replace it with the imported version.'
+        return False
+    request['period_start'] = dateutil.parser.parse(request['period_start'])
+    nets = netaddr.IPSet(request['networks'])
+    if init_stage:
+        request['init_stage'] = init_stage
+    if has_intersections(db, nets, source, owner):
+        return False
+    request['networks'] = nets.iter_cidrs()
+    doc = db.RequestDoc()
+    util.copy_attrs(request, doc)
+    doc.save()
+    return True
+    
+def import_file(db, filename, force, init_stage=None):
+    f = open(filename, 'rb')
+    request = json.load(f)
+    f.close()
+    return import_request(db, request, filename, force, init_stage)
+        
+def import_stdin(db, force, init_stage=None):
+    request = json.load(sys.stdin)
+    return import_request(db, request, 'from stdin', force, init_stage)
+        
+def main():
+    args = docopt(__doc__, version='v0.0.1')
+    db = database.db_from_config(args['--section'])
+
+    if args['FILE'] != None:
+        success = import_file(db, args['FILE'], args['--force'], args['--init-stage'])
+    else:
+        success = import_stdin(db, args['--force'], args['--init-stage'])
+    
+    if not success:
+        sys.exit(-1)
+
+if __name__=='__main__':
+    main()
