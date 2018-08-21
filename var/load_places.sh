@@ -27,7 +27,7 @@ do
 	curl -O ${DATA_ROOT_URI}${PLACE_URI}
 	unzip *${PLACE_TYPE}*.zip -d ${TMP_PLACES_DIR}
 
-	PLACE_FILE=`ls ${TMP_PLACES_DIR}/*${PLACE_TYPE}*`
+	PLACE_FILE=`ls ${TMP_PLACES_DIR}/*${PLACE_TYPE}*.txt`
 	echo "Importing ${PLACE_FILE} to DB..."
 	if [ -z "${DB_SECTION}" ]; then
 		${SCRIPT_DIR}/GNIS_data_import.py ${PLACE_FILE}
