@@ -55,7 +55,7 @@ By default, the container will look for your CyHy configurations in `/etc/cyhy`.
 
 Example:
 ```
-export CYHY_CONF_DIR=~/.cyhy
+export CYHY_CONF_DIR=/private/etc/cyhy
 export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
 ```
 
