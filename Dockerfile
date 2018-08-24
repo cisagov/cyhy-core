@@ -11,6 +11,9 @@ RUN mkdir ${CYHY_HOME}
 RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
+RUN apt-get update
+RUN apt-get install -y mongodb-clients
+
 WORKDIR ${CYHY_CORE_SRC}
 
 COPY . ${CYHY_CORE_SRC}
@@ -21,4 +24,4 @@ RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
 
 USER cyhy
 WORKDIR ${CYHY_HOME}
-CMD ["sleep", "infinity"]
+CMD ["getenv"]

@@ -1,16 +1,23 @@
 #!/bin/bash
 
-# $1 can be a name to use, otherwise use hostname
-DOCKER_HOSTNAME=${1-${HOSTNAME}}
+echo '################################################################################'
+echo '# The following output is used to setup aliases to containerized cyhy commands'
+echo '# To apply these changes under bash use a command similar to:'
+echo '# eval "$(docker run ncats/cyhy-core)"'
+echo '#'
+echo '# Environment variables:'
+echo '# CYHY_CONF_DIR, defaults to "/etc/cyhy" if not set'
+echo '# CYHY_CORE_IMAGE, defaults to "ncats/cyhy-core" if not set'
+echo '################################################################################'
+echo
 
 cd /usr/local/bin
-# create aliases for everything but cyhy-mongo
-GLOBIGNORE="cyhy-mongo"
+
+# create output that can be evaled to create aliases for cyhy commands
 for f in cyhy-*
 do
-  echo alias $f=\"docker exec -it ${DOCKER_HOSTNAME} $f\"
+  echo alias $f=\"docker run -it --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" $f\"
 done
-unset GLOBIGNORE
 
-# create a function for cyhy-mongo
-echo 'cyhy-mongo() { source <(docker exec '${DOCKER_HOSTNAME}' cyhy-mongo -p "$@") ; }'
+# create an alias to start bash in the container
+echo alias cyhy-bash=\"docker run -it --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" /bin/bash\"
