@@ -1,31 +1,31 @@
-NCATS Scanner
-=============
+# NCATS: Cyber Hygiene Core Libraries
 
-The NCATS scanner is the core of the Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.  
+This project contains the core libraries and executables for the NCATS Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.  
 
-Installation
-------------
+## CyHy Configuration
 
-Required third party libraries can be installed using: `pip install -r requirements.txt`
+The `cyhy-core` library requires a configuration be created.  The default location for this file is `/etc/cyhy/cyhy.conf`.  An example configuration is below.
 
-Required configurations:
-The commander will read `/etc/cyhy/commander.conf`
-If you do not have this file, please create one (even if empty)
+### `/etc/cyhy/cyhy.conf`
+```
+[DEFAULT]
+default-section = cyhy-ops-ssh-tunnel-docker-mac
+report-key = master-report-password
 
+[cyhy-ops-ssh-tunnel-docker-mac]
+database-uri = mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@host.docker.internal:27017/cyhy
+database-name = cyhy
 
-IP Address Geolocation Database:
-The geolocation database is not included in the source tree due to size and licensing.  Please cd into the 'var' directory and run the 'get-geo-db.sh' script to get the latest database.
+[cyhy-ops-ssh-tunnel-docker]
+database-uri = mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@localhost:27017/cyhy
+database-name = cyhy
 
-Development Installation
-------------------------
-If you are developing the source the following installation will allow in place editing with live updates to the libraries, and command line utilities.
+[cyhy-ops-staging-read]
+database-uri = mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@database1:27017/cyhy
+database-name = cyhy
+```
 
-sudo pip install numpy
-sudo port install geos
-sudo pip install -r requirements.txt
-
-Docker Goodies
---------------
+## Using CyHy Commands with Docker
 The CyHy commands implemented in the docker container can be aliased into the host environment by using the procedure below.
 
 Alias the container commands to the local environment:
@@ -38,7 +38,7 @@ To run a CyHy command:
 cyhy-tool status NASA
 ```
 
-#### Caveats, and Gotchas
+### Caveats, and Gotchas
 
 Whenever an aliased CyHy command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the current working directory, or a subdirectory.  
 
@@ -60,15 +60,28 @@ export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
 ```
 
 ### Building the cyhy-core container
-
-
 To build the Docker container for cyhy-core:
 
 ```bash
 docker build -t ncats/cyhy-core .
 ```
 
-To attach a shell:
-```bash
-docker exec -ti cyhy-core /bin/bash
-```
+## Manual Installation
+Required third party libraries can be installed using: `pip install -r requirements.txt`
+
+Required configurations:
+The commander will read `/etc/cyhy/commander.conf`
+If you do not have this file, please create one (even if empty)
+
+
+IP Address Geolocation Database:
+The geolocation database is not included in the source tree due to size and licensing.  Please cd into the `var` directory and run the `get-geo-db.sh` script to get the latest database.
+
+## Development Installation
+If you are developing the source the following installation will allow in place editing with live updates to the libraries, and command line utilities.
+
+`sudo pip install numpy`
+
+`sudo port install geos`
+
+`sudo pip install -r requirements.txt`
