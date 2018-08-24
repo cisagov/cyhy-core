@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# $1 can be a name to use, otherwise use hostname
-DOCKER_HOSTNAME=${1-${HOSTNAME}}
-
 cd /usr/local/bin
 # create aliases for everything but cyhy-mongo
 GLOBIGNORE="cyhy-mongo"
@@ -13,4 +10,4 @@ done
 unset GLOBIGNORE
 
 # create a function for cyhy-mongo
-echo 'cyhy-mongo() { source <(docker exec '${DOCKER_HOSTNAME}' cyhy-mongo -p "$@") ; }'
+echo 'cyhy-mongo() { source <(docker run --volume "${CYHY_CONF_DIR:-/etc/cyhy}":/etc/cyhy ${CYHY_CORE_IMAGE:-ncats/cyhy-core} cyhy-mongo -p "$@") ; }'
