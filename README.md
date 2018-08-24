@@ -26,7 +26,21 @@ sudo pip install -r requirements.txt
 
 Docker Goodies
 --------------
-Preliminary support for Docker has been added.  The commands can all be mapped into the host path using the alias.sh script below.  Note that the container's cyhy user can only write to the mapped home volume, which is the default working directory for all execs.
+Preliminary support for Docker has been added.  The commands can all be mapped into the host path using the procedure below.  Note that the container will use the current working directory as its home.  So all path parameters must be in the current working directory, or a subdirectory.  
+
+Expose the container commands to the local environment:
+```bash
+eval "$(docker run ncats/cyhy-core)"
+```
+
+By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `ncats/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
+
+Example:
+```
+export CYHY_CONF_DIR=~/.cyhy
+export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
+```
+
 
 To build the Docker container for cyhy-core:
 
@@ -34,15 +48,6 @@ To build the Docker container for cyhy-core:
 docker build -t ncats/cyhy-core .
 ```
 
-To run the container:
-```bash
-docker run --rm --name cyhy-core --detach --volume /private/etc/cyhy:/etc/cyhy --volume /tmp/cyhy:/home/cyhy dhub.ncats.dhs.gov:5001/cyhy-core
-```
-
-Create aliases to the containers commands:
-```bash
-eval "$(docker exec cyhy-core getenv)"
-```
 
 To run a command:
 ```bash
