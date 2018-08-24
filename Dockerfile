@@ -21,4 +21,4 @@ RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
 
 USER cyhy
 WORKDIR ${CYHY_HOME}
-CMD ["sleep", "infinity"]
+CMD ["getenv"]

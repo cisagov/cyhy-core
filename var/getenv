@@ -8,7 +8,7 @@ cd /usr/local/bin
 GLOBIGNORE="cyhy-mongo"
 for f in cyhy-*
 do
-  echo alias $f=\"docker exec -it ${DOCKER_HOSTNAME} $f\"
+  echo alias $f=\"docker run -ti --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" $f\"
 done
 unset GLOBIGNORE
 
