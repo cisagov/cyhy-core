@@ -13,7 +13,11 @@ echo
 
 cd /usr/local/bin
 
+# create output that can be evaled to create aliases for cyhy commands
 for f in cyhy-*
 do
-  echo alias $f=\"docker run -ti --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" $f\"
+  echo alias $f=\"docker run -it --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" $f\"
 done
+
+# create an alias to start bash in the container
+echo alias cyhy-bash=\"docker run -it --rm --name cyhy-core --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-ncats/cyhy-core}\\\" /bin/bash\"
