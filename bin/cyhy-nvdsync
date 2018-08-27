@@ -31,7 +31,7 @@ import datetime
 from cyhy.db import database
 from cyhy.util import util
 
-NVD_URL = 'http://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-{year}.xml.gz'
+NVD_URL = 'https://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-{year}.xml.gz'
 NVD_FIRST_YEAR = 2002
 
 class NVDCVEContentHander(ContentHandler):
@@ -87,7 +87,7 @@ class Inserter(object):
 
     def end_callback(self):
         print '\n\n'
- 
+
 def process_file(handler, filename, gzipped=False):
     if gzipped:
         stream = gzip.GzipFile(filename)
