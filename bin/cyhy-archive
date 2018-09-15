@@ -14,19 +14,21 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 '''
 
-import sys
-import os
-from docopt import docopt
 import datetime
+import logging
+import os
+import re
+import subprocess
+import sys
+import time
+from urlparse import urlparse
+
+from bson import ObjectId
+from docopt import docopt
+
 from cyhy.core.config import Config
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
-import logging
-import time
-import subprocess
-import re
-from bson import ObjectId
-from urlparse import urlparse
 
 logger = logging.getLogger('cyhy-archive')
 LOG_FILE = '/var/log/cyhy/archive.log'
