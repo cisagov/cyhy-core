@@ -2,7 +2,7 @@
 '''Archive CyHy data to file and delete archived data from the CyHy database
 
 Usage:
-  cyhy-archive [options]
+  cyhy-archive [options] ARCHIVE_DIR
   cyhy-archive (-h | --help)
   cyhy-archive --version
 
@@ -14,19 +14,21 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 '''
 
-import sys
-import os
-from docopt import docopt
 import datetime
+import logging
+import os
+import re
+import subprocess
+import sys
+import time
+from urlparse import urlparse
+
+from bson import ObjectId
+from docopt import docopt
+
 from cyhy.core.config import Config
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
-import logging
-import time
-import subprocess
-import re
-from bson import ObjectId
-from urlparse import urlparse
 
 logger = logging.getLogger('cyhy-archive')
 LOG_FILE = '/var/log/cyhy/archive.log'
@@ -34,8 +36,6 @@ DEFAULT_LOGGER_LEVEL = logging.INFO
 COLLECTIONS_TO_ARCHIVE = [{'name': 'HostScanDoc', 'age_limit_days': 548},
                           {'name': 'PortScanDoc', 'age_limit_days': 90},
                           {'name': 'VulnScanDoc', 'age_limit_days': 548}]
-ARCHIVE_DIR = '/mnt/data/cyhy_archive'
-#ARCHIVE_DIR = '/tmp/cyhy_archive'
 
 def logging_setup(debug_logging):
     if debug_logging:
@@ -54,8 +54,8 @@ def get_db_info_from_config(config_section=None):
     return parsed_db_uri
 
 def pause_commander(db):
-    PAUSE_ITERATION_LIMIT = 24          # number of iterations to wait before giving up
-    PAUSE_ITERATION_WAIT_SECONDS = 5    # number of seconds to wait between each check to see if the commander has paused
+    PAUSE_ITERATION_LIMIT = 60          # number of iterations to wait before giving up
+    PAUSE_ITERATION_WAIT_SECONDS = 30   # number of seconds to wait between each check to see if the commander has paused
     pause_iteration_count = 0
 
     ch = CHDatabase(db)
@@ -83,7 +83,7 @@ def resume_commander(db, pause_doc_id):
     logger.info('Commander control doc {} successfully deleted (commander should resume unless other control docs exist)'.format(pause_doc_id))
     return True
 
-def archive_and_delete(db, curr_date, parsed_db_uri):
+def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
     doc_counts = { 'pre-archiving': dict(), 'post-archiving': dict() }
     results = { 'export_success': False, 'exported_counts': dict(),
                 'delete_success': False, 'deleted_counts': dict() }
@@ -101,7 +101,7 @@ def archive_and_delete(db, curr_date, parsed_db_uri):
         # check to see if at least one document is eligible to be archived
         if db_collection.find_one({'latest':False, 'time':{'$lt':cutoff_date}}):
             # use mongodump to create an archive for this collection
-            archive_file = '{}/cyhy_archive_{}_{}.gz'.format(ARCHIVE_DIR, collection_name, today_str)
+            archive_file = '{}/cyhy_archive_{}_{}.gz'.format(archive_dir, collection_name, today_str)
             query = '{{latest:false, time:{{$lt:{}}}}}'.format(cutoff_date.strftime('ISODate("%Y-%m-%dT%H:%M:%S.%fZ")'))
 
             if parsed_db_uri.port:
@@ -170,9 +170,13 @@ def main():
     else:
         db_host_port_name = '{}/{}'.format(parsed_db_uri.hostname, db.name)
 
+    archive_directory = args['ARCHIVE_DIR']
     logger.info('='*60)
     logger.info('Database to be archived: {}'.format(db_host_port_name))
-    logger.info('Directory to archive to: {}'.format(ARCHIVE_DIR))
+    logger.info('Directory to archive to: {}'.format(archive_directory))
+    if not os.path.exists(archive_directory):
+        logger.info('  {} does not exist - creating!'.format(archive_directory))
+        os.makedirs(archive_directory)
     logger.info('Data to be archived:')
     for collection_info in COLLECTIONS_TO_ARCHIVE:
         logger.info('  {} older than {:,} days'.format(db[collection_info['name']].collection.name, collection_info['age_limit_days']))
@@ -184,10 +188,10 @@ def main():
             logger.fatal('Exiting; no data was archived!')
             sys.exit(-1)
 
-    results = archive_and_delete(db, start_time, parsed_db_uri)
+    results = archive_and_delete(db, start_time, archive_directory, parsed_db_uri)
     if not results['export_success']:
         logger.fatal('Exiting; data export failed, no data was deleted from database!')
-        logger.fatal('Clean up any exported data in {}'.format(ARCHIVE_DIR))
+        logger.fatal('Clean up any exported data in {}'.format(archive_directory))
         for collection_info in COLLECTIONS_TO_ARCHIVE:
             collection_name = db[collection_info['name']].collection.name
             logger.fatal('  {}: exported {:,} documents'.format(collection_name, results['exported_counts'].get(collection_name, 0)))
