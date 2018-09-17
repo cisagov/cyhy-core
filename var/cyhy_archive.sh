@@ -29,6 +29,12 @@ if [ $RESULT -ne 0 ]; then
 fi
 echo "Successfully executed cyhy-archive script"
 
+# Check if any archive files were created- if not, log message and exit
+if [ -n "$(find ${ARCHIVE_DIR} -prune -empty 2>/dev/null)" ]; then
+  echo "No archives created by cyhy-archive; exiting."
+	exit 0
+fi
+
 # Set default AWS signature version; required in order to successfully copy
 # objects to a bucket
 aws configure set default.s3.signature_version s3v4
