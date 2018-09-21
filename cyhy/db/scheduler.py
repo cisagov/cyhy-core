@@ -99,7 +99,7 @@ class DefaultScheduler(BaseScheduler):
     def __host_max_severity(self, host):
         ip_int = host['_id']
         q = max_severity_for_host(ip_int)
-        r = database.run_pipeline(q, self._db)
+        r = database.run_pipeline_cursor(q, self._db)
         database.id_expand(r)
         if len(r) > 0:
             # found tickets
