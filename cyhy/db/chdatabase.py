@@ -252,9 +252,9 @@ class CHDatabase(object):
     def __get_tag_timespan(self, oid):
         '''determines the earliest, and latest times of documents'''
         pipeline = queries.time_span(oid)
-        r1 = database.run_pipeline((pipeline, database.HOST_SCAN_COLLECTION), self.__db)
-        r2 = database.run_pipeline((pipeline, database.PORT_SCAN_COLLECTION), self.__db)
-        r3 = database.run_pipeline((pipeline, database.VULN_SCAN_COLLECTION), self.__db)
+        r1 = database.run_pipeline_cursor((pipeline, database.HOST_SCAN_COLLECTION), self.__db)
+        r2 = database.run_pipeline_cursor((pipeline, database.PORT_SCAN_COLLECTION), self.__db)
+        r3 = database.run_pipeline_cursor((pipeline, database.VULN_SCAN_COLLECTION), self.__db)
         database.id_expand(r1)
         database.id_expand(r2)
         database.id_expand(r3)
@@ -277,7 +277,7 @@ class CHDatabase(object):
     def __get_host_timespan(self, owners):
         '''determines the earliest and latest last_changed times of hosts'''
         pipeline_collection = queries.host_time_span(owners)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         database.id_expand(results)
 
         if len(results) == 0:
@@ -364,13 +364,13 @@ class CHDatabase(object):
                                                          # Not ideal, but will only happen in rare cases and should have minimal impact
 
         pipeline_collection = queries.addresses_scanned_pl([owner] + descendants_included)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.cvss_sum_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         if results:
@@ -379,13 +379,13 @@ class CHDatabase(object):
             cvss_sum = 0.0
 
         pipeline_collection = queries.host_count_pl([owner] + descendants_included)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.vulnerable_host_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
@@ -394,63 +394,63 @@ class CHDatabase(object):
         snapshot_doc['cvss_average_vulnerable'] = util.safe_divide(cvss_sum, snapshot_doc['vulnerable_host_count'])
 
         pipeline_collection = queries.unique_operating_system_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.port_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.unique_port_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.silent_port_count_pl([owner] + descendants_included)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
         pipeline_collection = queries.severity_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results, 'vulnerabilities')
 
         pipeline_collection = queries.unique_severity_count_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results, 'unique_vulnerabilities')
 
         pipeline_collection = queries.false_positives_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results, 'false_positives')
 
         pipeline_collection = queries.service_counts_simple_pl(snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         services = self.__process_services(results)
         snapshot_doc['services'] = services
 
         pipeline_collection = queries.open_ticket_age_in_snapshot_pl(current_time, snapshot_oid)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         snapshot_doc['tix_msec_open'] = self.__process_open_ticket_age(results, current_time)
 
         tix_closed_since_date = current_time - datetime.timedelta(self.SNAPSHOT_CLOSED_TICKET_HISTORY_DAYS)
         pipeline_collection = queries.closed_ticket_age_for_orgs_pl(tix_closed_since_date, [owner] + descendants_included)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         snapshot_doc['tix_msec_to_close'] = self.__process_closed_ticket_age(results, tix_closed_since_date)
@@ -471,7 +471,7 @@ class CHDatabase(object):
                 snaps_to_exclude_from_world_stats.append(snap['_id'])
 
         pipeline_collection = queries.world_pl(snaps_to_exclude_from_world_stats)
-        results = database.run_pipeline(pipeline_collection, self.__db)
+        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
         if progress_callback:
             progress_callback()
         database.combine_results(snapshot_doc, results, 'world')

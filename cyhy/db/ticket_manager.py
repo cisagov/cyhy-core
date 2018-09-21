@@ -187,7 +187,7 @@ class VulnTicketManager(object):
         #                                     'open':True})
         
         # work-around using a pipeline
-        tickets = database.run_pipeline(
+        tickets = database.run_pipeline_cursor(
             close_tickets_pl(ip_ints, list(self.__ports), list(self.__source_ids), list(self.__seen_ticket_ids), self.__source),
                              self.__db)
         
@@ -212,7 +212,7 @@ class VulnTicketManager(object):
         '''clear the latest flag for vuln_docs that match the ticket_manager scope'''
         ip_ints = [int(i) for i in self.__ips]
         pipeline = clear_latest_vulns_pl(ip_ints, list(self.__ports), list(self.__source_ids),  self.__source)
-        raw_vulns = database.run_pipeline(pipeline, self.__db)
+        raw_vulns = database.run_pipeline_cursor(pipeline, self.__db)
         for raw_vuln in raw_vulns:
             vuln = self.__db.VulnScanDoc(raw_vuln)
             vuln['latest'] = False
