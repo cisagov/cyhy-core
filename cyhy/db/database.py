@@ -13,10 +13,10 @@ from mongokit import Document, MongoClient, CustomType
 import netaddr
 from pymongo.errors import OperationFailure
 
-from cyhy.core.config import Config
 from cyhy.core.common import *
-from cyhy.util import util
+from cyhy.core.config import Config
 from cyhy.core.yaml_config import YamlConfig
+from cyhy.util import util
 
 REQUEST_COLLECTION = 'requests'
 HOST_COLLECTION = 'hosts'
