@@ -1,19 +1,22 @@
 __all__ = ['db_from_connection', 'db_from_config', 'id_expand', 'ensure_indices']
 
-import sys
-import copy
 from collections import OrderedDict, Iterable
+import copy
+import datetime
+import random
+import sys
+import time
+
+from bson import ObjectId
+from bson.binary import Binary
+from mongokit import Document, MongoClient, CustomType
+import netaddr
+from pymongo.errors import OperationFailure
+
 from cyhy.core.config import Config
 from cyhy.core.common import *
 from cyhy.util import util
 from cyhy.core.yaml_config import YamlConfig
-from mongokit import Document, MongoClient, CustomType
-from bson.binary import Binary
-from bson import ObjectId
-from pymongo.errors import OperationFailure
-import datetime
-import random
-import netaddr
 
 REQUEST_COLLECTION = 'requests'
 HOST_COLLECTION = 'hosts'
