@@ -32,6 +32,7 @@ REPORT_COLLECTION = 'reports'
 SYSTEM_CONTROL_COLLECTION = 'control'
 PLACE_COLLECTION = 'places'
 NEW_HIRE_COLLECTION = 'new_hire'
+CONTROL_DOC_POLL_INTERVAL = 5 # seconds
 
 def db_from_connection(uri, name):
     con = MongoClient(host=uri, tz_aware=True)
@@ -1355,6 +1356,18 @@ class SystemControlDoc(RootDoc):
         'completed': False
     }
 
+    def wait(self, timeout=None):
+        '''Wait for this control action to complete.  If a timeout is set, only
+        wait a maximum of timeout seconds.
+        Returns True if the document was completed, False otherwise.'''
+        if timeout:
+            timeout_time = util.utcnow() + datetime.timedelta(seconds=timeout)
+        while timeout==None or util.utcnow() < timeout_time:
+            self.reload()
+            if self['completed']:
+                return True
+            time.sleep(CONTROL_DOC_POLL_INTERVAL)
+        return False
 
 class PlaceDoc(RootDoc):
     __collection__ = PLACE_COLLECTION
