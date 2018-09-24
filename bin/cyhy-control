@@ -38,14 +38,14 @@ def pause_commander(db, sender, reason, wait=False, timeout=None, quiet=False):
             if timeout > 0:
                 print('Waiting up to {} second{} for commander to stop...'.format(timeout, ('' if timeout==1 else 's')))
             else:
-                print('Waiting for completion...')
+                print('Waiting for commander to stop...')
         wait_result = doc.wait(timeout=timeout)
         if not quiet:
             if wait_result:
                 print('Commander stopped.')
                 print('  (use "cyhy-control delete {_id}" to resume commander)'.format(**doc))
             else:
-                print('Commander did not stop yet...')
+                print('Commander DID NOT STOP before the timeout was reached.')
                 print('  (use "cyhy-control delete {_id}" to prevent commander from stopping)'.format(**doc))
         return wait_result
     # always returns True if there is no wait
