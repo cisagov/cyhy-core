@@ -29,6 +29,7 @@ setup(
         "pandas >= 0.16.2",  # TODO: test with 0.19.1
         "six >= 1.9",
         "mock >= 2.0.0",
-        "PyYAML >= 3.12"
+        "PyYAML >= 3.12",
+        "ipython >= 5.4.0"
     ]
 )
