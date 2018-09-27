@@ -20,7 +20,7 @@ RUN apt-get install -y mongodb-org-shell
 WORKDIR ${CYHY_CORE_SRC}
 
 COPY . ${CYHY_CORE_SRC}
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir .[dev]
 RUN var/geoipupdate.sh
 RUN ln -snf ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
 RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
