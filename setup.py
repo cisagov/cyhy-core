@@ -28,7 +28,12 @@ setup(
         "docopt >= 0.6.2",
         "pandas >= 0.16.2",  # TODO: test with 0.19.1
         "six >= 1.9",
-        "mock >= 2.0.0",
         "PyYAML >= 3.12"
-    ]
+    ],
+    extras_require={
+        'dev': [
+            "mock >= 2.0.0",
+            'ipython >= 5.8.0'
+        ],
+    },
 )
