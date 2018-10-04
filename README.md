@@ -47,7 +47,7 @@ Whenever an aliased CyHy command is executed, it will use the current working di
 | Yes           | `cyhy-import NASA.json`                     | parameter file is in the current directory |
 | Yes           | `cyhy-import space_agencies/NASA.json`      | parameter file is in a sub-directory |
 | NO!           | `cyhy-import ../WH.json`                    | parameter file is in a parent directory |
-| NO!           | `cyhy-import /tmp/SPACE_FORCE.json`         | parameter file is an absoulte path |
+| NO!           | `cyhy-import /tmp/SPACE_FORCE.json`         | parameter file is an absolute path |
 
 ### Advanced configuration
 

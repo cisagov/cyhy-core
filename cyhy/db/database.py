@@ -1,19 +1,22 @@
 __all__ = ['db_from_connection', 'db_from_config', 'id_expand', 'ensure_indices']
 
-import sys
-import copy
 from collections import OrderedDict, Iterable
-from cyhy.core.config import Config
-from cyhy.core.common import *
-from cyhy.util import util
-from cyhy.core.yaml_config import YamlConfig
-from mongokit import Document, MongoClient, CustomType
-from bson.binary import Binary
-from bson import ObjectId
-from pymongo.errors import OperationFailure
+import copy
 import datetime
 import random
+import sys
+import time
+
+from bson import ObjectId
+from bson.binary import Binary
+from mongokit import Document, MongoClient, CustomType
 import netaddr
+from pymongo.errors import OperationFailure
+
+from cyhy.core.common import *
+from cyhy.core.config import Config
+from cyhy.core.yaml_config import YamlConfig
+from cyhy.util import util
 
 REQUEST_COLLECTION = 'requests'
 HOST_COLLECTION = 'hosts'
@@ -29,6 +32,7 @@ REPORT_COLLECTION = 'reports'
 SYSTEM_CONTROL_COLLECTION = 'control'
 PLACE_COLLECTION = 'places'
 NEW_HIRE_COLLECTION = 'new_hire'
+CONTROL_DOC_POLL_INTERVAL = 5 # seconds
 
 def db_from_connection(uri, name):
     con = MongoClient(host=uri, tz_aware=True)
@@ -1352,6 +1356,18 @@ class SystemControlDoc(RootDoc):
         'completed': False
     }
 
+    def wait(self, timeout=None):
+        '''Wait for this control action to complete.  If a timeout is set, only
+        wait a maximum of timeout seconds.
+        Returns True if the document was completed, False otherwise.'''
+        if timeout:
+            timeout_time = util.utcnow() + datetime.timedelta(seconds=timeout)
+        while timeout==None or util.utcnow() < timeout_time:
+            self.reload()
+            if self['completed']:
+                return True
+            time.sleep(CONTROL_DOC_POLL_INTERVAL)
+        return False
 
 class PlaceDoc(RootDoc):
     __collection__ = PLACE_COLLECTION
