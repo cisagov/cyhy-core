@@ -24,7 +24,7 @@ def host_count_pl(owners):
 
 def vulnerable_host_count_pl(snapshot_oid):
     return  [
-            {'$match': {'snapshots':snapshot_oid}},
+            {'$match': {'snapshots':snapshot_oid, 'false_positive':False}},
             {'$group': {'_id': {'ip':'$ip'},
                         }
             },
