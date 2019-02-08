@@ -13,8 +13,8 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
-  -r --include-retired           Include retired orgs (ignored unless 
-                                 list-children or list-all-descendants is 
+  -r --include-retired           Include retired orgs (ignored unless
+                                 list-children or list-all-descendants is
                                  the selected action)
 
 '''
@@ -64,7 +64,7 @@ def import_child_request(db, parent_org_request, child_org_request):
     intersecting_cidrs = child_org_nets & parent_org_request.networks
     child_org_outlier_cidrs = child_org_nets - parent_org_request.networks
 
-    if not util.warn_and_confirm('This will modify database documents.  You should PAUSE the CyHy commander before continuing.'):
+    if not util.warn_and_confirm('About to create new child {} based on networks from parent {}. This will modify database documents.  You should PAUSE the CyHy commander before continuing.'.format(child_org_request['_id'], parent_org_request['_id'])):
         print 'Aborted.'
         sys.exit(-2)
 
@@ -113,6 +113,8 @@ def import_child_file(db, parent_org_request, filename):
     return import_child_request(db, parent_org_request, child_org_request)
 
 def add_children(db, parent_org_request, child_ids):
+    child_descendant_map = dict()
+
     for child in child_ids:
         if not db.RequestDoc.find_one({'_id':child}):
             print 'ERROR: Child organization %s not found in DB. EXITING without making any changes.' % child
@@ -123,9 +125,25 @@ def add_children(db, parent_org_request, child_ids):
         if parent_org_request.get('children') and child in parent_org_request['children']:
             print 'ERROR: Child (%s) cannot be added; it is already in list of children of %s. EXITING without making any changes.' % (child, parent_org_request['_id'])
             return False
-        if parent_org_request['_id'] in db.RequestDoc.get_all_descendants(child):
+
+        all_descendants = db.RequestDoc.get_all_descendants(child)
+        if parent_org_request['_id'] in all_descendants:
             print 'ERROR: Parent org (%s) is already a descendant of %s - no circular relationships allowed! EXITING without making any changes.' % (parent_org_request['_id'], child)
             return False
+        child_descendant_map[child] = all_descendants
+
+    print 'About to add the following children to {}:'.format(parent_org_request['_id'])
+    for child, descendants in child_descendant_map.iteritems():
+        print '  {}: Has {} descendants'.format(child, len(descendants)),
+        if descendants:
+            print '({})'.format(', '.join(descendants))
+        else:
+            print ''
+    print ''
+
+    if not util.warn_and_confirm('Please verify that the correct children are being added to {}.'.format(parent_org_request['_id'])):
+        print 'Aborted.'
+        sys.exit(-2)
 
     parent_org_request.add_children(db, child_ids)
     parent_org_request.save()
@@ -139,6 +157,13 @@ def remove_children(db, parent_org_request, child_ids):
         if parent_org_request.get('children') and child not in parent_org_request['children']:
             print 'ERROR: Child (%s) cannot be removed; it is NOT in list of children of %s. EXITING without making any changes.' % (child, parent_org_request['_id'])
             return False
+
+    print 'About to remove the following children from {}:'.format(parent_org_request['_id'])
+    print '  {}\n'.format('\n  '.join(child_ids))
+
+    if not util.warn_and_confirm('Please verify that the correct children are being removed from {}.'.format(parent_org_request['_id'])):
+        print 'Aborted.'
+        sys.exit(-2)
 
     parent_org_request.remove_children(child_ids)
     parent_org_request.save()
