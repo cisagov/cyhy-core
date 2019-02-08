@@ -13,8 +13,8 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
-  -r --include-retired           Include retired orgs (ignored unless 
-                                 list-children or list-all-descendants is 
+  -r --include-retired           Include retired orgs (ignored unless
+                                 list-children or list-all-descendants is
                                  the selected action)
 
 '''
@@ -113,7 +113,7 @@ def import_child_file(db, parent_org_request, filename):
     return import_child_request(db, parent_org_request, child_org_request)
 
 def add_children(db, parent_org_request, child_ids):
-    child_descandant_map = dict()
+    child_descendant_map = dict()
 
     for child in child_ids:
         if not db.RequestDoc.find_one({'_id':child}):
@@ -130,10 +130,10 @@ def add_children(db, parent_org_request, child_ids):
         if parent_org_request['_id'] in all_descendants:
             print 'ERROR: Parent org (%s) is already a descendant of %s - no circular relationships allowed! EXITING without making any changes.' % (parent_org_request['_id'], child)
             return False
-        child_descandant_map[child] = all_descendants
+        child_descendant_map[child] = all_descendants
 
     print 'About to add the following children to {}:'.format(parent_org_request['_id'])
-    for child, descendants in child_descandant_map.iteritems():
+    for child, descendants in child_descendant_map.iteritems():
         print '  {}: Has {} descendants'.format(child, len(descendants)),
         if descendants:
             print '({})'.format(', '.join(descendants))
