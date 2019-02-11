@@ -17,12 +17,16 @@ Options:
 
 '''
 
+# standard python libraries
 import gzip
+import urllib
 from xml.sax import ContentHandler, parse, SAXNotRecognizedException
 from StringIO import StringIO
-import urllib
 
+# third-party libraries (install with pip)
 from docopt import docopt
+
+# intra-project modules
 from cyhy.db import database
 from cyhy.util import util
 
