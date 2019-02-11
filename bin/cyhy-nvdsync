@@ -17,22 +17,18 @@ Options:
 
 '''
 
-import sys
-import os
 import gzip
 from xml.sax import ContentHandler, parse, SAXNotRecognizedException
-from xml.parsers.expat import ExpatError
 from StringIO import StringIO
 import urllib
 
 from docopt import docopt
-import netaddr
-import datetime
 from cyhy.db import database
 from cyhy.util import util
 
 NVD_URL = 'https://static.nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-{year}.xml.gz'
 NVD_FIRST_YEAR = 2002
+
 
 class NVDCVEContentHander(ContentHandler):
     def __init__(self, entry_callback, end_callback):
@@ -45,7 +41,7 @@ class NVDCVEContentHander(ContentHandler):
         self.current_entry = None
 
     def startElement(self, name, attrs):
-        #print '>>>', name
+        # print '>>>', name
         # clear characters buffer
         self.chars = ''
         if not self.isNVDFile:
@@ -53,12 +49,13 @@ class NVDCVEContentHander(ContentHandler):
                 self.isNVDFile = True
                 self.xmloutputversion = attrs['nvd_xml_version']
             else:
-                raise SAXNotRecognizedException('XML does not look like NVD data.')
+                raise SAXNotRecognizedException(
+                    'XML does not look like NVD data.')
         elif name == 'entry':
-            self.current_entry = {'_id':attrs['id']}
+            self.current_entry = {'_id': attrs['id']}
 
     def endElement(self, name):
-        #print '<<<', name
+        # print '<<<', name
         if name == 'entry':
             self.entry_callback(self.current_entry)
         elif name == 'cvss:score':
@@ -75,10 +72,10 @@ class Inserter(object):
         self.db = db
 
     def entry_callback(self, entry):
-        if not entry.has_key('cvss_score'):
+        if 'cvss_score' not in entry:
             # NVD Rejects have no cvss.
             # Make sure they are removed from our db.
-            self.db.CVEDoc.collection.remove({'_id':entry['_id']}, safe=False)
+            self.db.CVEDoc.collection.remove({'_id': entry['_id']}, safe=False)
             print 'x',
             return
         print '.',
@@ -88,12 +85,14 @@ class Inserter(object):
     def end_callback(self):
         print '\n\n'
 
+
 def process_file(handler, filename, gzipped=False):
     if gzipped:
         stream = gzip.GzipFile(filename)
     else:
-        stream = open(filename,'rb')
+        stream = open(filename, 'rb')
     parse(stream, handler)
+
 
 def process_url(handler, url):
     socket = urllib.urlopen(url)
@@ -101,18 +100,20 @@ def process_url(handler, url):
     f = gzip.GzipFile(fileobj=buf)
     parse(f, handler)
 
+
 def generate_urls():
-    urls = list()
     current_year = util.utcnow().year
     years = range(NVD_FIRST_YEAR, current_year + 1)
-    return [NVD_URL.format(**{'year':year}) for year in years]
+    return [NVD_URL.format(**{'year': year}) for year in years]
+
 
 def main():
     args = docopt(__doc__, version='v0.0.1')
 
     db = database.db_from_config(args['--section'])
     inserter = Inserter(db)
-    handler = NVDCVEContentHander(inserter.entry_callback, inserter.end_callback)
+    handler = NVDCVEContentHander(inserter.entry_callback,
+                                  inserter.end_callback)
 
     if args['--use-network']:
         urls = generate_urls()
@@ -125,6 +126,5 @@ def main():
             process_file(handler, filename, gzipped=args['--gzipped'])
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
