@@ -43,7 +43,7 @@ def parse_json(db, json_stream):
     for entry in data.get('CVE_Items', []):
         cve_id = entry['cve']['CVE_data_meta']['ID']
         if 'baseMetricV2' not in entry['impact']:
-            # NVD 'reject' 'CVEs do not have 'baseMetricV2' CVSS data
+            # NVD 'reject' CVEs do not have 'baseMetricV2' CVSS data
             # Make sure they are removed from our db.
             db.CVEDoc.collection.remove({'_id': cve_id}, safe=False)
             print 'x',
