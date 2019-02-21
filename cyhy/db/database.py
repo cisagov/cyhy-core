@@ -872,13 +872,16 @@ class RequestDoc(RootDoc):
         return parents
 
     def get_all_intersections(self, cidrs):
-        results = OrderedDict() #{request: IPSet of intersections}
-        owners = self.get_all_owners()
-        for owner in owners:
-            request = self.find_one({'_id':owner})
-            intersection = request.networks & cidrs
+        results = OrderedDict()  # {request: IPSet of intersections}
+        all_requests = self.collection.aggregate([{'$match':
+                                                   {'networks': {'$ne': []}}},
+                                                  {'$sort': {'_id': 1}}],
+                                                 cursor={})
+        for request in all_requests:
+            intersection = netaddr.IPSet(request['networks']) & cidrs
             if intersection:
-                results[request] = intersection
+                request_doc = self.find_one({'_id': request['_id']})
+                results[request_doc] = intersection
         return results
 
     def add_children(self, db, child_ids):
