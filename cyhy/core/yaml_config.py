@@ -55,7 +55,10 @@ class YamlConfig:
             self.logger.info('Loading configuration from {!s}'
                              .format(self.config_filename))
             with open(self.config_filename, 'r') as stream:
-                config = yaml.load(stream)
+                # The loader must now be explicitly specified to avoid
+                # a warning message.  See here for more details:
+                # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
+                config = yaml.load(stream, Loader=yaml.FullLoader)
 
                 if YamlConfig.VERSION not in config:
                     raise KeyError(
