@@ -107,6 +107,7 @@ class VulnTicketManager(object):
         new_notification = self.__db.NotificationDoc()
         new_notification['ticket_id'] = ticket['_id']
         new_notification['ticket_owner'] = ticket['owner']
+        new_notification['generated_for'] = list()
         new_notification.save()
 
     def open_ticket(self, vuln, reason):
@@ -177,7 +178,10 @@ class VulnTicketManager(object):
 
         new_ticket.save()
         self.__mark_seen(new_ticket)
-        self.__create_notification(new_ticket)
+
+        # Create notifications for Highs (3) or Criticals (4)
+        if new_ticket['details']['severity'] > 2:
+            self.__create_notification(new_ticket)
 
     def close_tickets(self):
         if self.__closing_time == None:
