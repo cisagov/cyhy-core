@@ -39,7 +39,8 @@ def db_from_connection(uri, name):
     con = MongoClient(host=uri, tz_aware=True)
     con.register([RequestDoc, SnapshotDoc, HostDoc, TallyDoc,
                  HostScanDoc, PortScanDoc, VulnScanDoc, TicketDoc,
-                 ScorecardDoc, CVEDoc, ReportDoc, SystemControlDoc, PlaceDoc, HireDoc])
+                 ScorecardDoc, CVEDoc, ReportDoc, SystemControlDoc, PlaceDoc,
+                 HireDoc, NotificationDoc])
     db = con[name]
     return db
 
@@ -1407,7 +1408,7 @@ class NotificationDoc(RootDoc):
         'ticket_owner': basestring,
         'generated_for': list
     }
-    required_fields = ['ticket_id', 'ticket_owner', 'generated_for']
+    required_fields = ['ticket_id', 'ticket_owner']
     default_values = {
         'generated_for': []
     }
