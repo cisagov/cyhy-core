@@ -32,13 +32,15 @@ REPORT_COLLECTION = 'reports'
 SYSTEM_CONTROL_COLLECTION = 'control'
 PLACE_COLLECTION = 'places'
 NEW_HIRE_COLLECTION = 'new_hire'
+NOTIFICATION_COLLECTION = 'notifications'
 CONTROL_DOC_POLL_INTERVAL = 5 # seconds
 
 def db_from_connection(uri, name):
     con = MongoClient(host=uri, tz_aware=True)
     con.register([RequestDoc, SnapshotDoc, HostDoc, TallyDoc,
                  HostScanDoc, PortScanDoc, VulnScanDoc, TicketDoc,
-                 ScorecardDoc, CVEDoc, ReportDoc, SystemControlDoc, PlaceDoc, HireDoc])
+                 ScorecardDoc, CVEDoc, ReportDoc, SystemControlDoc, PlaceDoc,
+                 HireDoc, NotificationDoc])
     db = con[name]
     return db
 
@@ -1394,6 +1396,22 @@ class PlaceDoc(RootDoc):
     }
     required_fields = ['_id', 'name', 'class', 'state', 'state_fips', 'state_name', 'country', 'country_name']
     default_values = {}
+
+    def get_indices(self):
+        return tuple()
+
+
+class NotificationDoc(RootDoc):
+    __collection__ = NOTIFICATION_COLLECTION
+    structure = {
+        'ticket_id': ObjectId,
+        'ticket_owner': basestring,
+        'generated_for': list
+    }
+    required_fields = ['ticket_id', 'ticket_owner']
+    default_values = {
+        'generated_for': []
+    }
 
     def get_indices(self):
         return tuple()
