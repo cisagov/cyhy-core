@@ -107,6 +107,11 @@ class VulnTicketManager(object):
         new_notification = self.__db.NotificationDoc()
         new_notification['ticket_id'] = ticket['_id']
         new_notification['ticket_owner'] = ticket['owner']
+        # generated_for is initialized as an empty list.  Whenever a
+        # notification PDF is generated using this NotificationDoc
+        # (by cyhy-reports), the owner _id for that PDF is added to the
+        # generated_for list.  It's a list because the same NotificationDoc
+        # can get used in both a parent and a descendant PDF.
         new_notification['generated_for'] = list()
         new_notification.save()
 
