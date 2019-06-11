@@ -16,7 +16,7 @@ MAX_PORTS_COUNT = 65535
 class VulnTicketManager(object):
     """Handles the opening and closing of tickets for a vulnerability scan"""
 
-    def __init__(self, db, source, reopen_days=90):
+    def __init__(self, db, source, reopen_days=90, manual_scan=False):
         self.__db = db
         self.__ips = IPSet()
         self.__ports = set()
@@ -25,6 +25,7 @@ class VulnTicketManager(object):
         self.__seen_ticket_ids = set()
         self.__closing_time = None
         self.__reopen_delta = relativedelta.relativedelta(days=-reopen_days)
+        self.__manual_scan = manual_scan
 
     @property
     def ips(self):
@@ -82,6 +83,8 @@ class VulnTicketManager(object):
                     "reference": None,
                     "delta": [{"from": True, "to": False, "key": "false_positive"}],
                 }
+                if self.__manual_scan:
+                    event["manual"] = True
                 ticket["events"].append(event)
 
     def __generate_ticket_details(self, vuln, ticket, check_for_changes=True):
@@ -113,6 +116,8 @@ class VulnTicketManager(object):
                     "reference": vuln["_id"],
                     "delta": delta,
                 }
+                if self.__manual_scan:
+                    event["manual"] = True
                 ticket["events"].append(event)
 
         ticket["details"] = new_details
@@ -157,6 +162,8 @@ class VulnTicketManager(object):
                 "reason": reason,
                 "reference": vuln["_id"],
             }
+            if self.__manual_scan:
+                event["manual"] = True
             prev_open_ticket["events"].append(event)
             prev_open_ticket.save()
             self.__mark_seen(prev_open_ticket)
@@ -185,6 +192,8 @@ class VulnTicketManager(object):
                 "reason": reason,
                 "reference": vuln["_id"],
             }
+            if self.__manual_scan:
+                event["manual"] = True
             reopen_ticket["events"].append(event)
             reopen_ticket["time_closed"] = None
             reopen_ticket["open"] = True
@@ -213,6 +222,8 @@ class VulnTicketManager(object):
             "reason": reason,
             "reference": vuln["_id"],
         }
+        if self.__manual_scan:
+            event["manual"] = True
         new_ticket["events"].append(event)
 
         if (
@@ -224,6 +235,8 @@ class VulnTicketManager(object):
                 "reason": "No associated owner",
                 "reference": None,
             }
+            if self.__manual_scan:
+                event["manual"] = True
             new_ticket["events"].append(event)
             new_ticket["open"] = False
             new_ticket["time_closed"] = self.__closing_time
@@ -286,6 +299,8 @@ class VulnTicketManager(object):
                     "reason": reason,
                     "reference": None,
                 }
+            if self.__manual_scan:
+                event["manual"] = True
             ticket["events"].append(event)
             ticket.save()
 
@@ -350,6 +365,8 @@ class IPPortTicketManager(object):
                     "reference": None,
                     "delta": [{"from": True, "to": False, "key": "false_positive"}],
                 }
+                if self.__manual_scan:
+                    event["manual"] = True
                 ticket["events"].append(event)
 
     def __handle_ticket_port_closed(self, ticket, closing_time):
@@ -374,6 +391,8 @@ class IPPortTicketManager(object):
                 "reason": reason,
                 "reference": None,
             }
+        if self.__manual_scan:
+            event["manual"] = True
         ticket["events"].append(event)
         ticket.save()
 
@@ -474,6 +493,8 @@ class IPTicketManager(object):
                     "reference": None,
                     "delta": [{"from": True, "to": False, "key": "false_positive"}],
                 }
+                if self.__manual_scan:
+                    event["manual"] = True
                 ticket["events"].append(event)
 
     def close_tickets(self, closing_time=None):
@@ -509,6 +530,8 @@ class IPTicketManager(object):
                     "reason": reason,
                     "reference": None,
                 }
+            if self.__manual_scan:
+                event["manual"] = True
             ticket["events"].append(event)
             ticket.save()
 
