@@ -1,10 +1,9 @@
 __all__ = ["VulnTicketManager", "IPPortTicketManager", "IPTicketManager"]
 
 from collections import defaultdict
-from datetime import datetime
 from dateutil import relativedelta, tz
 
-from cyhy.core.common import *
+from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
 from cyhy.db.queries import close_tickets_pl, clear_latest_vulns_pl
 from cyhy.db import database
 from cyhy.util import util
@@ -70,8 +69,9 @@ class VulnTicketManager(object):
         return delta
 
     def __check_false_positive_expiration(self, ticket, time):
-        # if false_positive expiration date has been reached, flip false_positive flag and add CHANGED event
-        if ticket["false_positive"] == True:
+        # if false_positive expiration date has been reached,
+        # flip false_positive flag and add CHANGED event
+        if ticket["false_positive"] is True:
             fp_effective_date, fp_expiration_date = ticket.false_positive_dates
             if fp_expiration_date < time:
                 ticket["false_positive"] = False
@@ -96,7 +96,7 @@ class VulnTicketManager(object):
             "name": vuln["plugin_name"],
         }
 
-        if vuln.has_key("cve"):
+        if "cve" in vuln:
             cve_doc = self.__db.CVEDoc.find_one({"_id": vuln["cve"]})
             if cve_doc:
                 new_details["score_source"] = "nvd"
@@ -131,7 +131,7 @@ class VulnTicketManager(object):
         new_notification.save()
 
     def open_ticket(self, vuln, reason):
-        if self.__closing_time == None or self.__closing_time < vuln["time"]:
+        if self.__closing_time is None or self.__closing_time < vuln["time"]:
             self.__closing_time = vuln["time"]
 
         # search for previous open ticket that matches
@@ -204,7 +204,7 @@ class VulnTicketManager(object):
         self.__generate_ticket_details(vuln, new_ticket, check_for_changes=False)
 
         host = self.__db.HostDoc.get_by_ip(vuln["ip"])
-        if host != None:
+        if host is not None:
             new_ticket["loc"] = host["loc"]
 
         event = {
@@ -236,7 +236,7 @@ class VulnTicketManager(object):
             self.__create_notification(new_ticket)
 
     def close_tickets(self):
-        if self.__closing_time == None:
+        if self.__closing_time is None:
             self.__closing_time = (
                 util.utcnow()
             )  # You don't have to go home but you can't stay here
@@ -270,7 +270,7 @@ class VulnTicketManager(object):
             self.__check_false_positive_expiration(
                 ticket, self.__closing_time.replace(tzinfo=tz.tzutc())
             )  # explicitly set to UTC (see CYHY-286)
-            if ticket["false_positive"] == True:
+            if ticket["false_positive"] is True:
                 event = {
                     "time": self.__closing_time,
                     "action": TICKET_EVENT.UNVERIFIED,
@@ -337,8 +337,9 @@ class IPPortTicketManager(object):
         self.__seen_ip_port[ip].add(port)
 
     def __check_false_positive_expiration(self, ticket, closing_time):
-        # if false_positive expiration date has been reached, flip false_positive flag and add CHANGED event
-        if ticket["false_positive"] == True:
+        # if false_positive expiration date has been reached,
+        # flip false_positive flag and add CHANGED event
+        if ticket["false_positive"] is True:
             fp_effective_date, fp_expiration_date = ticket.false_positive_dates
             if fp_expiration_date < closing_time:
                 ticket["false_positive"] = False
@@ -357,7 +358,7 @@ class IPPortTicketManager(object):
         self.__check_false_positive_expiration(
             ticket, closing_time.replace(tzinfo=tz.tzutc())
         )  # explicitly set to UTC (see CYHY-286)
-        if ticket["false_positive"] == True:
+        if ticket["false_positive"] is True:
             event = {
                 "time": closing_time,
                 "action": TICKET_EVENT.UNVERIFIED,
@@ -377,16 +378,16 @@ class IPPortTicketManager(object):
         ticket.save()
 
     def close_tickets(self, closing_time=None):
-        if closing_time == None:
+        if closing_time is None:
             closing_time = util.utcnow()
         ip_ints = [int(i) for i in self.__ips]
 
         all_ports_scanned = len(self.__ports) == MAX_PORTS_COUNT
 
         if all_ports_scanned:
-            # if all the ports were scanned we have to opportunity to close port 0 tickets
-            # this can only be done if no ports are open for an IP.  Otherwise they can
-            # be closed in the VULNSCAN stage.
+            # if all the ports were scanned we have an opportunity to close port 0
+            # tickets. This can only be done if no ports are open for an IP.
+            # Otherwise they can be closed in the VULNSCAN stage.
             ips_with_no_open_ports = self.__ips - IPSet(self.__seen_ip_port.keys())
             ips_with_no_open_ports_ints = [int(i) for i in ips_with_no_open_ports]
 
@@ -460,8 +461,9 @@ class IPTicketManager(object):
         self.__seen_ips.add(ip)
 
     def __check_false_positive_expiration(self, ticket, closing_time):
-        # if false_positive expiration date has been reached, flip false_positive flag and add CHANGED event
-        if ticket["false_positive"] == True:
+        # if false_positive expiration date has been reached,
+        # flip false_positive flag and add CHANGED event
+        if ticket["false_positive"] is True:
             fp_effective_date, fp_expiration_date = ticket.false_positive_dates
             if fp_expiration_date < closing_time:
                 ticket["false_positive"] = False
@@ -475,7 +477,7 @@ class IPTicketManager(object):
                 ticket["events"].append(event)
 
     def close_tickets(self, closing_time=None):
-        if closing_time == None:
+        if closing_time is None:
             closing_time = util.utcnow()
 
         not_up_ips = self.__ips - self.__seen_ips
@@ -491,7 +493,7 @@ class IPTicketManager(object):
             self.__check_false_positive_expiration(
                 ticket, closing_time.replace(tzinfo=tz.tzutc())
             )  # explicitly set to UTC (see CYHY-286)
-            if ticket["false_positive"] == True:
+            if ticket["false_positive"] is True:
                 event = {
                     "time": closing_time,
                     "action": TICKET_EVENT.UNVERIFIED,
