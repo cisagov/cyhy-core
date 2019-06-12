@@ -403,7 +403,7 @@ class IPPortTicketManager(object):
         all_ports_scanned = len(self.__ports) == MAX_PORTS_COUNT
 
         if all_ports_scanned:
-            # if all the ports were scanned we have an opportunity to close port 0
+            # If all the ports were scanned we have an opportunity to close port 0
             # tickets. This can only be done if no ports are open for an IP.
             # Otherwise they can be closed in the VULNSCAN stage.
             ips_with_no_open_ports = self.__ips - IPSet(self.__seen_ip_port.keys())
