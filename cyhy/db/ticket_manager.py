@@ -250,9 +250,8 @@ class VulnTicketManager(object):
 
     def close_tickets(self):
         if self.__closing_time is None:
-            self.__closing_time = (
-                util.utcnow()
-            )  # You don't have to go home but you can't stay here
+            # You don't have to go home but you can't stay here
+            self.__closing_time = util.utcnow()
         ip_ints = [int(i) for i in self.__ips]
 
         # find tickets that are covered by this scan, but weren't just touched
