@@ -364,8 +364,6 @@ class IPPortTicketManager(object):
                     "reference": None,
                     "delta": [{"from": True, "to": False, "key": "false_positive"}],
                 }
-                if self.__manual_scan:
-                    event["manual"] = True
                 ticket["events"].append(event)
 
     def __handle_ticket_port_closed(self, ticket, closing_time):
@@ -390,8 +388,6 @@ class IPPortTicketManager(object):
                 "reason": reason,
                 "reference": None,
             }
-        if self.__manual_scan:
-            event["manual"] = True
         ticket["events"].append(event)
         ticket.save()
 
@@ -492,8 +488,6 @@ class IPTicketManager(object):
                     "reference": None,
                     "delta": [{"from": True, "to": False, "key": "false_positive"}],
                 }
-                if self.__manual_scan:
-                    event["manual"] = True
                 ticket["events"].append(event)
 
     def close_tickets(self, closing_time=None):
@@ -529,8 +523,6 @@ class IPTicketManager(object):
                     "reason": reason,
                     "reference": None,
                 }
-            if self.__manual_scan:
-                event["manual"] = True
             ticket["events"].append(event)
             ticket.save()
 
