@@ -17,7 +17,7 @@ then
 	usage
 else
 	# Skeleton to allow additional options at a later date if so desired.
-  while getopts ":h-:" opt; do
+	while getopts ":h-:" opt; do
 		case "${opt}" in
 			"h")
 				usage
