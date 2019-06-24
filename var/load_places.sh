@@ -8,7 +8,7 @@ set -o errexit
 set -o pipefail
 
 function usage() {
-	echo "Usage:  ${0##*/} database_section"
+	echo "Usage:  ${0##*/} [database_section]"
 	exit 0
 }
 
