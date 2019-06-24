@@ -9,8 +9,8 @@ set -o pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DB_SECTION=$1
-DATA_ROOT_URI="https://www.usgs.gov"
-DATA_FILE_WEBPAGE_URL="${DATA_ROOT_URI}/core-science-systems/ngp/board-on-geographic-names/download-gnis-data"
+DATA_FILE_WEBPAGE_URL="https://www.usgs.gov/core-science-systems/ \
+ngp/board-on-geographic-names/download-gnis-data"
 PLACES_HTML="places_data.html"
 TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
@@ -33,19 +33,20 @@ do
 	PLACE_FILE=$(ls ${TMP_PLACES_DIR}/*"${PLACE_TYPE}"*.txt)
 	echo "Importing ${PLACE_FILE} to DB..."
 	if [ -z "${DB_SECTION}" ]; then
-		"${SCRIPT_DIR}/GNIS_data_import.py" "${PLACE_FILE}"
+		echo "${SCRIPT_DIR}/GNIS_data_import.py" "${PLACE_FILE}"
 	else
-		"${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" "${PLACE_FILE}"
+		echo "${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" "${PLACE_FILE}"
 	fi
 done
 
 # import ADDL_CYHY_PLACES file into the DB
 echo "Importing ${ADDL_PLACES_FILE} to DB..."
 if [ -z "${DB_SECTION}" ]; then
-	"${SCRIPT_DIR}/GNIS_data_import.py" "${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
+	echo "${SCRIPT_DIR}/GNIS_data_import.py" "${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
 else
-	"${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" "${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
+	echo "${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" \
+		"${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
 fi
 
 # clean up
-#rm -R ${TMP_PLACES_DIR}
+rm -R ${TMP_PLACES_DIR}
