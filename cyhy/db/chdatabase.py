@@ -113,6 +113,23 @@ class CHDatabase(object):
         tally.transfer(prev_stage, prev_status, new_stage, new_status, 1)
         tally.save()
 
+    def update_host_priority_and_reschedule(self, ip):
+        """Update host priority and reschedule host."""
+        owner = self.__db.HostDoc.get_owner_of_ip(ip)
+        request = self.__db.RequestDoc.collection.find_one(
+            {"_id": owner}, {"scheduler": True}
+        )
+        if request and request.get("scheduler") is not None:
+            host = self.__db.HostDoc.get_by_ip(ip)
+            if host is None:
+                self.__logger.warning(
+                    "Could not find %s in database during "
+                    "update_host_priority_and_reschedule call" % ip
+                )
+                return
+            self.__scheduler.schedule(host)
+            host.save()  # save changes made by the scheduler
+
     def transition_host(self, ip, up=None, reason=None, has_open_ports=None, was_failure=False):
         '''Attempts to move host from one state to another.
            returns (HostDoc, state_changed)
