@@ -72,11 +72,28 @@ def main():
     if args["--force"] is not True:
         with open(args['PLACES_FILE'], 'r') as f:
             header_line = f.readline().strip().decode('utf-8-sig')
-            first_line = f.readline()
+            # Get the first record.
+            while True:
+                first_line = f.readline()
+                if first_line[0] == "#":
+                    pass
+                else:
+                    break
+
+            # Get the last record
             f.seek(-2, 2)
-            while f.read(1) != '\n':
-                f.seek(-2, 1)
-            last_line = f.readline()
+            while True:
+                while f.read(1) != '\n':
+                    f.seek(-2, 1)
+                pos = f.tell()
+                last_line = f.readline()
+                if last_line[0] == "#":
+                    f.seek(pos)
+                    f.seek(-1,1)
+                    pass
+                else:
+                    break
+
             first_record = first_line.split("|")
             last_record = last_line.split("|")
             if (db.places.find_one({"_id": long(first_record[0])}) is not None
