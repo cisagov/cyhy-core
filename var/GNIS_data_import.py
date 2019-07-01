@@ -3,7 +3,7 @@
 '''Import GNIS and FIPS data into the places collection.
 
 Usage:
-  COMMAND_NAME [--section SECTION] PLACES_FILE
+  COMMAND_NAME [--section SECTION] [--force] PLACES_FILE
   COMMAND_NAME (-h | --help)
   COMMAND_NAME --version
 
@@ -11,14 +11,17 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
+  --force                        Force loading the provided file.
 
 '''
 
-import sys
-import re
-from docopt import docopt
-from cyhy.db import database
 import csv
+import re
+import sys
+
+from docopt import docopt
+
+from cyhy.db import database
 
 # If you have fewer places than this, re-load the places collection
 MINIMUM_PLACE_COUNT = 200000
@@ -66,23 +69,33 @@ def main():
     args = docopt(__doc__, version='v0.0.1')
     db = database.db_from_config(args['--section'])
 
-    places_count = db.places.count()
-    if places_count > MINIMUM_PLACE_COUNT:
-        print 'EXITING without importing any documents.'
-        print 'The places collection already has {} documents loaded.'.format(places_count)
-        sys.exit(0)
+    if args["--force"] is not True:
+        with open(args['PLACES_FILE'], 'r') as f:
+            header_line = f.readline().strip().decode('utf-8-sig')
+            first_line = f.readline()
+            f.seek(-2, 2)
+            while f.read(1) != '\n':
+                f.seek(-2, 1)
+            last_line = f.readline()
+            first_record = first_line.split("|")
+            last_record = last_line.split("|")
+            if (db.places.find_one({"_id": long(first_record[0])}) is not None
+                and db.places.find_one({"_id": long(last_record[0])}) is not None):
+                print 'EXITING without importing any documents.'
+                print 'The places collection already has {} loaded.'.format(args['PLACES_FILE'])
+                sys.exit(0)
 
-    place_file = open(args['PLACES_FILE'], 'r')
-    header_line = place_file.readline().strip().decode('utf-8-sig')     # Files downloaded from geonames.usgs.gov are UTF8-BOM
-    csv_reader = csv.reader(place_file, delimiter='|')
+    with open(args['PLACES_FILE'], 'r') as place_file:
+        header_line = place_file.readline().strip().decode('utf-8-sig')     # Files downloaded from geonames.usgs.gov are UTF8-BOM
+        csv_reader = csv.reader(place_file, delimiter='|')
 
-    if header_line == GOVT_UNITS_HEADER:
-        import_govt_units(db, csv_reader)
-    elif header_line == POP_PLACES_HEADER:
-        import_populated_places(db, csv_reader)     # IMPORTANT: This import must be done AFTER import_govt_units()
-    else:
-        print 'ERROR: Unknown header line found in: {}'.format(args['PLACES_FILE'])
-        sys.exit(-1)
+        if header_line == GOVT_UNITS_HEADER:
+            import_govt_units(db, csv_reader)
+        elif header_line == POP_PLACES_HEADER:
+            import_populated_places(db, csv_reader)     # IMPORTANT: This import must be done AFTER import_govt_units()
+        else:
+            print 'ERROR: Unknown header line found in: {}'.format(args['PLACES_FILE'])
+            sys.exit(-1)
 
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
     # sys.exit(0)
