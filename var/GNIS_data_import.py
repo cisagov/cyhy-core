@@ -11,7 +11,7 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
-  --force                        Force loading the provided file.
+  --force                        Force loading of the provided file.
 
 """
 
@@ -23,7 +23,7 @@ from docopt import docopt
 
 from cyhy.db import database
 
-# Data file source: https://geonames.usgs.gov/domestic/download_data.htm
+# Data file source: https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data
 GOVT_UNITS_HEADER = "FEATURE_ID|UNIT_TYPE|COUNTY_NUMERIC|COUNTY_NAME|STATE_NUMERIC|STATE_ALPHA|STATE_NAME|COUNTRY_ALPHA|COUNTRY_NAME|FEATURE_NAME"
 POP_PLACES_HEADER = "FEATURE_ID|FEATURE_NAME|FEATURE_CLASS|STATE_ALPHA|STATE_NUMERIC|COUNTY_NAME|COUNTY_NUMERIC|PRIMARY_LAT_DMS|PRIM_LONG_DMS|PRIM_LAT_DEC|PRIM_LONG_DEC|SOURCE_LAT_DMS|SOURCE_LONG_DMS|SOURCE_LAT_DEC|SOURCE_LONG_DEC|ELEV_IN_M|ELEV_IN_FT|MAP_NAME|DATE_CREATED|DATE_EDITED"
 
