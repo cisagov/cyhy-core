@@ -69,41 +69,41 @@ def main():
     args = docopt(__doc__, version='v0.0.1')
     db = database.db_from_config(args['--section'])
 
-    if args["--force"] is not True:
-        with open(args['PLACES_FILE'], 'r') as f:
-            header_line = f.readline().strip().decode('utf-8-sig')
+    with open(args['PLACES_FILE'], 'r') as place_file:
+        header_line = place_file.readline().strip().decode('utf-8-sig')     # Files downloaded from geonames.usgs.gov are UTF8-BOM
+
+        if args["--force"] is not True:
+            marker = place_file.tell()
             # Get the first record.
             while True:
-                first_line = f.readline()
+                first_line = place_file.readline()
                 if first_line[0] == "#":
                     pass
                 else:
                     break
 
             # Get the last record
-            f.seek(-2, 2)
+            place_file.seek(-2, 2)
             while True:
-                while f.read(1) != '\n':
-                    f.seek(-2, 1)
-                pos = f.tell()
-                last_line = f.readline()
+                while place_file.read(1) != '\n' and marker < place_file.tell():
+                    place_file.seek(-2, 1)
+                pos = place_file.tell()
+                last_line = place_file.readline()
                 if last_line[0] == "#":
-                    f.seek(pos)
-                    f.seek(-1,1)
+                    place_file.seek(pos)
+                    place_file.seek(-1,1)
                     pass
                 else:
                     break
 
-            first_record = first_line.split("|")
-            last_record = last_line.split("|")
-            if (db.places.find_one({"_id": long(first_record[0])}) is not None
-                and db.places.find_one({"_id": long(last_record[0])}) is not None):
+            if (db.places.find_one({"_id": long(first_line.split("|")[0])}) is not None
+                and db.places.find_one({"_id": long(last_line.split("|")[0])}) is not None):
                 print 'EXITING without importing any documents.'
                 print 'The places collection already has {} loaded.'.format(args['PLACES_FILE'])
                 sys.exit(0)
 
-    with open(args['PLACES_FILE'], 'r') as place_file:
-        header_line = place_file.readline().strip().decode('utf-8-sig')     # Files downloaded from geonames.usgs.gov are UTF8-BOM
+            place_file.seek(marker)
+
         csv_reader = csv.reader(place_file, delimiter='|')
 
         if header_line == GOVT_UNITS_HEADER:
