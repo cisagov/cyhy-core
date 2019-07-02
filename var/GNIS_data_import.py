@@ -27,10 +27,16 @@ from cyhy.db import database
 GOVT_UNITS_HEADER = 'FEATURE_ID|UNIT_TYPE|COUNTY_NUMERIC|COUNTY_NAME|STATE_NUMERIC|STATE_ALPHA|STATE_NAME|COUNTRY_ALPHA|COUNTRY_NAME|FEATURE_NAME'
 POP_PLACES_HEADER = 'FEATURE_ID|FEATURE_NAME|FEATURE_CLASS|STATE_ALPHA|STATE_NUMERIC|COUNTY_NAME|COUNTY_NUMERIC|PRIMARY_LAT_DMS|PRIM_LONG_DMS|PRIM_LAT_DEC|PRIM_LONG_DEC|SOURCE_LAT_DMS|SOURCE_LONG_DMS|SOURCE_LAT_DEC|SOURCE_LONG_DEC|ELEV_IN_M|ELEV_IN_FT|MAP_NAME|DATE_CREATED|DATE_EDITED'
 
+# Exit if file appears to already have been loaded.
+def exit_if_imported(fname):
+    print 'EXITING without importing any documents.'
+    print 'The places collection already has {} loaded.'.format(fname)
+    sys.exit(0)
+
 # Check if the file has already been loaded by seeing if the first and last
 # records are already in the database.
 # NOTE: This method is entirely reliant on Python 2 file reading behavior.
-def check_if_imported(f, type):
+def is_imported(db, f, type):
     # GOVT_UNITS
     if type == 0:
         name_idx = 9
@@ -51,7 +57,7 @@ def check_if_imported(f, type):
     f.seek(-2, 2)
     # Get the last record
     while True:
-        while f.read(1) != '\n' and marker < place_file.tell():
+        while f.read(1) != '\n' and marker < f.tell():
             f.seek(-2, 1)  # Seek to the byte before the one we just read.
         pos = f.tell()
         last_data_line = f.readline()
@@ -63,15 +69,14 @@ def check_if_imported(f, type):
         else:
             break
 
-    first_record = first_data_line.split("|")
-    last_record = last_data_line.split("|")
+    first_record = first_data_line.strip().split("|")
+    last_record = last_data_line.strip().split("|")
     if (db.PlaceDoc.find_one({"_id": long(first_record[0]), "name": first_record[name_idx]}) is not None
         and db.PlaceDoc.find_one({"_id": long(last_record[0]), "name": last_record[name_idx]}) is not None):
-        print 'EXITING without importing any documents.'
-        print 'The places collection already has {} loaded.'.format(args['PLACES_FILE'])
-        sys.exit(0)
+        return True
 
     f.seek(marker)
+    return False
 
 def import_govt_units(db, csv_reader):
     for line in csv_reader:
@@ -118,11 +123,13 @@ def main():
 
         if header_line == GOVT_UNITS_HEADER:
             if args["--force"] is not True:
-                check_if_imported(place_file, 0)
+                if is_imported(db, place_file, 0):
+                    exit_if_imported(args["PLACES_FILE"])
             import_govt_units(db, csv_reader)
         elif header_line == POP_PLACES_HEADER:
             if args["--force"] is not True:
-                check_if_imported(place_file, 1)
+                if is_imported(db, place_file, 1):
+                    exit_if_imported(args["PLACES_FILE"])
             import_populated_places(db, csv_reader)     # IMPORTANT: This import must be done AFTER import_govt_units()
         else:
             print 'ERROR: Unknown header line found in: {}'.format(args['PLACES_FILE'])
