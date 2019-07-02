@@ -82,8 +82,9 @@ def main():
                 else:
                     break
 
-            # Get the last record
+            # Seek to the second to last byte in the file (to avoid any trailing newline).
             place_file.seek(-2, 2)
+            # Get the last record
             while True:
                 while place_file.read(1) != '\n' and marker < place_file.tell():
                     place_file.seek(-2, 1)  # Seek to the byte before the one we just read.
