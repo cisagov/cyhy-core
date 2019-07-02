@@ -41,7 +41,7 @@ def is_imported(db, f, type):
     This check is done by seeing if the first and last records are already in
     the database.
     NOTE: This method is entirely reliant on Python 2 file reading behavior.
-     """
+    """
     # GOVT_UNITS
     if type == 0:
         header = GOVT_UNITS_HEADER
