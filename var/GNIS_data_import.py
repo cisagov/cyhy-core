@@ -69,12 +69,15 @@ def main():
     with open(args['PLACES_FILE'], 'r') as place_file:
         header_line = place_file.readline().strip().decode('utf-8-sig')     # Files downloaded from geonames.usgs.gov are UTF8-BOM
 
+        # Check if the file has already been loaded by seeing if the first and last
+        # records are already in the database.
+        # NOTE: This method is entirely reliant on Python 2 file reading behavior.
         if args["--force"] is not True:
             marker = place_file.tell()
             # Get the first record.
             while True:
                 first_line = place_file.readline()
-                if first_line[0] == "#":
+                if first_line[0] == "#":    # Skip commented out lines.
                     pass
                 else:
                     break
@@ -83,10 +86,11 @@ def main():
             place_file.seek(-2, 2)
             while True:
                 while place_file.read(1) != '\n' and marker < place_file.tell():
-                    place_file.seek(-2, 1)
+                    place_file.seek(-2, 1)  # Seek to the byte before the one we just read.
                 pos = place_file.tell()
                 last_line = place_file.readline()
-                if last_line[0] == "#":
+                if last_line[0] == "#": # Skip commented out lines.
+                    # Reset location to one byte before the line just read.
                     place_file.seek(pos)
                     place_file.seek(-1,1)
                     pass
