@@ -2,8 +2,9 @@
 
 __all__ = ["GeoLocDB"]
 
-import sys
 import os
+import sys
+
 import geoip2.database
 
 GEODB_FILE = "GeoIP2-City.mmdb"
