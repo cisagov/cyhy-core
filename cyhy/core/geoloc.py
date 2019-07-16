@@ -1,22 +1,27 @@
 #!/usr/bin/env python
 
-__all__ = ['GeoLocDB']
+__all__ = ["GeoLocDB"]
 
+import os
 import sys
-import os 
-import geoip2.database 
 
-GEODB_CITY_PATHS = ['/usr/share/GeoIP/GeoLite2-City.mmdb', '/usr/local/share/GeoIP/GeoLite2-City.mmdb']
+import geoip2.database
+
+GEODB_FILE = "GeoIP2-City.mmdb"
+GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
+
 
 class GeoLocDB(object):
     def __init__(self, database_path=None):
         if not database_path:
-            for path in GEODB_CITY_PATHS:
+            for path in [path + GEODB_FILE for path in GEODB_CITY_PATHS]:
                 if os.path.exists(path):
                     database_path = path
                     break
             else:
-                raise Exception('No GeoIP databases found.  Search in:', GEODB_CITY_PATHS)
+                raise Exception(
+                    "No GeoIP databases found.  Search in:", GEODB_CITY_PATHS
+                )
         self.__reader = geoip2.database.Reader(database_path)
 
     def lookup(self, ip):
