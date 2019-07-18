@@ -24,7 +24,7 @@ def main():
     geoip_db = GeoLocDB()
 
     for host in cyhy_db.HostDoc.find():
-        new_loc = geoip_db.lookup(host.ip
+        new_loc = geoip_db.lookup(host.ip)
         if new_loc != host["loc"]:
             host["loc"] = new_loc
             host.save()
