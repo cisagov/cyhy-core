@@ -10,24 +10,47 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
+import logging
+
 from docopt import docopt
 import geoip2.database
 import pymongo
 
-from cyhy.db import database
 from cyhy.core.geoloc import GeoLocDB
+from cyhy.db import database
+from cyhy.util import util
+
+logger = logging.getLogger("cyhy-geoip")
+LOG_FILE = "/var/log/cyhy/geoip.log"
+util.setup_logging(logging.INFO, filename=LOG_FILE)
+
 
 def main():
-    args = docopt(__doc__, version='v0.0.1')
+    args = docopt(__doc__, version="v0.0.1")
 
-    cyhy_db = database.db_from_config(args['--section'])
+    cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
+    logger.info("Beginning update of GeoIP data in hosts collection")
+
+    total_updated = 0
     for host in cyhy_db.HostDoc.find():
-        new_loc = geoip_db.lookup(host.ip)
+        new_loc = list(geoip_db.lookup(host.ip))
         if new_loc != host["loc"]:
             host["loc"] = new_loc
             host.save()
+            total_updated += 1
+            logger.info(
+                "Host %s location changed from [%s, %s] to [%s, %s]",
+                host["ip"],
+                str(host["loc"][0]),
+                str(host["loc"][1]),
+                str(new_loc[0]),
+                str(new_loc[1]),
+            )
 
-if __name__=='__main__':
+    logger.info("Finished update with %d records changed", total_updated)
+
+
+if __name__ == "__main__":
     main()
