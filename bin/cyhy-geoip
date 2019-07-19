@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Cyber-Hygiene GeoIP maintenance tool.
+"""Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
   cyhy-geoip [--section SECTION]
@@ -38,19 +38,20 @@ def main():
         # lookup() returns a tuple but the host object stores it as a list
         new_loc = list(geoip_db.lookup(host.ip))
         if new_loc != host["loc"]:
+            old_loc = host["loc"]
             host["loc"] = new_loc
             host.save()
             total_updated += 1
             logger.info(
                 "Host %s location changed from [%s, %s] to [%s, %s]",
                 host["ip"],
-                str(host["loc"][0]),
-                str(host["loc"][1]),
+                str(old_loc[0]),
+                str(old_loc[1]),
                 str(new_loc[0]),
                 str(new_loc[1]),
             )
 
-    logger.info("Finished update with %d records changed", total_updated)
+    logger.info("Finished update with %d record(s) changed", total_updated)
 
 
 if __name__ == "__main__":
