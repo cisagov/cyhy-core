@@ -35,6 +35,7 @@ def main():
 
     total_updated = 0
     for host in cyhy_db.HostDoc.find():
+        # lookup() returns a tuple but the host object stores it as a list
         new_loc = list(geoip_db.lookup(host.ip))
         if new_loc != host["loc"]:
             host["loc"] = new_loc
