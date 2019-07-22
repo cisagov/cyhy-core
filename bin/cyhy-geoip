@@ -20,6 +20,8 @@ from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util
 
+UPDATE_INCREMENT = 100000
+
 logger = logging.getLogger("cyhy-geoip")
 LOG_FILE = "/var/log/cyhy/geoip.log"
 util.setup_logging(logging.INFO, filename=LOG_FILE)
@@ -31,10 +33,14 @@ def main():
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
-    logger.info("Beginning update of GeoIP data in hosts collection")
+    hosts = cyhy_db.HostDoc.find()
+    total_documents = hosts.count()
 
+    logger.info("Beginning update of GeoIP data in hosts collection [{} document(s)]".format(total_documents))
+
+    total_processed = 0
     total_updated = 0
-    for host in cyhy_db.HostDoc.find():
+    for host in hosts:
         # lookup() returns a tuple but the host object stores it as a list
         new_loc = list(geoip_db.lookup(host.ip))
         if new_loc != host["loc"]:
@@ -50,6 +56,10 @@ def main():
                 str(new_loc[0]),
                 str(new_loc[1]),
             )
+
+        total_processed += 1
+        if (total_processed % UPDATE_INCREMENT) == 0:
+            logger.info("Processed {}/{} host documents".format(total_processed, total_documents))
 
     logger.info("Finished update with %d record(s) changed", total_updated)
 
