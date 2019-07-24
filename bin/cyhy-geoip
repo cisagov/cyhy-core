@@ -2,12 +2,16 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
-  cyhy-geoip [--section SECTION]
+  cyhy-geoip [options]
   cyhy-geoip (-h | --help)
+  cyhy-geoip --version
 
 Options:
   -h --help                      Show this screen.
+  --version                      Show version.
+
   -s SECTION --section=SECTION   Configuration section to use.
+  -d --debug                     Output debug messages
 """
 
 import logging
@@ -55,9 +59,6 @@ SPECIAL_RANGES = {
     "IPv4 Reserved": munge(ip.IPV4_RESERVED),
 }
 
-logger = logging.getLogger("cyhy-geoip")
-util.setup_logging(logging.INFO, filename=LOG_FILE)
-
 
 def get_special_intersections(cidrs):
     results = {}  # {request: IPSet of intersections}
@@ -71,6 +72,13 @@ def get_special_intersections(cidrs):
 def main():
     args = docopt(__doc__, version="v0.0.1")
 
+    logger = logging.getLogger("cyhy-geoip")
+    if args["--debug"]:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+    util.setup_logging(log_level, filename=LOG_FILE)
+
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
@@ -78,7 +86,7 @@ def main():
     total_documents = hosts.count()
 
     logger.info(
-        "Beginning update of GeoIP data in hosts collection [{} document(s)]".format(
+        "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
             total_documents
         )
     )
@@ -89,7 +97,7 @@ def main():
         intersections = get_special_intersections(IPSet([host["ip"]]))
         if intersections:
             for request, intersecting_cidrs in intersections.iteritems():
-                logger.info(
+                logger.warning(
                     "{} found in private IP block {}".format(
                         str(intersecting_cidrs), request
                     )
@@ -101,24 +109,24 @@ def main():
             host["loc"] = new_loc
             host.save()
             total_updated += 1
-            logger.info(
-                "Host %s location changed from [%s, %s] to [%s, %s]",
+            logger.debug(
+                "Host {!r} location changed from [{!r}, {!r}] to [{!r}, {!r}]",
                 host["ip"],
-                str(old_loc[0]),
-                str(old_loc[1]),
-                str(new_loc[0]),
-                str(new_loc[1]),
+                old_loc[0],
+                old_loc[1],
+                new_loc[0],
+                new_loc[1],
             )
 
         total_processed += 1
         if (total_processed % UPDATE_INCREMENT) == 0:
             logger.info(
-                "Processed {}/{} host documents ({} updated)".format(
+                "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
                     total_processed, total_documents, total_updated
                 )
             )
 
-    logger.info("Finished update with %d record(s) updated", total_updated)
+    logger.info("Finished update with {} record(s) updated".format(total_updated))
 
 
 if __name__ == "__main__":
