@@ -98,7 +98,7 @@ def main():
         if intersections:
             for request, intersecting_cidrs in intersections.iteritems():
                 logger.warning(
-                    "{!r} found in private IP block {!r}".format(
+                    "{!s} found in private IP block {!s}".format(
                         intersecting_cidrs, request
                     )
                 )
@@ -110,7 +110,7 @@ def main():
             host.save()
             total_updated += 1
             logger.debug(
-                "Host {!r} location changed from [{1[0]!r}, {1[1]!r}] to [{2[0]!r}, {2[1]!r}]",
+                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]",
                 host["ip"],
                 old_loc,
                 new_loc,
