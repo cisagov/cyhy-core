@@ -98,8 +98,8 @@ def main():
         if intersections:
             for request, intersecting_cidrs in intersections.iteritems():
                 logger.warning(
-                    "{} found in private IP block {}".format(
-                        str(intersecting_cidrs), request
+                    "{!r} found in private IP block {!r}".format(
+                        intersecting_cidrs, request
                     )
                 )
         # lookup() returns a tuple but the host object stores it as a list
@@ -110,12 +110,10 @@ def main():
             host.save()
             total_updated += 1
             logger.debug(
-                "Host {!r} location changed from [{!r}, {!r}] to [{!r}, {!r}]",
+                "Host {!r} location changed from [{1[0]!r}, {1[1]!r}] to [{2[0]!r}, {2[1]!r}]",
                 host["ip"],
-                old_loc[0],
-                old_loc[1],
-                new_loc[0],
-                new_loc[1],
+                old_loc,
+                new_loc,
             )
 
         total_processed += 1
@@ -126,7 +124,7 @@ def main():
                 )
             )
 
-    logger.info("Finished update with {} record(s) updated".format(total_updated))
+    logger.info("Finished update with {:,} record(s) updated".format(total_updated))
 
 
 if __name__ == "__main__":
