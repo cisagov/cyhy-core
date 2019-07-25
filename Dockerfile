@@ -1,4 +1,4 @@
-FROM python:2
+FROM python:2-stretch
 MAINTAINER Mark Feldhousen <mark.feldhousen@hq.dhs.gov>
 ENV CYHY_HOME="/home/cyhy" \
     CYHY_ETC="/etc/cyhy" \
@@ -13,8 +13,8 @@ VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 # Install MongoDB shell from official repository
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
-RUN echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
-RUN echo "deb http://ftp.debian.org/debian jessie-backports main" | tee /etc/apt/sources.list.d/jessie-backports.list
+RUN echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+RUN echo "deb http://ftp.debian.org/debian stretch-backports main" | tee /etc/apt/sources.list.d/stretch-backports.list
 RUN apt-get update
 RUN apt-get install -y mongodb-org-shell
 

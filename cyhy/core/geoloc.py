@@ -7,6 +7,7 @@ import os
 import sys
 
 import geoip2.database
+from geoip2.errors import AddressNotFoundError
 
 GEODB_FILES = ["GeoIP2-City.mmdb", "GeoLite2-City.mmdb"]
 GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
@@ -31,8 +32,11 @@ class GeoLocDB(object):
         self.__reader = geoip2.database.Reader(database_path)
 
     def lookup(self, ip):
-        # ip is expected to be a netaddr.IPAddress
-        response = self.__reader.city(str(ip))
-        if response == None:
+        try:
+            # ip is expected to be a netaddr.IPAddress
+            response = self.__reader.city(str(ip))
+            if response == None:
+                return (None, None)
+            return (response.location.longitude, response.location.latitude)
+        except AddressNotFoundError:
             return (None, None)
-        return (response.location.longitude, response.location.latitude)
