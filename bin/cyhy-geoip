@@ -110,10 +110,9 @@ def main():
             host.save()
             total_updated += 1
             logger.debug(
-                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]",
-                host["ip"],
-                old_loc,
-                new_loc,
+                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
+                    host["ip"], old_loc, new_loc
+                )
             )
 
         total_processed += 1
