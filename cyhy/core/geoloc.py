@@ -2,19 +2,24 @@
 
 __all__ = ["GeoLocDB"]
 
+import itertools
 import os
 import sys
 
 import geoip2.database
 
-GEODB_FILE = "GeoIP2-City.mmdb"
+GEODB_FILES = ["GeoIP2-City.mmdb", "GeoLite2-City.mmdb"]
 GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
-
+GEODB_FILE_PATHS = []
+# Ensure that the order in GEODB_FILES is used for searching
+for file in GEODB_FILES:
+    for path in GEODB_CITY_PATHS:
+        GEODB_FILE_PATHS.append(path + file)
 
 class GeoLocDB(object):
     def __init__(self, database_path=None):
         if not database_path:
-            for path in [path + GEODB_FILE for path in GEODB_CITY_PATHS]:
+            for file in GEODB_FILE_PATHS:
                 if os.path.exists(path):
                     database_path = path
                     break
