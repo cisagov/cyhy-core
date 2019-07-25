@@ -123,7 +123,7 @@ def main():
                 )
             )
 
-    logger.info("Finished update with {:,} record(s) updated".format(total_updated))
+    logger.info("Finished update with {:,} document(s) updated".format(total_updated))
 
 
 if __name__ == "__main__":
