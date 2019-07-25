@@ -16,6 +16,7 @@ for file in GEODB_FILES:
     for path in GEODB_CITY_PATHS:
         GEODB_FILE_PATHS.append(path + file)
 
+
 class GeoLocDB(object):
     def __init__(self, database_path=None):
         if not database_path:
