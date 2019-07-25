@@ -2,7 +2,6 @@
 
 __all__ = ["GeoLocDB"]
 
-import itertools
 import os
 import sys
 
@@ -21,8 +20,8 @@ class GeoLocDB(object):
     def __init__(self, database_path=None):
         if not database_path:
             for file in GEODB_FILE_PATHS:
-                if os.path.exists(path):
-                    database_path = path
+                if os.path.exists(file):
+                    database_path = file
                     break
             else:
                 raise Exception(
