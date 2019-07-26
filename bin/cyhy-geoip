@@ -2,39 +2,106 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
-  cyhy-geoip [--section SECTION]
+  cyhy-geoip [options]
   cyhy-geoip (-h | --help)
+  cyhy-geoip --version
 
 Options:
   -h --help                      Show this screen.
+  --version                      Show version.
+
   -s SECTION --section=SECTION   Configuration section to use.
+  -d --debug                     Output debug messages.
 """
 
 import logging
 
 from docopt import docopt
-import geoip2.database
+from netaddr import ip, IPNetwork, IPRange, IPSet
 import pymongo
 
 from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util
 
-logger = logging.getLogger("cyhy-geoip")
+
+def munge(network_list):
+    """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
+
+    Args:
+        network_list: A Python tuple or list containing IPNetwork and IPRange objects
+
+    Returns:
+        An IPSet corresponding to the Python tuple or list that was passed
+        in.
+    """
+    fixed_list = []
+    for net in network_list:
+        # IPSet doesn't like it when an IPRange appears in the tuple
+        # or list in its constructor.  It only likes IPNetworks.
+        if isinstance(net, IPRange):
+            fixed_list.extend(net.cidrs())
+        else:
+            fixed_list.append(net)
+    return IPSet(fixed_list)
+
+
+UPDATE_INCREMENT = 100000
 LOG_FILE = "/var/log/cyhy/geoip.log"
-util.setup_logging(logging.INFO, filename=LOG_FILE)
+# Only IPV4_LOOPBACK and IPV4_RESERVED need to be munged, since the
+# others are not lists or tuples
+SPECIAL_RANGES = {
+    "IPv4 Loopback": IPSet(ip.IPV4_LOOPBACK),
+    "IPv4 Private": munge(ip.IPV4_PRIVATE),
+    "IPv4 Link Local": IPSet(ip.IPV4_LINK_LOCAL),
+    "IPv4 Multicast": IPSet(ip.IPV4_MULTICAST),
+    "IPv4 6 to 4": IPSet(ip.IPV4_6TO4),
+    "IPv4 Reserved": munge(ip.IPV4_RESERVED),
+}
+
+
+def get_special_intersections(cidrs):
+    results = dict()  # {request: IPSet of intersections}
+    for description, special_set in SPECIAL_RANGES.items():
+        intersection = special_set & cidrs
+        if intersection:
+            results[description] = intersection
+    return results
 
 
 def main():
     args = docopt(__doc__, version="v0.0.1")
 
+    logger = logging.getLogger("cyhy-geoip")
+    if args["--debug"]:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+    util.setup_logging(log_level, filename=LOG_FILE)
+
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
-    logger.info("Beginning update of GeoIP data in hosts collection")
+    hosts = cyhy_db.HostDoc.find()
+    total_documents = hosts.count()
 
+    logger.info(
+        "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
+            total_documents
+        )
+    )
+
+    total_processed = 0
     total_updated = 0
-    for host in cyhy_db.HostDoc.find():
+    for host in hosts:
+        intersections = get_special_intersections(IPSet([host["ip"]]))
+        if intersections:
+            for request, intersecting_cidrs in intersections.iteritems():
+                logger.warning(
+                    "{!s} found in private IP block {!s}".format(
+                        intersecting_cidrs, request
+                    )
+                )
         # lookup() returns a tuple but the host object stores it as a list
         new_loc = list(geoip_db.lookup(host.ip))
         if new_loc != host["loc"]:
@@ -42,16 +109,21 @@ def main():
             host["loc"] = new_loc
             host.save()
             total_updated += 1
-            logger.info(
-                "Host %s location changed from [%s, %s] to [%s, %s]",
-                host["ip"],
-                str(old_loc[0]),
-                str(old_loc[1]),
-                str(new_loc[0]),
-                str(new_loc[1]),
+            logger.debug(
+                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
+                    host["ip"], old_loc, new_loc
+                )
             )
 
-    logger.info("Finished update with %d record(s) changed", total_updated)
+        total_processed += 1
+        if (total_processed % UPDATE_INCREMENT) == 0:
+            logger.info(
+                "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
+                    total_processed, total_documents, total_updated
+                )
+            )
+
+    logger.info("Finished update with {:,} document(s) updated".format(total_updated))
 
 
 if __name__ == "__main__":
