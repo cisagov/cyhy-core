@@ -11,7 +11,7 @@ Options:
   --version                      Show version.
 
   -s SECTION --section=SECTION   Configuration section to use.
-  -d --debug                     Output debug messages
+  -d --debug                     Output debug messages.
 """
 
 import logging
@@ -25,25 +25,25 @@ from cyhy.db import database
 from cyhy.util import util
 
 
-def munge(x):
+def munge(network_list):
     """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
 
     Args:
-        x: A Python tuple or list containing IPNetwork and IPRange objects
+        network_list: A Python tuple or list containing IPNetwork and IPRange objects
 
     Returns:
         An IPSet corresponding to the Python tuple or list that was passed
         in.
     """
-    ans = []
-    for i in x:
+    fixed_list = []
+    for net in network_list:
         # IPSet doesn't like it when an IPRange appears in the tuple
         # or list in its constructor.  It only likes IPNetworks.
-        if isinstance(i, IPRange):
-            ans.extend(i.cidrs())
+        if isinstance(net, IPRange):
+            fixed_list.extend(net.cidrs())
         else:
-            ans.append(i)
-    return IPSet(ans)
+            fixed_list.append(net)
+    return IPSet(fixed_list)
 
 
 UPDATE_INCREMENT = 100000
@@ -61,7 +61,7 @@ SPECIAL_RANGES = {
 
 
 def get_special_intersections(cidrs):
-    results = {}  # {request: IPSet of intersections}
+    results = dict()  # {request: IPSet of intersections}
     for description, special_set in SPECIAL_RANGES.items():
         intersection = special_set & cidrs
         if intersection:
