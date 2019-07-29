@@ -1,9 +1,12 @@
 FROM python:2-stretch
-MAINTAINER Mark Feldhousen <mark.feldhousen@hq.dhs.gov>
+LABEL maintainer="Mark Feldhousen <mark.feldhousen@hq.dhs.gov>"
+LABEL description="Docker image to provide tools for interacting with the CyHy \
+production database."
 ENV CYHY_HOME="/home/cyhy" \
     CYHY_ETC="/etc/cyhy" \
     CYHY_CORE_SRC="/usr/src/cyhy-core" \
     PYTHONIOENCODING="utf8"
+ARG maxmind_license
 
 RUN groupadd --system cyhy && useradd --system --gid cyhy cyhy
 
@@ -22,7 +25,7 @@ WORKDIR ${CYHY_CORE_SRC}
 
 COPY . ${CYHY_CORE_SRC}
 RUN pip install --no-cache-dir .[dev]
-RUN var/geoipupdate.sh
+RUN var/geoipupdate.sh $maxmind_license
 RUN ln -snf ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
 RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
 
