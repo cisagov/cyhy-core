@@ -2,9 +2,8 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
+  cyhy-geoip check ADDRESS [options]
   cyhy-geoip [options]
-  cyhy-geoip (-h | --help)
-  cyhy-geoip --version
 
 Options:
   -h --help                      Show this screen.
@@ -17,7 +16,8 @@ Options:
 import logging
 
 from docopt import docopt
-from netaddr import ip, IPNetwork, IPRange, IPSet
+from netaddr import ip, IPAddress, IPNetwork, IPRange, IPSet
+from netaddr.core import AddrFormatError
 import pymongo
 
 from cyhy.core.geoloc import GeoLocDB
@@ -69,15 +69,21 @@ def get_special_intersections(cidrs):
     return results
 
 
+def check_special_intersections(ip_addr):
+    intersections = get_special_intersections(IPSet([ip_addr]))
+    if intersections:
+        print "Problem with provided address:"
+        for group, intersecting_cidrs in intersections.iteritems():
+            print "\t{!s} found in {!s}".format(
+                intersecting_cidrs.pop(), group
+            )
+        return True
+
+    return False
+
+
 def main():
     args = docopt(__doc__, version="v0.0.1")
-
-    logger = logging.getLogger("cyhy-geoip")
-    if args["--debug"]:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-    util.setup_logging(log_level, filename=LOG_FILE)
 
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
@@ -85,45 +91,63 @@ def main():
     hosts = cyhy_db.HostDoc.find()
     total_documents = hosts.count()
 
-    logger.info(
-        "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
-            total_documents
-        )
-    )
+    if args["check"]:
+        ip_to_check = IPAddress(args["ADDRESS"])
 
-    total_processed = 0
-    total_updated = 0
-    for host in hosts:
-        intersections = get_special_intersections(IPSet([host["ip"]]))
-        if intersections:
-            for request, intersecting_cidrs in intersections.iteritems():
-                logger.warning(
-                    "{!s} found in private IP block {!s}".format(
-                        intersecting_cidrs, request
+        if not check_special_intersections(ip_to_check):
+            cyhy_info = cyhy_db.HostDoc.find_one({"_id": long(ip_to_check)})
+            geoip_loc = list(geoip_db.lookup(ip_to_check))
+
+            if cyhy_info["loc"] != geoip_loc:
+                print "{!s} location in CyHy database does not match GeoIP2 database.".format(
+                    ip_to_check
+                )
+                print "\tCyHy Location (long, lat): {}".format(cyhy_info["loc"])
+                print "\tGeoIP2 Location (long, lat): {}".format(geoip_loc)
+            else:
+                print "CyHy location is up to date."
+    else:
+        logger = logging.getLogger("cyhy-geoip")
+        if args["--debug"]:
+            log_level = logging.DEBUG
+        else:
+            log_level = logging.INFO
+        util.setup_logging(log_level, filename=LOG_FILE)
+
+        logger.info(
+            "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
+                total_documents
+            )
+        )
+
+        total_processed = 0
+        total_updated = 0
+        for host in hosts:
+            check_special_intersections([host["ip"]])
+            # lookup() returns a tuple but the host object stores it as a list
+            new_loc = list(geoip_db.lookup(host.ip))
+            if new_loc != host["loc"]:
+                old_loc = host["loc"]
+                host["loc"] = new_loc
+                host.save()
+                total_updated += 1
+                logger.debug(
+                    "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
+                        host["ip"], old_loc, new_loc
                     )
                 )
-        # lookup() returns a tuple but the host object stores it as a list
-        new_loc = list(geoip_db.lookup(host.ip))
-        if new_loc != host["loc"]:
-            old_loc = host["loc"]
-            host["loc"] = new_loc
-            host.save()
-            total_updated += 1
-            logger.debug(
-                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
-                    host["ip"], old_loc, new_loc
-                )
-            )
 
-        total_processed += 1
-        if (total_processed % UPDATE_INCREMENT) == 0:
-            logger.info(
-                "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
-                    total_processed, total_documents, total_updated
+            total_processed += 1
+            if (total_processed % UPDATE_INCREMENT) == 0:
+                logger.info(
+                    "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
+                        total_processed, total_documents, total_updated
+                    )
                 )
-            )
 
-    logger.info("Finished update with {:,} document(s) updated".format(total_updated))
+        logger.info(
+            "Finished update with {:,} document(s) updated".format(total_updated)
+        )
 
 
 if __name__ == "__main__":
