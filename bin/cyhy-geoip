@@ -69,6 +69,19 @@ def get_special_intersections(cidrs):
     return results
 
 
+def check_special_intersections(ip_addr):
+    intersections = get_special_intersections(IPSet([ip_addr]))
+    if intersections:
+        print "Problem with provided address:"
+        for group, intersecting_cidrs in intersections.iteritems():
+            print "\t{!s} found in {!s}".format(
+                intersecting_cidrs.pop(), group
+            )
+        return True
+
+    return False
+
+
 def main():
     args = docopt(__doc__, version="v0.0.1")
 
@@ -81,13 +94,7 @@ def main():
     if args["check"]:
         ip_to_check = IPAddress(args["ADDRESS"])
 
-        intersections = get_special_intersections(IPSet([ip_to_check]))
-        if intersections:
-            for request, intersecting_cidrs in intersections.iteritems():
-                print "{!s} found in private IP block {!s}".format(
-                    intersecting_cidrs, request
-                )
-        else:
+        if not check_special_intersections(ip_to_check):
             cyhy_info = cyhy_db.HostDoc.find_one({"_id": long(ip_to_check)})
             geoip_loc = list(geoip_db.lookup(ip_to_check))
 
@@ -116,14 +123,7 @@ def main():
         total_processed = 0
         total_updated = 0
         for host in hosts:
-            intersections = get_special_intersections(IPSet([host["ip"]]))
-            if intersections:
-                for request, intersecting_cidrs in intersections.iteritems():
-                    logger.warning(
-                        "{!s} found in private IP block {!s}".format(
-                            intersecting_cidrs, request
-                        )
-                    )
+            check_special_intersections([host["ip"]])
             # lookup() returns a tuple but the host object stores it as a list
             new_loc = list(geoip_db.lookup(host.ip))
             if new_loc != host["loc"]:
