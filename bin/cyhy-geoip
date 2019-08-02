@@ -2,7 +2,7 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
-  cyhy-geoip check <ip> [options]
+  cyhy-geoip check ADDRESS [options]
   cyhy-geoip [options]
 
 Options:
@@ -79,9 +79,7 @@ def main():
     total_documents = hosts.count()
 
     if args["check"]:
-        ip_to_check = IPAddress(args["<ip>"])
-        cyhy_info = cyhy_db.HostDoc.find_one({"_id": long(ip_to_check)})
-        geoip_loc = list(geoip_db.lookup(ip_to_check))
+        ip_to_check = IPAddress(args["ADDRESS"])
 
         intersections = get_special_intersections(IPSet([ip_to_check]))
         if intersections:
@@ -90,6 +88,9 @@ def main():
                     intersecting_cidrs, request
                 )
         else:
+            cyhy_info = cyhy_db.HostDoc.find_one({"_id": long(ip_to_check)})
+            geoip_loc = list(geoip_db.lookup(ip_to_check))
+
             if cyhy_info["loc"] != geoip_loc:
                 print "{!s} location in CyHy database does not match GeoIP2 database.".format(
                     ip_to_check
