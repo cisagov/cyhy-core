@@ -2,8 +2,8 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
-  cyhy-geoip check ADDRESS [options]
-  cyhy-geoip [options]
+  cyhy-geoip [options] check ADDRESS
+  cyhy-geoip [options] update [OWNER]
 
 Options:
   -h --help                      Show this screen.
@@ -74,9 +74,7 @@ def check_special_intersections(ip_addr):
     if intersections:
         print "Problem with provided address:"
         for group, intersecting_cidrs in intersections.iteritems():
-            print "\t{!s} found in {!s}".format(
-                intersecting_cidrs.pop(), group
-            )
+            print "\t{!s} found in {!s}".format(intersecting_cidrs.pop(), group)
         return True
 
     return False
@@ -87,9 +85,6 @@ def main():
 
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
-
-    hosts = cyhy_db.HostDoc.find()
-    total_documents = hosts.count()
 
     if args["check"]:
         ip_to_check = IPAddress(args["ADDRESS"])
@@ -114,11 +109,23 @@ def main():
             log_level = logging.INFO
         util.setup_logging(log_level, filename=LOG_FILE)
 
-        logger.info(
-            "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
+    if args["update"]:
+        query = None
+        if len(args["OWNER"]) != 0:
+            query = {"owner": args["OWNER"][0]}
+        hosts = cyhy_db.hosts.find(query)
+        total_documents = hosts.count()
+
+        if query is None:
+            header_message = "Beginning update of GeoIP data all hosts in the hosts collection [{:,} document(s)]".format(
                 total_documents
             )
-        )
+        else:
+            header_message = "Beginning update of GeoIP data for all hosts belonging to '{:s}' [{:,} document(s)]".format(
+                args["OWNER"][0], total_documents
+            )
+
+        logger.info(header_message)
 
         total_processed = 0
         total_updated = 0
