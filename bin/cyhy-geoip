@@ -109,7 +109,6 @@ def main():
             log_level = logging.INFO
         util.setup_logging(log_level, filename=LOG_FILE)
 
-    if args["update"]:
         query = None
         if len(args["OWNER"]) != 0:
             query = {"owner": args["OWNER"][0]}
