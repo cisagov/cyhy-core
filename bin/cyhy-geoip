@@ -86,6 +86,14 @@ def main():
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
+    # Set up logging
+    logger = logging.getLogger("cyhy-geoip")
+    if args["--debug"]:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+    util.setup_logging(log_level, filename=LOG_FILE)
+
     if args["check"]:
         ip_to_check = IPAddress(args["ADDRESS"])
 
@@ -101,14 +109,7 @@ def main():
                 print "\tGeoIP2 Location (long, lat): {}".format(geoip_loc)
             else:
                 print "CyHy location is up to date."
-    else:
-        logger = logging.getLogger("cyhy-geoip")
-        if args["--debug"]:
-            log_level = logging.DEBUG
-        else:
-            log_level = logging.INFO
-        util.setup_logging(log_level, filename=LOG_FILE)
-
+    elif args["update"]:
         query = None
         if len(args["OWNER"]) != 0:
             query = {"owner": args["OWNER"][0]}
@@ -116,7 +117,7 @@ def main():
         total_documents = hosts.count()
 
         if query is None:
-            header_message = "Beginning update of GeoIP data all hosts in the hosts collection [{:,} document(s)]".format(
+            header_message = "Beginning update of GeoIP data for all hosts [{:,} document(s)]".format(
                 total_documents
             )
         else:
