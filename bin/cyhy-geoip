@@ -111,9 +111,9 @@ def main():
                 print "CyHy location is up to date."
     elif args["update"]:
         query = None
-        if len(args["OWNER"]) != 0:
-            query = {"owner": args["OWNER"][0]}
-        hosts = cyhy_db.hosts.find(query)
+        if args["OWNER"]) is not None:
+            query = {"owner": args["OWNER"]}
+        hosts = cyhy_db.HostDoc.find(query)
         total_documents = hosts.count()
 
         if query is None:
@@ -122,7 +122,7 @@ def main():
             )
         else:
             header_message = "Beginning update of GeoIP data for all hosts belonging to '{:s}' [{:,} document(s)]".format(
-                args["OWNER"][0], total_documents
+                args["OWNER"], total_documents
             )
 
         logger.info(header_message)
@@ -130,9 +130,9 @@ def main():
         total_processed = 0
         total_updated = 0
         for host in hosts:
-            check_special_intersections([host["ip"]])
+            check_special_intersections(host["ip"])
             # lookup() returns a tuple but the host object stores it as a list
-            new_loc = list(geoip_db.lookup(host.ip))
+            new_loc = list(geoip_db.lookup(host["ip"]))
             if new_loc != host["loc"]:
                 old_loc = host["loc"]
                 host["loc"] = new_loc
