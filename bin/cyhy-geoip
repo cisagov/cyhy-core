@@ -6,7 +6,7 @@ Usage:
   cyhy-geoip [options] update [--force] [OWNER] ...
 
 Arguments:
-  ADDRESS  The IP address to check and see if GeoIP data is the latest.
+  ADDRESS  The IP address whose GeoIP data should be checked.
   OWNER    An owner whose hosts should have GeoIP data refreshed.
 
 Options:
@@ -165,7 +165,9 @@ def do_update(chdb, gidb, force_update=False, owner=None):
                 )
             )
 
-    logger.info("Finished update with {:,} document(s) updated".format(total_updated))
+    logger.info(
+        "Finished update with {:,} document(s) updated".format(total_updated)
+    )
 
 
 def main():
