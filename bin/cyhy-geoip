@@ -2,15 +2,20 @@
 """Cyber Hygiene GeoIP maintenance tool.
 
 Usage:
-  cyhy-geoip check ADDRESS [options]
-  cyhy-geoip [options]
+  cyhy-geoip [options] check ADDRESS
+  cyhy-geoip [options] update [--live-only] [OWNER] ...
+
+Arguments:
+  ADDRESS  The IP address whose GeoIP data should be checked.
+  OWNER    An owner whose hosts should have GeoIP data refreshed.
 
 Options:
-  -h --help                      Show this screen.
+  -h, --help                     Show this screen.
   --version                      Show version.
+  -s SECTION, --section=SECTION  Configuration section to use.
+  -d, --debug                    Output debug messages.
+  --live-only                    Update only hosts that are up.
 
-  -s SECTION --section=SECTION   Configuration section to use.
-  -d --debug                     Output debug messages.
 """
 
 import logging
@@ -29,11 +34,10 @@ def munge(network_list):
     """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
 
     Args:
-        network_list: A Python tuple or list containing IPNetwork and IPRange objects
+        network_list: A Python tuple or list containing IPNetwork and IPRange objects.
 
     Returns:
-        An IPSet corresponding to the Python tuple or list that was passed
-        in.
+        An IPSet corresponding to the Python tuple or list that was passed in.
     """
     fixed_list = []
     for net in network_list:
@@ -46,8 +50,14 @@ def munge(network_list):
     return IPSet(fixed_list)
 
 
+# How often do we output progress (every UPDATE_INCREMENT documents)
 UPDATE_INCREMENT = 100000
+
+# Logging core variables
+logger = logging.getLogger("cyhy-geoip")
 LOG_FILE = "/var/log/cyhy/geoip.log"
+DEFAULT_LOGGER_LEVEL = logging.INFO
+
 # Only IPV4_LOOPBACK and IPV4_RESERVED need to be munged, since the
 # others are not lists or tuples
 SPECIAL_RANGES = {
@@ -58,6 +68,16 @@ SPECIAL_RANGES = {
     "IPv4 6 to 4": IPSet(ip.IPV4_6TO4),
     "IPv4 Reserved": munge(ip.IPV4_RESERVED),
 }
+
+
+def logging_setup(debug_logging):
+    if debug_logging:
+        level = logging.DEBUG
+    else:
+        level = DEFAULT_LOGGER_LEVEL
+    util.setup_logging(level, filename=LOG_FILE)
+    # Only output if debug is enabled.  Skipped otherwise.
+    logger.debug("Debug logging enabled")
 
 
 def get_special_intersections(cidrs):
@@ -74,12 +94,76 @@ def check_special_intersections(ip_addr):
     if intersections:
         print "Problem with provided address:"
         for group, intersecting_cidrs in intersections.iteritems():
-            print "\t{!s} found in {!s}".format(
-                intersecting_cidrs.pop(), group
-            )
+            print "\t{!s} found in {!s}".format(intersecting_cidrs.pop(), group)
         return True
 
     return False
+
+
+def do_check(chdb, gidb, address):
+    ip_to_check = IPAddress(address)
+
+    if not check_special_intersections(ip_to_check):
+        cyhy_info = chdb.HostDoc.find_one({"_id": long(ip_to_check)})
+        geoip_loc = list(gidb.lookup(ip_to_check))
+
+        if cyhy_info["loc"] != geoip_loc:
+            print "{!s} location in CyHy database does not match GeoIP database.".format(
+                ip_to_check
+            )
+            print "\tCyHy Location (long, lat): {}".format(cyhy_info["loc"])
+            print "\tGeoIP Location (long, lat): {}".format(geoip_loc)
+        else:
+            print "CyHy location is up to date."
+
+
+def do_update(chdb, gidb, up_only=False, owner=None):
+    # Set up find query.
+    query = {}
+    if owner is not None:
+        query["owner"] = owner
+    if up_only:
+        query["state.up"] = True
+
+    hosts = chdb.HostDoc.find(query)
+    total_documents = hosts.count()
+
+    header_message = "Beginning update of GeoIP data for all {:s}hosts {:s}[{:,} document(s)]".format(
+        "live " if up_only else "",
+        "belonging to '{:s}' ".format(owner) if owner is not None else "",
+        total_documents
+    )
+
+    logger.info(header_message)
+
+    total_processed = 0
+    total_updated = 0
+    for host in hosts:
+        check_special_intersections(host["ip"])
+        # lookup() returns a tuple but the host object stores it as a list
+        new_loc = list(gidb.lookup(host["ip"]))
+        if new_loc != host["loc"]:
+            old_loc = host["loc"]
+            host["loc"] = new_loc
+            host.save()
+            total_updated += 1
+            logger.debug(
+                "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
+                    host["ip"], old_loc, new_loc
+                )
+            )
+
+        total_processed += 1
+        if (total_processed % UPDATE_INCREMENT) == 0:
+            logger.info(
+                "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
+                    total_processed, total_documents, total_updated
+                )
+            )
+
+    logger.info(
+        "Finished update with {:,} document(s) updated".format(total_updated)
+    )
 
 
 def main():
@@ -88,66 +172,17 @@ def main():
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB()
 
-    hosts = cyhy_db.HostDoc.find()
-    total_documents = hosts.count()
+    # Set up logging
+    logging_setup(args["--debug"])
 
     if args["check"]:
-        ip_to_check = IPAddress(args["ADDRESS"])
-
-        if not check_special_intersections(ip_to_check):
-            cyhy_info = cyhy_db.HostDoc.find_one({"_id": long(ip_to_check)})
-            geoip_loc = list(geoip_db.lookup(ip_to_check))
-
-            if cyhy_info["loc"] != geoip_loc:
-                print "{!s} location in CyHy database does not match GeoIP2 database.".format(
-                    ip_to_check
-                )
-                print "\tCyHy Location (long, lat): {}".format(cyhy_info["loc"])
-                print "\tGeoIP2 Location (long, lat): {}".format(geoip_loc)
-            else:
-                print "CyHy location is up to date."
-    else:
-        logger = logging.getLogger("cyhy-geoip")
-        if args["--debug"]:
-            log_level = logging.DEBUG
+        do_check(cyhy_db, geoip_db, args["ADDRESS"])
+    elif args["update"]:
+        if len(args["OWNER"]) > 0:
+            for owner in args["OWNER"]:
+                do_update(cyhy_db, geoip_db, args["--live-only"], owner)
         else:
-            log_level = logging.INFO
-        util.setup_logging(log_level, filename=LOG_FILE)
-
-        logger.info(
-            "Beginning update of GeoIP data in hosts collection [{:,} document(s)]".format(
-                total_documents
-            )
-        )
-
-        total_processed = 0
-        total_updated = 0
-        for host in hosts:
-            check_special_intersections([host["ip"]])
-            # lookup() returns a tuple but the host object stores it as a list
-            new_loc = list(geoip_db.lookup(host.ip))
-            if new_loc != host["loc"]:
-                old_loc = host["loc"]
-                host["loc"] = new_loc
-                host.save()
-                total_updated += 1
-                logger.debug(
-                    "Host {0!s} location changed from [{1[0]!s}, {1[1]!s}] to [{2[0]!s}, {2[1]!s}]".format(
-                        host["ip"], old_loc, new_loc
-                    )
-                )
-
-            total_processed += 1
-            if (total_processed % UPDATE_INCREMENT) == 0:
-                logger.info(
-                    "Processed {:,}/{:,} host document(s) ({:,} updated)".format(
-                        total_processed, total_documents, total_updated
-                    )
-                )
-
-        logger.info(
-            "Finished update with {:,} document(s) updated".format(total_updated)
-        )
+            do_update(cyhy_db, geoip_db, args["--live-only"])
 
 
 if __name__ == "__main__":
