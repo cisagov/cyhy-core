@@ -3,7 +3,7 @@
 
 Usage:
   cyhy-geoip [options] check ADDRESS
-  cyhy-geoip [options] update [--force] [OWNER] ...
+  cyhy-geoip [options] update [--live-only] [OWNER] ...
 
 Arguments:
   ADDRESS  The IP address whose GeoIP data should be checked.
@@ -14,7 +14,7 @@ Options:
   --version                      Show version.
   -s SECTION, --section=SECTION  Configuration section to use.
   -d, --debug                    Output debug messages.
-  --force                        Update even if the host is not up.
+  --live-only                    Update only hosts that are up.
 
 """
 
@@ -117,12 +117,12 @@ def do_check(chdb, gidb, address):
             print "CyHy location is up to date."
 
 
-def do_update(chdb, gidb, force_update=False, owner=None):
+def do_update(chdb, gidb, up_only=False, owner=None):
     # Set up find query.
     query = {}
     if owner is not None:
         query["owner"] = owner
-    if not force_update:
+    if up_only:
         query["state.up"] = True
 
     hosts = chdb.HostDoc.find(query)
@@ -183,9 +183,9 @@ def main():
     elif args["update"]:
         if len(args["OWNER"]) > 0:
             for owner in args["OWNER"]:
-                do_update(cyhy_db, geoip_db, args["--force"], owner)
+                do_update(cyhy_db, geoip_db, args["--live-only"], owner)
         else:
-            do_update(cyhy_db, geoip_db, args["--force"])
+            do_update(cyhy_db, geoip_db, args["--live-only"])
 
 
 if __name__ == "__main__":
