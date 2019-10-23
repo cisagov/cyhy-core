@@ -76,9 +76,8 @@ def logging_setup(debug_logging):
     else:
         level = DEFAULT_LOGGER_LEVEL
     util.setup_logging(level, filename=LOG_FILE)
-    logger.debug(
-        "Debug logging enabled"
-    )  # Only output if debug is enabled.  Skipped otherwise.
+    # Only output if debug is enabled.  Skipped otherwise.
+    logger.debug("Debug logging enabled")
 
 
 def get_special_intersections(cidrs):

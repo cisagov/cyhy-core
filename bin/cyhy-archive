@@ -61,10 +61,10 @@ def get_db_info_from_config(config_section=None):
 
 
 def pause_commander(db):
-    PAUSE_ITERATION_LIMIT = 60  # number of iterations to wait before giving up
-    PAUSE_ITERATION_WAIT_SECONDS = (
-        30
-    )  # number of seconds to wait between each check to see if the commander has paused
+    # number of iterations to wait before giving up
+    PAUSE_ITERATION_LIMIT = 60
+    # number of seconds to wait between each check to see if the commander has paused
+    PAUSE_ITERATION_WAIT_SECONDS = 30
     pause_iteration_count = 0
 
     ch = CHDatabase(db)
@@ -121,12 +121,10 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
     today_str = curr_date.strftime("%Y%m%d")
 
     for collection_info in COLLECTIONS_TO_ARCHIVE:
-        db_collection = db[
-            collection_info["name"]
-        ]  # e.g. db_collection == db['HostScanDoc'] == db.HostScanDoc
-        collection_name = (
-            db_collection.collection.name
-        )  # e.g. collection_name == 'host_scans'
+        # e.g. db_collection == db['HostScanDoc'] == db.HostScanDoc
+        db_collection = db[collection_info["name"]]
+        # e.g. collection_name == 'host_scans'
+        collection_name = db_collection.collection.name
 
         # count documents in collection before archiving
         doc_counts["pre-archiving"][collection_name] = db_collection.find(
@@ -285,9 +283,8 @@ def main():
     logging_setup(args["--debug"])
     logger.info("cyhy-archive started")
     db = database.db_from_config(args["--section"])
-    parsed_db_uri = get_db_info_from_config(
-        args["--section"]
-    )  # creds needed in subprocess call to mongodump
+    # creds needed in subprocess call to mongodump
+    parsed_db_uri = get_db_info_from_config(args["--section"])
     if parsed_db_uri.port:
         db_host_port_name = "{}:{}/{}".format(
             parsed_db_uri.hostname, parsed_db_uri.port, db.name
