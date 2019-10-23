@@ -4,7 +4,7 @@ setup(
     name="cyhy-core",
     version="0.0.2",
     author="Mark Feldhousen Jr.",
-    author_email="mark.feldhousen@hq.dhs.gov",
+    author_email="mark.feldhousen@cisa.dhs.gov",
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,

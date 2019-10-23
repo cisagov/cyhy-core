@@ -43,7 +43,7 @@ def logging_setup(debug_logging):
     else:
         level = DEFAULT_LOGGER_LEVEL
     util.setup_logging(level, filename=LOG_FILE)
-    logger.debug('Debug logging enabled')       # Only output if debug in enabled.  Skipped outwise.
+    logger.debug('Debug logging enabled')       # Only output if debug is enabled.  Skipped outwise.
 
 def get_db_info_from_config(config_section=None):
     # NOTE: ConfigParser will choke if special characters ('%' or '?') appear in the URI
