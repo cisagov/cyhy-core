@@ -25,7 +25,9 @@ AGENCY_TYPE = Enumerator(
     "FEDERAL", "STATE", "LOCAL", "PRIVATE", "TRIBAL", "TERRITORIAL"
 )
 SCAN_TYPE = Enumerator("CYHY", "DNSSEC", "PHISHING")
-REPORT_TYPE = Enumerator("CYHY", "BOD", "CYBEX", "DNSSEC", "PHISHING")
+REPORT_TYPE = Enumerator(
+    "CYHY", "BOD", "CYBEX", "DNSSEC", "PHISHING", "CYHY_THIRD_PARTY"
+)
 REPORT_PERIOD = Enumerator("WEEKLY", "MONTHLY", "QUARTERLY")
 POC_TYPE = Enumerator("DISTRO", "TECHNICAL")  # addition for POC types
 CONTROL_ACTION = Enumerator("PAUSE", "STOP")
