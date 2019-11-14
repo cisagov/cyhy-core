@@ -12,25 +12,77 @@ from common_fixtures import database, ch_db
 from cyhy.core.common import *
 from cyhy.util import util
 
-#IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
-IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('172.20.20.20'), ip('10.0.0.2')]
-PORTS = [0,123,456,10123]
-SOURCE_IDS = [1,2,3]
-SOURCE_NESSUS = 'nessus'
-OWNER = 'TEST'
-PROTOCOLS = ['tcp']
-VULN_1 = {'ip':IPS[0], 'ip_int':long(IPS[0]), 'port':PORTS[0], 'protocol':'tcp', 'service':'ntp', 'source':SOURCE_NESSUS,
-    'plugin_id':SOURCE_IDS[0], 'owner':OWNER, 'severity':2, 'cvss_base_score':10.0, 'plugin_name':'Looks for stuff', '_id':ObjectId(),
-    'time':util.utcnow(), 'latest':True}
-VULN_2 = {'ip':IPS[1], 'ip_int':long(IPS[1]), 'port':PORTS[1], 'protocol':'tcp', 'service':'ntp', 'source':SOURCE_NESSUS,
-    'plugin_id':SOURCE_IDS[1], 'owner':OWNER, 'severity':2, 'cvss_base_score':10.0, 'plugin_name':'Looks for stuff', '_id':ObjectId(),
-    'time':util.utcnow(), 'latest':True}
-VULN_3 = {'ip':IPS[3], 'ip_int':long(IPS[3]), 'port':PORTS[2], 'protocol':'tcp', 'service':'ntp', 'source':SOURCE_NESSUS,
-    'plugin_id':SOURCE_IDS[1], 'owner':UNKNOWN_OWNER, 'severity':2, 'cvss_base_score':10.0, 'plugin_name':'Looks for stuff', '_id':ObjectId(),
-    'time':util.utcnow(), 'latest':True}
-VULN_4 = {'ip':IPS[1], 'ip_int':long(IPS[1]), 'port':PORTS[2], 'protocol':'udp', 'service':'ntp', 'source':SOURCE_NESSUS,
-    'plugin_id':SOURCE_IDS[1], 'owner':OWNER, 'severity':2, 'cvss_base_score':10.0, 'plugin_name':'Looks for stuff', '_id':ObjectId(),
-    'time':util.utcnow(), 'latest':True}
+# IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
+IPS = [ip("10.0.0.1"), ip("192.168.1.1"), ip("172.20.20.20"), ip("10.0.0.2")]
+PORTS = [0, 123, 456, 10123]
+SOURCE_IDS = [1, 2, 3]
+SOURCE_NESSUS = "nessus"
+OWNER = "TEST"
+PROTOCOLS = ["tcp"]
+VULN_1 = {
+    "ip": IPS[0],
+    "ip_int": long(IPS[0]),
+    "port": PORTS[0],
+    "protocol": "tcp",
+    "service": "ntp",
+    "source": SOURCE_NESSUS,
+    "plugin_id": SOURCE_IDS[0],
+    "owner": OWNER,
+    "severity": 2,
+    "cvss_base_score": 10.0,
+    "plugin_name": "Looks for stuff",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+VULN_2 = {
+    "ip": IPS[1],
+    "ip_int": long(IPS[1]),
+    "port": PORTS[1],
+    "protocol": "tcp",
+    "service": "ntp",
+    "source": SOURCE_NESSUS,
+    "plugin_id": SOURCE_IDS[1],
+    "owner": OWNER,
+    "severity": 2,
+    "cvss_base_score": 10.0,
+    "plugin_name": "Looks for stuff",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+VULN_3 = {
+    "ip": IPS[3],
+    "ip_int": long(IPS[3]),
+    "port": PORTS[2],
+    "protocol": "tcp",
+    "service": "ntp",
+    "source": SOURCE_NESSUS,
+    "plugin_id": SOURCE_IDS[1],
+    "owner": UNKNOWN_OWNER,
+    "severity": 2,
+    "cvss_base_score": 10.0,
+    "plugin_name": "Looks for stuff",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+VULN_4 = {
+    "ip": IPS[1],
+    "ip_int": long(IPS[1]),
+    "port": PORTS[2],
+    "protocol": "udp",
+    "service": "ntp",
+    "source": SOURCE_NESSUS,
+    "plugin_id": SOURCE_IDS[1],
+    "owner": OWNER,
+    "severity": 2,
+    "cvss_base_score": 10.0,
+    "plugin_name": "Looks for stuff",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
 
 
 @pytest.fixture
@@ -41,6 +93,7 @@ def vuln_ticket_manager1(database):
     vtm.source_ids = SOURCE_IDS
     return vtm
 
+
 @pytest.fixture
 def vuln_ticket_manager2(database):
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
@@ -49,49 +102,56 @@ def vuln_ticket_manager2(database):
     vtm.source_ids = SOURCE_IDS
     return vtm
 
+
 @pytest.fixture
 def vuln_ticket_manager3(database):
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
     return vtm
+
 
 @pytest.fixture
 def ip_port_ticket_manager1(database):
     ptm = IPPortTicketManager(database, PROTOCOLS)
     return ptm
 
+
 @pytest.fixture
 def ip_port_ticket_manager2(database):
     database.tickets.remove()
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
-    vtm.open_ticket(VULN_1, 'test vuln detected')
-    vtm.open_ticket(VULN_2, 'test vuln detected')
+    vtm.open_ticket(VULN_1, "test vuln detected")
+    vtm.open_ticket(VULN_2, "test vuln detected")
     ptm = IPPortTicketManager(database, PROTOCOLS)
     return ptm
-    
+
+
 @pytest.fixture
 def ip_port_ticket_manager3(database):
     database.tickets.remove()
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
-    vtm.open_ticket(VULN_1, 'test vuln detected')
-    vtm.open_ticket(VULN_2, 'test vuln detected')
-    vtm.open_ticket(VULN_4, 'test vuln detected')
+    vtm.open_ticket(VULN_1, "test vuln detected")
+    vtm.open_ticket(VULN_2, "test vuln detected")
+    vtm.open_ticket(VULN_4, "test vuln detected")
     ptm = IPPortTicketManager(database, PROTOCOLS)
     return ptm
-       
+
+
 @pytest.fixture
 def ip_ticket_manager1(database):
     ptm = IPTicketManager(database)
     return ptm
 
+
 @pytest.fixture
 def ip_ticket_manager2(database):
     database.tickets.remove()
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
-    vtm.open_ticket(VULN_1, 'test vuln detected')
-    vtm.open_ticket(VULN_2, 'test vuln detected')
+    vtm.open_ticket(VULN_1, "test vuln detected")
+    vtm.open_ticket(VULN_2, "test vuln detected")
     ptm = IPTicketManager(database)
     return ptm
-   
+
+
 @pytest.fixture
 def database_w_vulns(database):
     database.vuln_scans.remove()
@@ -99,7 +159,8 @@ def database_w_vulns(database):
         vuln = database.VulnScanDoc(v)
         vuln.save()
     return database
-   
+
+
 @pytest.fixture
 def database_w_udp_vulns(database):
     database.vuln_scans.remove()
@@ -108,268 +169,344 @@ def database_w_udp_vulns(database):
         vuln = database.VulnScanDoc(v)
         vuln.save()
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
-    vtm.open_ticket(VULN_1, 'test vuln detected')
-    vtm.open_ticket(VULN_2, 'test vuln detected')
-    vtm.open_ticket(VULN_4, 'test vuln detected')
+    vtm.open_ticket(VULN_1, "test vuln detected")
+    vtm.open_ticket(VULN_2, "test vuln detected")
+    vtm.open_ticket(VULN_4, "test vuln detected")
     return database
-        
-#@pytest.mark.parametrize(('sources'), [SOURCE_NESSUSS_1, SOURCE_NESSUSS_2, SOURCE_NESSUSS_3, SOURCE_NESSUSS_4], scope='class')
+
+
+# @pytest.mark.parametrize(('sources'), [SOURCE_NESSUSS_1, SOURCE_NESSUSS_2, SOURCE_NESSUSS_3, SOURCE_NESSUSS_4], scope='class')
 class TestVulnTickets:
     def test_clear_tickets(self, database):
-        print 'number of tickets to remove:', database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
-        assert database.tickets.count() == 0, 'tickets did not clear from database'
-    
+        assert database.tickets.count() == 0, "tickets did not clear from database"
+
     def test_add_one_ticket(self, database, vuln_ticket_manager1):
-        assert database.tickets.count() == 0, 'collection should be empty'
-        vuln_ticket_manager1.open_ticket(VULN_1, 'test vuln detected')
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':True}).count() == 1, 'ticket should be open'
+        assert database.tickets.count() == 0, "collection should be empty"
+        vuln_ticket_manager1.open_ticket(VULN_1, "test vuln detected")
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "ticket should be open"
         vuln_ticket_manager1.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1, 'ticket should still be open'
-        ticket = database.TicketDoc.find_one({'open':True})
-        assert ticket['events'][-1]['action'] == TICKET_EVENT.OPENED, 'last event of ticket should be opened'
-        
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "ticket should still be open"
+        ticket = database.TicketDoc.find_one({"open": True})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.OPENED
+        ), "last event of ticket should be opened"
+
     def test_ticket_closed(self, database, vuln_ticket_manager1):
-        assert database.tickets.find({'open':True}).count() == 1, 'ticket should be open'
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "ticket should be open"
         vuln_ticket_manager1.close_tickets()
-        assert database.tickets.find({'open':False}).count() == 1, 'ticket should be closed'
-        ticket = database.TicketDoc.find_one({'open':False})
-        assert ticket['events'][-1]['action'] == TICKET_EVENT.CLOSED, 'last event of ticket should be closed'
-        
+        assert (
+            database.tickets.find({"open": False}).count() == 1
+        ), "ticket should be closed"
+        ticket = database.TicketDoc.find_one({"open": False})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.CLOSED
+        ), "last event of ticket should be closed"
+
     def test_reopen_ticket(self, database, vuln_ticket_manager1):
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':False}).count() == 1, 'ticket should be closed'
-        vuln_ticket_manager1.open_ticket(VULN_1, 'test vuln detected')
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
-        ticket = database.TicketDoc.find_one({'open':True})
-        assert ticket['events'][-1]['action'] == TICKET_EVENT.REOPENED, 'last event of ticket should be reopened'
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": False}).count() == 1
+        ), "ticket should be closed"
+        vuln_ticket_manager1.open_ticket(VULN_1, "test vuln detected")
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
+        ticket = database.TicketDoc.find_one({"open": True})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.REOPENED
+        ), "last event of ticket should be reopened"
         vuln_ticket_manager1.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
 
     def test_close_other_ips(self, database, vuln_ticket_manager2):
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '1 ticket should be closed'
-        vuln_ticket_manager2.close_tickets() # ip is not in list, should not close
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "1 ticket should be closed"
+        vuln_ticket_manager2.close_tickets()  # ip is not in list, should not close
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
 
     def test_verify_ticket(self, database, vuln_ticket_manager1):
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
-        vuln_ticket_manager1.open_ticket(VULN_1, 'test vuln detected')
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
-        vuln_ticket_manager1.close_tickets() # ip is not in list, should not close
-        assert database.tickets.find({'open':True}).count() == 1, '1 ticket should be open'
-        assert database.tickets.find({'open':False}).count() == 0, '0 ticket should be closed'
-        ticket = database.TicketDoc.find_one({'open':True})
-        assert len(ticket['events']) == 4, 'ticket should have 4 events'
-        assert ticket['events'][-1]['action'] == TICKET_EVENT.VERIFIED, 'last event of ticket should be verified'
-        
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
+        vuln_ticket_manager1.open_ticket(VULN_1, "test vuln detected")
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
+        vuln_ticket_manager1.close_tickets()  # ip is not in list, should not close
+        assert (
+            database.tickets.find({"open": True}).count() == 1
+        ), "1 ticket should be open"
+        assert (
+            database.tickets.find({"open": False}).count() == 0
+        ), "0 ticket should be closed"
+        ticket = database.TicketDoc.find_one({"open": True})
+        assert len(ticket["events"]) == 4, "ticket should have 4 events"
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.VERIFIED
+        ), "last event of ticket should be verified"
+
     def test_ready_to_clear_vuln_latest_flags(self, database):
         vtm = VulnTicketManager(database, SOURCE_NESSUS)
-        assert vtm.ready_to_clear_vuln_latest_flags() == False, 'should not be ready at init'
+        assert (
+            vtm.ready_to_clear_vuln_latest_flags() == False
+        ), "should not be ready at init"
         vtm.ports = PORTS
-        assert vtm.ready_to_clear_vuln_latest_flags() == False, 'should not be ready with only ports set'
+        assert (
+            vtm.ready_to_clear_vuln_latest_flags() == False
+        ), "should not be ready with only ports set"
         vtm.ips = IPS
-        assert vtm.ready_to_clear_vuln_latest_flags() == False, 'should not be ready without source ids set'
+        assert (
+            vtm.ready_to_clear_vuln_latest_flags() == False
+        ), "should not be ready without source ids set"
         vtm.source_ids = SOURCE_IDS
-        assert vtm.ready_to_clear_vuln_latest_flags() == True, 'should be ready as all attributes are set'
-        
+        assert (
+            vtm.ready_to_clear_vuln_latest_flags() == True
+        ), "should be ready as all attributes are set"
+
     def test_add_unknown_ticket(self, database, vuln_ticket_manager1):
         database.tickets.remove()
-        assert database.tickets.count() == 0, 'collection should be empty'
-        vuln_ticket_manager1.open_ticket(VULN_3, 'test vuln detected')
-        assert database.tickets.count() == 1, 'collection should have 1 document'
-        assert database.tickets.find({'open':True}).count() == 0, 'ticket should be closed since owner was unknown'
-        
-    #TODO test whitelisting
-        
+        assert database.tickets.count() == 0, "collection should be empty"
+        vuln_ticket_manager1.open_ticket(VULN_3, "test vuln detected")
+        assert database.tickets.count() == 1, "collection should have 1 document"
+        assert (
+            database.tickets.find({"open": True}).count() == 0
+        ), "ticket should be closed since owner was unknown"
+
+    # TODO test whitelisting
+
 
 class TestIPPortTickets:
     def test_clear_tickets(self, database):
-        print 'number of tickets to remove:', database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
-        assert database.tickets.count() == 0, 'tickets did not clear from database'
+        assert database.tickets.count() == 0, "tickets did not clear from database"
 
     def test_add_two_tickets(self, database, vuln_ticket_manager1):
-        assert database.tickets.count() == 0, 'collection should be empty'
-        vuln_ticket_manager1.open_ticket(VULN_1, 'test vuln detected')
-        vuln_ticket_manager1.open_ticket(VULN_2, 'test vuln detected')
+        assert database.tickets.count() == 0, "collection should be empty"
+        vuln_ticket_manager1.open_ticket(VULN_1, "test vuln detected")
+        vuln_ticket_manager1.open_ticket(VULN_2, "test vuln detected")
         assert database.tickets.count() == 2
 
     def test_init(self, ip_port_ticket_manager1):
         ptm = ip_port_ticket_manager1
-        assert ptm.ips == IPSet(), 'ips should be an empty IPSet at init'
-        assert ptm.ports == set(), 'ports should be an empty set'
-        
+        assert ptm.ips == IPSet(), "ips should be an empty IPSet at init"
+        assert ptm.ports == set(), "ports should be an empty set"
+
     def test_close_none_1(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 2
-    
+        assert database.tickets.find({"open": True}).count() == 2
+
     def test_close_none_2(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_port_ticket_manager2.ports = PORTS
         ip_port_ticket_manager2.ips = IPSet(IPS[2:])
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
 
     def test_close_all(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_port_ticket_manager2.ports = PORTS
         ip_port_ticket_manager2.ips = IPSet(IPS)
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 0
-        assert database.tickets.find({'open':False}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 0
+        assert database.tickets.find({"open": False}).count() == 2
 
     def test_close_all_max_ports(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
-        ip_port_ticket_manager2.ports = xrange(1,65536)
+        assert database.tickets.find({"open": True}).count() == 2
+        ip_port_ticket_manager2.ports = xrange(1, 65536)
         ip_port_ticket_manager2.ips = IPSet(IPS)
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 0
-        assert database.tickets.find({'open':False}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 0
+        assert database.tickets.find({"open": False}).count() == 2
 
     def test_do_not_close_port_0(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
-        ip_port_ticket_manager2.ports = xrange(1,1024)
+        assert database.tickets.find({"open": True}).count() == 2
+        ip_port_ticket_manager2.ports = xrange(1, 1024)
         ip_port_ticket_manager2.ips = IPSet(IPS)
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1
-        assert database.tickets.find({'open':False}).count() == 1
+        assert database.tickets.find({"open": True}).count() == 1
+        assert database.tickets.find({"open": False}).count() == 1
 
     def test_close_one_unseen(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_port_ticket_manager2.ports = PORTS
         ip_port_ticket_manager2.ips = IPSet(IPS)
-        ip_port_ticket_manager2.port_open(VULN_1['ip'], VULN_1['port'])
+        ip_port_ticket_manager2.port_open(VULN_1["ip"], VULN_1["port"])
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1
-        assert database.tickets.find({'open':False}).count() == 1
-    
+        assert database.tickets.find({"open": True}).count() == 1
+        assert database.tickets.find({"open": False}).count() == 1
+
     def test_close_one_uncovered_port(self, database, ip_port_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_port_ticket_manager2.ports = PORTS[1:]
         ip_port_ticket_manager2.ips = IPSet(IPS)
         ip_port_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1
-        assert database.tickets.find({'open':False}).count() == 1
-    
+        assert database.tickets.find({"open": True}).count() == 1
+        assert database.tickets.find({"open": False}).count() == 1
+
+
 class TestIPTickets:
     def test_clear_tickets(self, database):
-        print 'number of tickets to remove:', database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
-        assert database.tickets.count() == 0, 'tickets did not clear from database'
+        assert database.tickets.count() == 0, "tickets did not clear from database"
 
     def test_add_two_tickets(self, database, vuln_ticket_manager1):
-        assert database.tickets.count() == 0, 'collection should be empty'
-        vuln_ticket_manager1.open_ticket(VULN_1, 'test vuln detected')
-        vuln_ticket_manager1.open_ticket(VULN_2, 'test vuln detected')
+        assert database.tickets.count() == 0, "collection should be empty"
+        vuln_ticket_manager1.open_ticket(VULN_1, "test vuln detected")
+        vuln_ticket_manager1.open_ticket(VULN_2, "test vuln detected")
         assert database.tickets.count() == 2
 
     def test_init(self, ip_ticket_manager1):
         ptm = ip_ticket_manager1
-        assert ptm.ips == IPSet(), 'ips should be an empty IPSet at init'
-        
+        assert ptm.ips == IPSet(), "ips should be an empty IPSet at init"
+
     def test_close_none_1(self, database, ip_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
 
     def test_close_none_2(self, database, ip_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_ticket_manager2.ips = IPSet(IPS[2:])
         ip_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
 
     def test_close_all(self, database, ip_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_ticket_manager2.ips = IPSet(IPS)
         ip_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 0
-        assert database.tickets.find({'open':False}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 0
+        assert database.tickets.find({"open": False}).count() == 2
 
     def test_close_one(self, database, ip_ticket_manager2):
-        assert database.tickets.find({'open':True}).count() == 2
+        assert database.tickets.find({"open": True}).count() == 2
         ip_ticket_manager2.ips = IPSet([IPS[0]])
         ip_ticket_manager2.close_tickets()
-        assert database.tickets.find({'open':True}).count() == 1
-        assert database.tickets.find({'open':False}).count() == 1
-    
-    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
-        
+        assert database.tickets.find({"open": True}).count() == 1
+        assert database.tickets.find({"open": False}).count() == 1
+
+    # import IPython; IPython.embed() #<<< BREAKPOINT >>>
+
+
 class TestVulnLatestClear:
-    '''CYHY-56'''
+    """CYHY-56"""
+
     def test_database_setup(self, database_w_vulns):
-        assert database_w_vulns.vuln_scans.count() == 3, 'vuln_scans collection not expected size'
-        
+        assert (
+            database_w_vulns.vuln_scans.count() == 3
+        ), "vuln_scans collection not expected size"
+
     def test_IPTm_none_up(self, database_w_vulns, ip_ticket_manager1):
         tm = ip_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 0
-    
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 0
+
     def test_IPTm_some_up(self, database_w_vulns, ip_ticket_manager1):
         tm = ip_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
         tm.ip_up(IPS[0])
         tm.ip_up(IPS[1])
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 2
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 2
 
     def test_IPTm_all_up(self, database_w_vulns, ip_ticket_manager1):
         tm = ip_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
         tm.ip_up(IPS[0])
         tm.ip_up(IPS[1])
         tm.ip_up(IPS[2])
         tm.ip_up(IPS[3])
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
 
     def test_IPPortTm_vuln_none_open(self, database_w_vulns, ip_port_ticket_manager1):
         tm = ip_port_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 0
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 0
 
     def test_IPPortTm_vuln_some_open(self, database_w_vulns, ip_port_ticket_manager1):
         tm = ip_port_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
-        tm.port_open(VULN_1['ip'], VULN_1['port'])
+        tm.port_open(VULN_1["ip"], VULN_1["port"])
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 1
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 1
 
     def test_IPPortTm_vuln_more_open(self, database_w_vulns, ip_port_ticket_manager1):
         tm = ip_port_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
-        tm.port_open(VULN_1['ip'], VULN_1['port'])
-        tm.port_open(VULN_2['ip'], VULN_2['port'])
+        tm.port_open(VULN_1["ip"], VULN_1["port"])
+        tm.port_open(VULN_2["ip"], VULN_2["port"])
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 2
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 2
 
     def test_IPPortTm_vuln_all_open(self, database_w_vulns, ip_port_ticket_manager1):
         tm = ip_port_ticket_manager1
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
-        tm.port_open(VULN_1['ip'], VULN_1['port'])
-        tm.port_open(VULN_2['ip'], VULN_2['port'])
-        tm.port_open(VULN_3['ip'], VULN_3['port'])
+        tm.port_open(VULN_1["ip"], VULN_1["port"])
+        tm.port_open(VULN_2["ip"], VULN_2["port"])
+        tm.port_open(VULN_3["ip"], VULN_3["port"])
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
 
     def test_VulnTm_readiness(self, vuln_ticket_manager3):
         tm = vuln_ticket_manager3
@@ -380,78 +517,125 @@ class TestVulnLatestClear:
         assert tm.ready_to_clear_vuln_latest_flags() == False
         tm.ports = PORTS
         assert tm.ready_to_clear_vuln_latest_flags() == True
-    
+
     def test_VulnTm_none_in_scope(self, database_w_vulns, vuln_ticket_manager3):
         tm = vuln_ticket_manager3
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = []
         tm.ports = []
         tm.source_ids = []
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3
-        
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+
     def test_VulnTm_some_in_scope(self, database_w_vulns, vuln_ticket_manager3):
         tm = vuln_ticket_manager3
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS[:1]
         tm.ports = PORTS[:1]
         tm.source_ids = SOURCE_IDS[:1]
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 2
-    
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 2
+
     def test_VulnTm_all_in_scope(self, database_w_vulns, vuln_ticket_manager3):
         tm = vuln_ticket_manager3
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 3, 'wrong number of latest vuln_scans'
+        assert (
+            database_w_vulns.vuln_scans.find({"latest": True}).count() == 3
+        ), "wrong number of latest vuln_scans"
         tm.ips = IPS
         tm.ports = PORTS
         tm.source_ids = SOURCE_IDS
         tm.clear_vuln_latest_flags()
-        assert database_w_vulns.vuln_scans.find({'latest':True}).count() == 0
-        
+        assert database_w_vulns.vuln_scans.find({"latest": True}).count() == 0
+
+
 class TestUDPVulnClose:
-    '''CYHY-127'''
+    """CYHY-127"""
+
     def test_database_setup(self, database_w_udp_vulns):
-        assert database_w_udp_vulns.vuln_scans.count() == 3, 'vuln_scans collection not expected size'
-        assert database_w_udp_vulns.tickets.count() == 3, 'tickets collection not expected size'
-        
+        assert (
+            database_w_udp_vulns.vuln_scans.count() == 3
+        ), "vuln_scans collection not expected size"
+        assert (
+            database_w_udp_vulns.tickets.count() == 3
+        ), "tickets collection not expected size"
+
     def test_close_all_max_ports(self, database_w_udp_vulns, ip_port_ticket_manager3):
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 3
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'tcp'}).count() == 2, 'tcp tickets count not expected'
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp tickets count not expected'
-        ip_port_ticket_manager3.ports = xrange(1,65536)
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 3
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
+            == 2
+        ), "tcp tickets count not expected"
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp tickets count not expected"
+        ip_port_ticket_manager3.ports = xrange(1, 65536)
         ip_port_ticket_manager3.ips = IPSet(IPS)
         ip_port_ticket_manager3.close_tickets()
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 0
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 0
 
     def test_close_all_udp_tickets(self, database_w_udp_vulns, vuln_ticket_manager3):
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 3
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'tcp'}).count() == 2, 'tcp tickets count not expected'
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp tickets count not expected'
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 3
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
+            == 2
+        ), "tcp tickets count not expected"
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp tickets count not expected"
         vuln_ticket_manager3.ports = PORTS[:2]
         vuln_ticket_manager3.ips = IPSet(IPS[:2])
         vuln_ticket_manager3.source_ids = SOURCE_IDS
         vuln_ticket_manager3.close_tickets()
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 0
-        
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 0
+
     def test_seen_udp_vuln_ticket(self, database_w_udp_vulns, vuln_ticket_manager3):
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 3
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'tcp'}).count() == 2, 'tcp tickets count not expected'
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp tickets count not expected'
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 3
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
+            == 2
+        ), "tcp tickets count not expected"
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp tickets count not expected"
         vuln_ticket_manager3.source_ids = SOURCE_IDS
-        vuln_ticket_manager3.ports = xrange(1,65536)
+        vuln_ticket_manager3.ports = xrange(1, 65536)
         vuln_ticket_manager3.ips = IPSet(IPS)
-        vuln_ticket_manager3.open_ticket(VULN_4, 'test vuln detected')
+        vuln_ticket_manager3.open_ticket(VULN_4, "test vuln detected")
         vuln_ticket_manager3.close_tickets()
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp ticket should not have been closed'
-        
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp ticket should not have been closed"
+
     def test_seen_udp_port_ticket(self, database_w_udp_vulns, ip_port_ticket_manager3):
-        assert database_w_udp_vulns.tickets.find({'open':True}).count() == 3
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'tcp'}).count() == 2, 'tcp tickets count not expected'
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp tickets count not expected'
+        assert database_w_udp_vulns.tickets.find({"open": True}).count() == 3
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
+            == 2
+        ), "tcp tickets count not expected"
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp tickets count not expected"
         ip_port_ticket_manager3.source_ids = SOURCE_IDS
-        ip_port_ticket_manager3.ports = xrange(1,65536)
+        ip_port_ticket_manager3.ports = xrange(1, 65536)
         ip_port_ticket_manager3.ips = IPSet(IPS[:2])
-        ip_port_ticket_manager3.port_open(IPS[1], PORTS[2]) # saw PORTS[2] open on IPS[1] (VULN_4)
+        ip_port_ticket_manager3.port_open(
+            IPS[1], PORTS[2]
+        )  # saw PORTS[2] open on IPS[1] (VULN_4)
         ip_port_ticket_manager3.close_tickets()
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'udp'}).count() == 1, 'udp ticket should not have been closed'
-        assert database_w_udp_vulns.tickets.find({'open':True, 'protocol':'tcp'}).count() == 0, 'tcp tickets should have been closed'
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "udp"}).count()
+            == 1
+        ), "udp ticket should not have been closed"
+        assert (
+            database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
+            == 0
+        ), "tcp tickets should have been closed"
