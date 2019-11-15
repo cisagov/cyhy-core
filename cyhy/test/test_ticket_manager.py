@@ -188,6 +188,14 @@ def ip_port_ticket_manager3(database):
 
 
 @pytest.fixture
+def ip_port_ticket_manager4(database):
+    ptm = IPPortTicketManager(database, PROTOCOLS)
+    ptm.ips = IPS
+    ptm.ports = PORTSCAN_PORTS
+    return ptm
+
+
+@pytest.fixture
 def ip_ticket_manager1(database):
     ptm = IPTicketManager(database)
     return ptm
@@ -690,3 +698,114 @@ class TestUDPVulnClose:
             database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
             == 0
         ), "tcp tickets should have been closed"
+
+
+class TestIPPortNonVulnScanTickets:
+    """CYHYDEV-777"""
+
+    def test_add_two_ps_tickets(self, database, ip_port_ticket_manager4):
+        database.tickets.remove()
+        assert database.tickets.count() == 0, "collection should be empty"
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.port_open(PS_2["ip"], PS_2["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        ip_port_ticket_manager4.open_ticket(PS_2, "potentially risky service detected")
+        assert database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+
+    def test_ps_tickets_closed(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        # Next lines should close the PS_1 and PS_2 tickets since they were not seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be closed"
+        ticket = database.tickets.find_one({"open": False, "source": SOURCE_NMAP})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.CLOSED
+        ), "last event of ticket should be closed"
+
+    def test_reopen_ps_tickets(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be closed"
+        # Next lines should re-open the PS_1 and PS_2 tickets
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.port_open(PS_2["ip"], PS_2["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        ip_port_ticket_manager4.open_ticket(PS_2, "potentially risky service detected")
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap ticket should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        ticket = database.tickets.find_one({"open": True, "source": SOURCE_NMAP})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.REOPENED
+        ), "last event of nmap ticket should be reopened"
+        # Next line should should not close either ticket since they were both seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap ticket should be closed"
+
+    def test_verify_ps_ticket(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        # Next lines should verify the already-open PS_1 ticket
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        # Next line should:
+        #  Close the ticket for PS_2, since ip/port was not seen
+        #  Not close the ticket for PS_1, since ip/port was just seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 1
+        ), "1 nmap ticket should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 1
+        ), "1 nmap ticket should be closed"
+        ticket = database.tickets.find_one({"open": True, "source": SOURCE_NMAP})
+        assert len(ticket["events"]) == 4, "nmap ticket should have 4 events"
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.VERIFIED
+        ), "last event of nmap ticket should be verified"
+
+    def test_add_unknown_ps_ticket(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find(
+                {"owner": UNKNOWN_OWNER, "source": SOURCE_NMAP}
+            ).count()
+            == 0
+        ), "collection should have 0 UNKNOWN_OWNER nmap tickets"
+        ip_port_ticket_manager4.open_ticket(PS_3, "potentially risky service detected")
+        assert (
+            database.tickets.find(
+                {"open": False, "owner": UNKNOWN_OWNER, "source": SOURCE_NMAP}
+            ).count()
+            == 1
+        ), "collection should have 1 closed UNKNOWN_OWNER nmap ticket"
