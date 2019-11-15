@@ -11,10 +11,65 @@ from cyhy.util import util
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
 IPS = [ip("10.0.0.1"), ip("192.168.1.1"), ip("172.20.20.20"), ip("10.0.0.2")]
 PORTS = [0, 123, 456, 10123]
+PORTSCAN_PORTS = [21, 23, 389]
 SOURCE_IDS = [1, 2, 3]
+SOURCE_NMAP = "nmap"
 SOURCE_NESSUS = "nessus"
 OWNER = "TEST"
 PROTOCOLS = ["tcp"]
+
+PS_1 = {
+    "ip": IPS[0],
+    "ip_int": long(IPS[0]),
+    "port": PORTSCAN_PORTS[1],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "telnet",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: telnet",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+PS_2 = {
+    "ip": IPS[1],
+    "ip_int": long(IPS[1]),
+    "port": PORTSCAN_PORTS[2],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "ldap",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: ldap",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+PS_3 = {
+    "ip": IPS[2],
+    "ip_int": long(IPS[2]),
+    "port": PORTSCAN_PORTS[0],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "ftp",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": UNKNOWN_OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: ftp",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+
 VULN_1 = {
     "ip": IPS[0],
     "ip_int": long(IPS[0]),
