@@ -1,15 +1,11 @@
 #!/usr/bin/env py.test -v
 
-import os
-import sys
-import itertools
-from datetime import datetime
 import pytest
-from cyhy.db import CHDatabase, VulnTicketManager, IPPortTicketManager, IPTicketManager
+from cyhy.db import VulnTicketManager, IPPortTicketManager, IPTicketManager
 from bson.objectid import ObjectId
 from netaddr import IPSet, IPAddress as ip
-from common_fixtures import database, ch_db
-from cyhy.core.common import *
+from common_fixtures import database
+from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
 from cyhy.util import util
 
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
