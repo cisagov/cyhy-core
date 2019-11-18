@@ -74,15 +74,11 @@ def pause_commander(db):
             "Commander pause control document _id not found! Is the database up?"
         )
         return None
-    logger.info(
-        "Requesting commander pause (control doc id = {_id})".format(**doc)
-    )
+    logger.info("Requesting commander pause (control doc id = {_id})".format(**doc))
     while not doc["completed"]:
         pause_iteration_count += 1
         logger.info(
-            "  Waiting for commander to pause... (#{})".format(
-                pause_iteration_count
-            )
+            "  Waiting for commander to pause... (#{})".format(pause_iteration_count)
         )
         time.sleep(PAUSE_ITERATION_WAIT_SECONDS)
         if pause_iteration_count == PAUSE_ITERATION_LIMIT:
@@ -97,9 +93,7 @@ def pause_commander(db):
 def resume_commander(db, pause_doc_id):
     doc = db.SystemControlDoc.find_one({"_id": ObjectId(pause_doc_id)})
     if not doc:
-        logger.error(
-            "Could not find a control doc with id {}".format(pause_doc_id)
-        )
+        logger.error("Could not find a control doc with id {}".format(pause_doc_id))
         return False
     doc.delete()
     logger.info(
@@ -127,9 +121,7 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
         collection_name = db_collection.collection.name
 
         # count documents in collection before archiving
-        doc_counts["pre-archiving"][collection_name] = db_collection.find(
-            {}
-        ).count()
+        doc_counts["pre-archiving"][collection_name] = db_collection.find({}).count()
         logger.info(
             "{}: {:,} documents exist before archiving".format(
                 collection_name, doc_counts["pre-archiving"][collection_name]
@@ -140,9 +132,7 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
             days=collection_info["age_limit_days"]
         )
         # check to see if at least one document is eligible to be archived
-        if db_collection.find_one(
-            {"latest": False, "time": {"$lt": cutoff_date}}
-        ):
+        if db_collection.find_one({"latest": False, "time": {"$lt": cutoff_date}}):
             # use mongodump to create an archive for this collection
             archive_file = "{}/cyhy_archive_{}_{}.gz".format(
                 archive_dir, collection_name, today_str
@@ -173,21 +163,15 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
                 # unencode special characters in password (see get_db_info_from_config)
                 mongodump_command += [
                     "--username={}".format(parsed_db_uri.username),
-                    "--password={}".format(
-                        parsed_db_uri.password.replace("%23", "#")
-                    ),
+                    "--password={}".format(parsed_db_uri.password.replace("%23", "#")),
                 ]
 
             auth_db = parsed_db_uri.path.lstrip("/")
             if auth_db:
-                mongodump_command += [
-                    "--authenticationDatabase={}".format(auth_db)
-                ]
+                mongodump_command += ["--authenticationDatabase={}".format(auth_db)]
 
             p = subprocess.Popen(
-                mongodump_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                mongodump_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
             logger.info(
                 "{}: exporting documents older than {} to {}".format(
@@ -215,9 +199,7 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
                 regex.findall(stderr_data)[0].split(" ")[0]
             )
             if results["exported_counts"][collection_name] < 1:
-                logger.error(
-                    "{}: no documents exported".format(collection_name)
-                )
+                logger.error("{}: no documents exported".format(collection_name))
                 return results
             results["export_success"] = True
             logger.info(
@@ -259,20 +241,18 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
             ).count()
             logger.info(
                 "{}: {:,} documents exist after archiving".format(
-                    collection_name,
-                    doc_counts["post-archiving"][collection_name],
+                    collection_name, doc_counts["post-archiving"][collection_name],
                 )
             )
         else:  # no documents to archive
             logger.warning(
                 "{}: no documents are old enough to be archived (cutoff date: {})".format(
-                    collection_name,
-                    cutoff_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    collection_name, cutoff_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 )
             )
-            results["exported_counts"][collection_name] = results[
-                "deleted_counts"
-            ][collection_name] = 0
+            results["exported_counts"][collection_name] = results["deleted_counts"][
+                collection_name
+            ] = 0
             results["export_success"] = results["delete_success"] = True
     return results
 
@@ -315,31 +295,20 @@ def main():
             logger.fatal("Exiting; no data was archived!")
             sys.exit(-1)
 
-    results = archive_and_delete(
-        db, start_time, archive_directory, parsed_db_uri
-    )
+    results = archive_and_delete(db, start_time, archive_directory, parsed_db_uri)
     if not results["export_success"]:
-        logger.fatal(
-            "Exiting; data export failed, no data was deleted from database!"
-        )
-        logger.fatal(
-            "Clean up any exported data in {}".format(archive_directory)
-        )
+        logger.fatal("Exiting; data export failed, no data was deleted from database!")
+        logger.fatal("Clean up any exported data in {}".format(archive_directory))
         for collection_info in COLLECTIONS_TO_ARCHIVE:
             collection_name = db[collection_info["name"]].collection.name
             logger.fatal(
                 "  {}: exported {:,} documents".format(
-                    collection_name,
-                    results["exported_counts"].get(collection_name, 0),
+                    collection_name, results["exported_counts"].get(collection_name, 0),
                 )
             )
         if not args["--no-commander-pause"]:
-            if not resume_commander(
-                db, commander_pause_id
-            ):  # start commander back up
-                logger.error(
-                    "Exiting abnormally- verify that commander has resumed!"
-                )
+            if not resume_commander(db, commander_pause_id):  # start commander back up
+                logger.error("Exiting abnormally- verify that commander has resumed!")
         sys.exit(-1)
 
     if not results["delete_success"]:
@@ -350,22 +319,18 @@ def main():
             collection_name = db[collection_info["name"]].collection.name
             logger.fatal(
                 "  {}: exported {:,} documents".format(
-                    collection_name,
-                    results["exported_counts"].get(collection_name, 0),
+                    collection_name, results["exported_counts"].get(collection_name, 0),
                 )
             )
             logger.fatal(
                 "  {}: deleted {:,} documents".format(
-                    collection_name,
-                    results["deleted_counts"].get(collection_name, 0),
+                    collection_name, results["deleted_counts"].get(collection_name, 0),
                 )
             )
 
     if not args["--no-commander-pause"]:
         if not resume_commander(db, commander_pause_id):
-            logger.error(
-                "Exiting abnormally- verify that commander has resumed!"
-            )
+            logger.error("Exiting abnormally- verify that commander has resumed!")
             sys.exit(-1)
 
     duration = util.utcnow() - start_time

@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 
-__all__ = ['Config']
+__all__ = ["Config"]
 
 import os
 from ConfigParser import SafeConfigParser
 
-DEFAULT_CONFIG_FILENAME = os.path.expanduser('/etc/cyhy/cyhy.conf')
-DEFAULT = 'DEFAULT'
-PRODUCTION_SECTION = 'production'
-TESTING_SECTION = 'testing'
-DATABASE_NAME = 'database-name'
-DATABASE_URI = 'database-uri'
-REPORT_KEY = 'report-key'
-DEFAULT_SECTION = 'default-section'
-TESTING_DATABASE_NAME = 'test_cyhy'
-PRODUCTION_DATABASE_NAME = 'cyhy'
-DEFAULT_DATABASE_URI = 'mongodb://localhost:27017/'
+DEFAULT_CONFIG_FILENAME = os.path.expanduser("/etc/cyhy/cyhy.conf")
+DEFAULT = "DEFAULT"
+PRODUCTION_SECTION = "production"
+TESTING_SECTION = "testing"
+DATABASE_NAME = "database-name"
+DATABASE_URI = "database-uri"
+REPORT_KEY = "report-key"
+DEFAULT_SECTION = "default-section"
+TESTING_DATABASE_NAME = "test_cyhy"
+PRODUCTION_DATABASE_NAME = "cyhy"
+DEFAULT_DATABASE_URI = "mongodb://localhost:27017/"
+
 
 class Config(object):
     def __init__(self, config_section=None, config_filename=None):
@@ -50,6 +51,6 @@ class Config(object):
         config.set(PRODUCTION_SECTION, DATABASE_NAME, PRODUCTION_DATABASE_NAME)
         config.set(TESTING_SECTION, DATABASE_NAME, TESTING_DATABASE_NAME)
         config.set(None, DATABASE_URI, DEFAULT_DATABASE_URI)
-        config.set(None, REPORT_KEY, '')
-        with open(self.config_filename, 'wb') as config_file:
+        config.set(None, REPORT_KEY, "")
+        with open(self.config_filename, "wb") as config_file:
             config.write(config_file)

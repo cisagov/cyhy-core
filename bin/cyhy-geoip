@@ -131,7 +131,7 @@ def do_update(chdb, gidb, up_only=False, owner=None):
     header_message = "Beginning update of GeoIP data for all {:s}hosts {:s}[{:,} document(s)]".format(
         "live " if up_only else "",
         "belonging to '{:s}' ".format(owner) if owner is not None else "",
-        total_documents
+        total_documents,
     )
 
     logger.info(header_message)
@@ -161,9 +161,7 @@ def do_update(chdb, gidb, up_only=False, owner=None):
                 )
             )
 
-    logger.info(
-        "Finished update with {:,} document(s) updated".format(total_updated)
-    )
+    logger.info("Finished update with {:,} document(s) updated".format(total_updated))
 
 
 def main():

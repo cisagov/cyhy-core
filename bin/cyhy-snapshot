@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Manage snapshot documents and tags.
+"""Manage snapshot documents and tags.
 
 Usage:
   cyhy-snapshot [--section SECTION] list OWNER
@@ -15,19 +15,20 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
-'''
+"""
 import sys
 import os
 from docopt import docopt
- 
+
 from cyhy.core import Config
 from cyhy.db import CHDatabase, database
 from bson import ObjectId
 
+
 def parse_owners(db, args):
     all_requests_found = True
     requests = []
-    for owner in args['OWNER']:
+    for owner in args["OWNER"]:
         request = db.RequestDoc.get_by_owner(owner)
         if request == None:
             print >> sys.stderr, 'ERROR: No request with "%s" found.' % owner
@@ -38,223 +39,328 @@ def parse_owners(db, args):
         sys.exit(-1)
     return requests
 
+
 def warn_and_confirm(message):
-    print >> sys.stderr, 'WARNING: %s' % message
+    print >> sys.stderr, "WARNING: %s" % message
     print >> sys.stderr
     yes = raw_input('Type "yes" if you sure that you want to do this? ')
-    return yes == 'yes'
-    
+    return yes == "yes"
+
+
 def print_snapshot_line(snapshot):
-    snapshot_owner = snapshot['owner']
-    snapshot_id = snapshot['_id']
-    start_time = snapshot['start_time']
-    end_time = snapshot['end_time']
-    print '%-15s: %s %s - %s (%s)' % (snapshot_owner, snapshot_id, start_time, end_time, end_time - start_time)
+    snapshot_owner = snapshot["owner"]
+    snapshot_id = snapshot["_id"]
+    start_time = snapshot["start_time"]
+    end_time = snapshot["end_time"]
+    print "%-15s: %s %s - %s (%s)" % (
+        snapshot_owner,
+        snapshot_id,
+        start_time,
+        end_time,
+        end_time - start_time,
+    )
+
 
 def list_snapshots(db, ch_db, owner):
-    cursor = db.SnapshotDoc.find({'owner':owner}).sort([('end_time',-1)])
+    cursor = db.SnapshotDoc.find({"owner": owner}).sort([("end_time", -1)])
     for snapshot in cursor:
         print_snapshot_line(snapshot)
     return True
-    
-def create_snapshot(db, ch_db, owner_request, do_descendants, use_only_existing_snapshots):
-    result = {'successful_snapshots':[], 'failed_snapshots':[]}
+
+
+def create_snapshot(
+    db, ch_db, owner_request, do_descendants, use_only_existing_snapshots
+):
+    result = {"successful_snapshots": [], "failed_snapshots": []}
     descendant_snaps = dict()
     descendant_ids = []
-    owner = owner_request['_id']
+    owner = owner_request["_id"]
     exclude_from_world_stats = False
     if do_descendants:
         descendant_ids = db.RequestDoc.get_all_descendants(owner)
         if descendant_ids:
-            print 'Tagging latest reports for %s (including descendants %s)...' % (owner, ', '.join(descendant_ids)),
+            print "Tagging latest reports for %s (including descendants %s)..." % (
+                owner,
+                ", ".join(descendant_ids),
+            ),
         else:
-            print 'Tagging latest reports for %s...' % owner, 
+            print "Tagging latest reports for %s..." % owner,
         owner_snapshot_oid = ch_db.tag_latest([owner] + descendant_ids)
-        print 'Done'
+        print "Done"
         for descendant in descendant_ids:
             descendant_descendant_ids = db.RequestDoc.get_all_descendants(descendant)
             if descendant_descendant_ids:
-                print '  Tagging latest reports for %s (including descendants %s)...' % (descendant, ', '.join(descendant_descendant_ids)),
-                descendant_snaps[descendant] = {'snap_oid':ch_db.tag_latest([descendant] + descendant_descendant_ids),
-                                                'descendants_included':descendant_descendant_ids}
+                print "  Tagging latest reports for %s (including descendants %s)..." % (
+                    descendant,
+                    ", ".join(descendant_descendant_ids),
+                ),
+                descendant_snaps[descendant] = {
+                    "snap_oid": ch_db.tag_latest(
+                        [descendant] + descendant_descendant_ids
+                    ),
+                    "descendants_included": descendant_descendant_ids,
+                }
             else:
-                print '  Tagging latest reports for %s...' % descendant, 
-                descendant_snaps[descendant] = {'snap_oid':ch_db.tag_latest([descendant]),
-                                                'descendants_included':[]}
-            print 'Done'
+                print "  Tagging latest reports for %s..." % descendant,
+                descendant_snaps[descendant] = {
+                    "snap_oid": ch_db.tag_latest([descendant]),
+                    "descendants_included": [],
+                }
+            print "Done"
     elif use_only_existing_snapshots:
-        latest_child_snapshot_oids = list(snap['_id'] for snap in db.SnapshotDoc.collection.find({'latest':True, 'owner':{'$in':owner_request['children']}}, {'_id':1}))
-        print '  Tagging reports from latest snapshots of children of %s...' % owner, 
+        latest_child_snapshot_oids = list(
+            snap["_id"]
+            for snap in db.SnapshotDoc.collection.find(
+                {"latest": True, "owner": {"$in": owner_request["children"]}},
+                {"_id": 1},
+            )
+        )
+        print "  Tagging reports from latest snapshots of children of %s..." % owner,
         owner_snapshot_oid = ch_db.tag_matching(latest_child_snapshot_oids)
-        print 'Done'
+        print "Done"
         descendant_ids = db.RequestDoc.get_all_descendants(owner)
         # Exclude these types of snapshots from the world stats calculations in chdatabase:create_snapshot() to avoid double-counting (see CYHY-329)
         exclude_from_world_stats = True
     else:
-        print 'Tagging latest reports for %s...' % owner, 
+        print "Tagging latest reports for %s..." % owner,
         owner_snapshot_oid = ch_db.tag_latest([owner])
-        print 'Done'
-    
-    print 'Creating snapshot for %s...' % owner, 
-    owner_snapshot = ch_db.create_snapshot(owner, owner_snapshot_oid, parent_oid=None, descendants_included=descendant_ids, exclude_from_world_stats=exclude_from_world_stats)
-    
+        print "Done"
+
+    print "Creating snapshot for %s..." % owner,
+    owner_snapshot = ch_db.create_snapshot(
+        owner,
+        owner_snapshot_oid,
+        parent_oid=None,
+        descendants_included=descendant_ids,
+        exclude_from_world_stats=exclude_from_world_stats,
+    )
+
     if owner_snapshot:
-        result['successful_snapshots'].append(owner)
-        print 'Done'
+        result["successful_snapshots"].append(owner)
+        print "Done"
         if do_descendants:
-            for org,data in descendant_snaps.items():
-                print '  Creating snapshot for %s...' % org, 
-                data['snapshot'] = ch_db.create_snapshot(org, data['snap_oid'], parent_oid=owner_snapshot_oid, descendants_included=data['descendants_included'])
-                if data['snapshot']:
-                    result['successful_snapshots'].append(org)
-                    print 'Done'
+            for org, data in descendant_snaps.items():
+                print "  Creating snapshot for %s..." % org,
+                data["snapshot"] = ch_db.create_snapshot(
+                    org,
+                    data["snap_oid"],
+                    parent_oid=owner_snapshot_oid,
+                    descendants_included=data["descendants_included"],
+                )
+                if data["snapshot"]:
+                    result["successful_snapshots"].append(org)
+                    print "Done"
                 else:
                     # Untag docs from failed descendant snapshot
-                    print 'FAILED!\n  Untagging reports for %s...' % org,
-                    ch_db.remove_tag(data['snap_oid'])
-                    descendant_snaps.pop(org)           # Remove this item from descendant_snaps dict
-                    result['failed_snapshots'].append(org)
-                    print 'Done'
+                    print "FAILED!\n  Untagging reports for %s..." % org,
+                    ch_db.remove_tag(data["snap_oid"])
+                    descendant_snaps.pop(
+                        org
+                    )  # Remove this item from descendant_snaps dict
+                    result["failed_snapshots"].append(org)
+                    print "Done"
         elif use_only_existing_snapshots:
             # Add new snapshot _id as a parent to the existing child snapshots (mainly to populate Sub-Org Summary in CyHy report)
-            print '  Adding new snapshot as parent to existing child snapshots...' 
-            db.SnapshotDoc.collection.update({'_id':{'$in':latest_child_snapshot_oids}},
-                                             {'$push':{'parents':owner_snapshot_oid}}, multi=True, safe=True)
-    
-        print 'Success!  New snapshot(s) created:'
+            print "  Adding new snapshot as parent to existing child snapshots..."
+            db.SnapshotDoc.collection.update(
+                {"_id": {"$in": latest_child_snapshot_oids}},
+                {"$push": {"parents": owner_snapshot_oid}},
+                multi=True,
+                safe=True,
+            )
+
+        print "Success!  New snapshot(s) created:"
         print_snapshot_line(owner_snapshot)
         for descendant in descendant_snaps.values():
-            print ' ',
-            print_snapshot_line(descendant['snapshot'])
+            print " ",
+            print_snapshot_line(descendant["snapshot"])
     else:
-        print 'FAILED! No valid snapshot created for %s' % owner
-        result['failed_snapshots'].append(owner)
-        print 'Untagging reports for %s...' % owner, 
+        print "FAILED! No valid snapshot created for %s" % owner
+        result["failed_snapshots"].append(owner)
+        print "Untagging reports for %s..." % owner,
         ch_db.remove_tag(owner_snapshot_oid)
-        print 'Done'
-    
-        for org,data in descendant_snaps.items():
-            print '  Untagging reports for %s...' % org, 
-            ch_db.remove_tag(data['snap_oid'])
-            print 'Done'
+        print "Done"
+
+        for org, data in descendant_snaps.items():
+            print "  Untagging reports for %s..." % org,
+            ch_db.remove_tag(data["snap_oid"])
+            print "Done"
     return result
-    
+
+
 def delete_snapshot(db, ch_db, snapshot_id):
     oid = ObjectId(snapshot_id)
-    print 'Removing tags from report documents...',
+    print "Removing tags from report documents...",
     ch_db.remove_tag(oid)
-    print 'Done'
-    snapshot_to_delete = db.snapshots.find_one({'_id':oid})
-    deleting_latest_snapshot = snapshot_to_delete['latest']
-    print 'Removing snapshot document %s [%s]...' % (snapshot_id, snapshot_to_delete['owner']),
-    db.SnapshotDoc.collection.remove({'_id':oid})
-    print 'Done'
+    print "Done"
+    snapshot_to_delete = db.snapshots.find_one({"_id": oid})
+    deleting_latest_snapshot = snapshot_to_delete["latest"]
+    print "Removing snapshot document %s [%s]..." % (
+        snapshot_id,
+        snapshot_to_delete["owner"],
+    ),
+    db.SnapshotDoc.collection.remove({"_id": oid})
+    print "Done"
     if deleting_latest_snapshot:
         # If deleting latest snapshot, find the next-newest snapshot and mark it as the 'latest'
-        newest_snapshot_cursor = db.SnapshotDoc.find({'owner':snapshot_to_delete['owner']}).sort('end_time', -1).limit(1)
+        newest_snapshot_cursor = (
+            db.SnapshotDoc.find({"owner": snapshot_to_delete["owner"]})
+            .sort("end_time", -1)
+            .limit(1)
+        )
         if newest_snapshot_cursor.count():
             newest_snapshot = newest_snapshot_cursor.next()
-            newest_snapshot['latest'] = True
+            newest_snapshot["latest"] = True
             newest_snapshot.save()
-        
+
     # Look for child snapshots of snapshot_id
-    child_snaps = db.SnapshotDoc.find({'parents':oid})
+    child_snaps = db.SnapshotDoc.find({"parents": oid})
     for child_snap in child_snaps:
-        print '  Processing child snapshot %s [%s]:' % (child_snap['_id'], child_snap['owner'])
-        child_snap['parents'].remove(oid)
-        if child_snap['parents'] == []:
+        print "  Processing child snapshot %s [%s]:" % (
+            child_snap["_id"],
+            child_snap["owner"],
+        )
+        child_snap["parents"].remove(oid)
+        if child_snap["parents"] == []:
             # No parents are left, so we can safely untag reports and delete this snapshot
-            print '    Removing tags from report documents...', 
-            ch_db.remove_tag(child_snap['_id'])
-            print 'Done'
-            deleting_latest_snapshot = child_snap['latest']
-            print '    Removing snapshot document...', 
-            db.SnapshotDoc.collection.remove({'_id':child_snap['_id']})
-            print 'Done'
+            print "    Removing tags from report documents...",
+            ch_db.remove_tag(child_snap["_id"])
+            print "Done"
+            deleting_latest_snapshot = child_snap["latest"]
+            print "    Removing snapshot document...",
+            db.SnapshotDoc.collection.remove({"_id": child_snap["_id"]})
+            print "Done"
             if deleting_latest_snapshot:
                 # If deleting latest snapshot, find the next-newest snapshot and mark it as the 'latest'
-                newest_snapshot_cursor = db.SnapshotDoc.find({'owner':child_snap['owner']}).sort('end_time', -1).limit(1)
+                newest_snapshot_cursor = (
+                    db.SnapshotDoc.find({"owner": child_snap["owner"]})
+                    .sort("end_time", -1)
+                    .limit(1)
+                )
                 if newest_snapshot_cursor.count():
                     newest_snapshot = newest_snapshot_cursor.next()
-                    newest_snapshot['latest'] = True
+                    newest_snapshot["latest"] = True
                     newest_snapshot.save()
         else:
-            print '    Removing snapshot %s as a parent to this snapshot...' % snapshot_id,
+            print "    Removing snapshot %s as a parent to this snapshot..." % snapshot_id,
             child_snap.save()
-            print 'Done'
+            print "Done"
     return True
 
+
 def read_file(filename):
-    f = open(filename, 'r')
+    f = open(filename, "r")
     for line in f.readlines():
-        if line.startswith('#'):
+        if line.startswith("#"):
             continue
-        yield line.strip() #boosh!
+        yield line.strip()  # boosh!
+
 
 def create_snapshots(db, ch_db, requests, do_descendants, use_only_existing_snapshots):
     successful_snapshots = []
     failed_snapshots = []
     success = False
     for request in requests:
-        print >> sys.stderr, 'Creating snapshot for: %s' % (request['_id'])
-        snapshot_results = create_snapshot(db, ch_db, request, do_descendants, use_only_existing_snapshots)
-        successful_snapshots += snapshot_results['successful_snapshots']
-        failed_snapshots += snapshot_results['failed_snapshots']
+        print >> sys.stderr, "Creating snapshot for: %s" % (request["_id"])
+        snapshot_results = create_snapshot(
+            db, ch_db, request, do_descendants, use_only_existing_snapshots
+        )
+        successful_snapshots += snapshot_results["successful_snapshots"]
+        failed_snapshots += snapshot_results["failed_snapshots"]
     print >> sys.stderr
     if len(successful_snapshots) > 0:
-        print >> sys.stderr, 'New snapshot successfully created for:', ' '.join(successful_snapshots)
+        print >> sys.stderr, "New snapshot successfully created for:", " ".join(
+            successful_snapshots
+        )
     if len(failed_snapshots) > 0:
         success = False
-        print >> sys.stderr, 'WARNING: Snapshot creation failed for:', ' '.join(failed_snapshots)
+        print >> sys.stderr, "WARNING: Snapshot creation failed for:", " ".join(
+            failed_snapshots
+        )
     else:
         success = True
     return success
 
+
 def main():
-    args = docopt(__doc__, version='v0.0.1')
-    db = database.db_from_config(args['--section'])
+    args = docopt(__doc__, version="v0.0.1")
+    db = database.db_from_config(args["--section"])
     ch_db = CHDatabase(db)
-    
-    if args['--file']:
-        args['OWNER'] = list(read_file(args['--file']))
-    
+
+    if args["--file"]:
+        args["OWNER"] = list(read_file(args["--file"]))
+
     requests = parse_owners(db, args)
-    
-    if args['list']:
-        success = list_snapshots(db, ch_db, requests[0]['_id'])
-    elif args['create']:
+
+    if args["list"]:
+        success = list_snapshots(db, ch_db, requests[0]["_id"])
+    elif args["create"]:
         for request in requests:
-            print >> sys.stderr, '\t%s: %s (%s)' % (request['_id'], request['agency']['name'],
-                request['agency']['acronym'])
-            if request.get('children') and not args['--no-descendants'] and not args['--use-only-existing-snapshots']:
-                for descendant in db.RequestDoc.get_all_descendants(request['_id']):
+            print >> sys.stderr, "\t%s: %s (%s)" % (
+                request["_id"],
+                request["agency"]["name"],
+                request["agency"]["acronym"],
+            )
+            if (
+                request.get("children")
+                and not args["--no-descendants"]
+                and not args["--use-only-existing-snapshots"]
+            ):
+                for descendant in db.RequestDoc.get_all_descendants(request["_id"]):
                     descendant_request = db.RequestDoc.get_by_owner(descendant)
-                    print >> sys.stderr, '\t  %s: %s (%s)' % (descendant_request['_id'], descendant_request['agency']['name'], descendant_request['agency']['acronym'])
-            elif args['--use-only-existing-snapshots']:
-                args['--no-descendants'] = True         # Manually set this flag so no descendants snapshots are created
-                if not request.get('children'):
-                    print >> sys.stderr, 'ERROR: %s has no children and is therefore incompatible with --use-only-existing-snapshots.  Exiting without making any changes.' % request['_id']
+                    print >> sys.stderr, "\t  %s: %s (%s)" % (
+                        descendant_request["_id"],
+                        descendant_request["agency"]["name"],
+                        descendant_request["agency"]["acronym"],
+                    )
+            elif args["--use-only-existing-snapshots"]:
+                args[
+                    "--no-descendants"
+                ] = True  # Manually set this flag so no descendants snapshots are created
+                if not request.get("children"):
+                    print >> sys.stderr, "ERROR: %s has no children and is therefore incompatible with --use-only-existing-snapshots.  Exiting without making any changes." % request[
+                        "_id"
+                    ]
                     sys.exit(-1)
                 else:
-                    print >> sys.stderr, '\tWARNING: --use-only-existing-snapshots flag assumes there is no scan data owned by %s; it will create a new snapshot based solely on data found in existing snapshots from children of %s, which are assumed to contain all needed descendant snapshot data.  Existing snapshots to be used in new snapshot:' % (request['_id'], request['_id'])
-                    for snap in db.SnapshotDoc.collection.find({'latest':True, 'owner':{'$in':request['children']}}).sort([('owner',1)]):
-                        print >> sys.stderr, '\t  %s [%s]' % (snap['_id'], snap['owner'])
-        confirmed = warn_and_confirm('This will create a new snapshot for the organization(s) listed above.')
+                    print >> sys.stderr, "\tWARNING: --use-only-existing-snapshots flag assumes there is no scan data owned by %s; it will create a new snapshot based solely on data found in existing snapshots from children of %s, which are assumed to contain all needed descendant snapshot data.  Existing snapshots to be used in new snapshot:" % (
+                        request["_id"],
+                        request["_id"],
+                    )
+                    for snap in db.SnapshotDoc.collection.find(
+                        {"latest": True, "owner": {"$in": request["children"]}}
+                    ).sort([("owner", 1)]):
+                        print >> sys.stderr, "\t  %s [%s]" % (
+                            snap["_id"],
+                            snap["owner"],
+                        )
+        confirmed = warn_and_confirm(
+            "This will create a new snapshot for the organization(s) listed above."
+        )
         if confirmed:
-            success = create_snapshots(db, ch_db, requests, not args['--no-descendants'], args['--use-only-existing-snapshots'])
+            success = create_snapshots(
+                db,
+                ch_db,
+                requests,
+                not args["--no-descendants"],
+                args["--use-only-existing-snapshots"],
+            )
         else:
-            print >> sys.stderr, 'Aborted.'
+            print >> sys.stderr, "Aborted."
             sys.exit(-2)
-    elif args['delete']:
-        confirmed = warn_and_confirm('This will delete a snapshot and untag all related report documents.')    
+    elif args["delete"]:
+        confirmed = warn_and_confirm(
+            "This will delete a snapshot and untag all related report documents."
+        )
         if confirmed:
-            success = delete_snapshot(db, ch_db, args['SNAPSHOT-ID'])
+            success = delete_snapshot(db, ch_db, args["SNAPSHOT-ID"])
         else:
-            print >> sys.stderr, 'Aborted.'
+            print >> sys.stderr, "Aborted."
             sys.exit(-2)
-    
+
     if not success:
         sys.exit(-1)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()

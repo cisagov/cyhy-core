@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Parse NVD CVE JSON feed and upsert a mongo collection.
+"""Parse NVD CVE JSON feed and upsert a mongo collection.
 
 Usage:
   cyhy-nvdsync [--section SECTION] --use-network
@@ -15,7 +15,7 @@ Options:
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
 
-'''
+"""
 
 # standard python libraries
 import gzip
@@ -30,37 +30,36 @@ from docopt import docopt
 from cyhy.db import database
 from cyhy.util import util
 
-NVD_URL = 'https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{year}.json.gz'
+NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
 
 
 def parse_json(db, json_stream):
     data = json.load(json_stream)
 
-    if data.get('CVE_data_type') != 'CVE':
-        raise ValueError('JSON does not look like valid NVD CVE data.')
+    if data.get("CVE_data_type") != "CVE":
+        raise ValueError("JSON does not look like valid NVD CVE data.")
 
-    for entry in data.get('CVE_Items', []):
-        cve_id = entry['cve']['CVE_data_meta']['ID']
-        if 'baseMetricV2' not in entry['impact']:
+    for entry in data.get("CVE_Items", []):
+        cve_id = entry["cve"]["CVE_data_meta"]["ID"]
+        if "baseMetricV2" not in entry["impact"]:
             # NVD 'reject' CVEs do not have 'baseMetricV2' CVSS data
             # Make sure they are removed from our db.
-            db.CVEDoc.collection.remove({'_id': cve_id}, safe=False)
-            print 'x',
+            db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
+            print "x",
         else:
-            print '.',
-            cvss_base_score = entry['impact']['baseMetricV2']['cvssV2']['baseScore']
-            entry_doc = db.CVEDoc({'_id': cve_id,
-                                   'cvss_score': float(cvss_base_score)})
+            print ".",
+            cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
+            entry_doc = db.CVEDoc({"_id": cve_id, "cvss_score": float(cvss_base_score)})
             entry_doc.save(safe=False)
-    print '\n\n'
+    print "\n\n"
 
 
 def process_file(db, filename, gzipped=False):
     if gzipped:
         stream = gzip.GzipFile(filename)
     else:
-        stream = open(filename, 'rb')
+        stream = open(filename, "rb")
     parse_json(db, stream)
 
 
@@ -74,24 +73,24 @@ def process_url(db, url):
 def generate_urls():
     current_year = util.utcnow().year
     years = range(NVD_FIRST_YEAR, current_year + 1)
-    return [NVD_URL.format(**{'year': year}) for year in years]
+    return [NVD_URL.format(**{"year": year}) for year in years]
 
 
 def main():
-    args = docopt(__doc__, version='v0.0.1')
+    args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args['--section'])
+    db = database.db_from_config(args["--section"])
 
-    if args['--use-network']:
+    if args["--use-network"]:
         urls = generate_urls()
         for url in urls:
-            print '-'*10, url, '-'*10
+            print "-" * 10, url, "-" * 10
             process_url(db, url)
     else:
-        for filename in args['<file>']:
-            print '-'*10, filename, '-'*10
-            process_file(db, filename, gzipped=args['--gzipped'])
+        for filename in args["<file>"]:
+            print "-" * 10, filename, "-" * 10
+            process_file(db, filename, gzipped=args["--gzipped"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Parses a simple request (INI) and outputs a JSON request.
+"""Parses a simple request (INI) and outputs a JSON request.
 
 Usage:
   cyhy-simple [options] FILENAME
@@ -15,7 +15,7 @@ Options:
   -b --blank                     Output a blank form.
   -n --networks                  Output networks only.
   -s SECTION --section=SECTION   Configuration section to use.
-'''
+"""
 
 import sys
 import os
@@ -28,23 +28,24 @@ from ConfigParser import SafeConfigParser
 from cyhy.core.common import *
 
 THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
-AGENCY = 'AGENCY'
-POC = 'POC'
-POC2 = 'POC2'
-NETWORKS = 'NETWORKS'
-NAME = 'name'
-EMAIL= 'email'
-PHONE = 'phone'
-ACRONYM = 'acronym'
-TYPE = 'type'
-STAKEHOLDER = 'stakeholder'
-SCAN_TYPES = 'scan_types'
-KEY = 'key'
-REPORTING = 'REPORTING'
-RPT_TYPES = 'report_types'
-RPT_PERIOD = 'report_period'
-LOCATION = 'location'
-GNIS_ID = 'gnis_id'
+AGENCY = "AGENCY"
+POC = "POC"
+POC2 = "POC2"
+NETWORKS = "NETWORKS"
+NAME = "name"
+EMAIL = "email"
+PHONE = "phone"
+ACRONYM = "acronym"
+TYPE = "type"
+STAKEHOLDER = "stakeholder"
+SCAN_TYPES = "scan_types"
+KEY = "key"
+REPORTING = "REPORTING"
+RPT_TYPES = "report_types"
+RPT_PERIOD = "report_period"
+LOCATION = "location"
+GNIS_ID = "gnis_id"
+
 
 def write_blank_config():
     config = SafeConfigParser()
@@ -52,110 +53,140 @@ def write_blank_config():
     config.add_section(POC)
     config.add_section(NETWORKS)
     config.add_section(REPORTING)
-    config.set(AGENCY, NAME , '')
-    config.set(AGENCY, ACRONYM , '')
-    config.set(AGENCY, KEY , '')
-    config.set(AGENCY, TYPE , '')
-    config.set(AGENCY, STAKEHOLDER , '')
-    config.set(AGENCY, SCAN_TYPES , '')
-    config.set(AGENCY, GNIS_ID, '')
-    config.set(POC, NAME , '')
-    config.set(POC, EMAIL , '')
-    config.set(POC, PHONE , '')
-    config.set(POC, TYPE, '') # addition for POC types
-    config.set(REPORTING, RPT_TYPES , '')
-    config.set(REPORTING, RPT_PERIOD , '')
+    config.set(AGENCY, NAME, "")
+    config.set(AGENCY, ACRONYM, "")
+    config.set(AGENCY, KEY, "")
+    config.set(AGENCY, TYPE, "")
+    config.set(AGENCY, STAKEHOLDER, "")
+    config.set(AGENCY, SCAN_TYPES, "")
+    config.set(AGENCY, GNIS_ID, "")
+    config.set(POC, NAME, "")
+    config.set(POC, EMAIL, "")
+    config.set(POC, PHONE, "")
+    config.set(POC, TYPE, "")  # addition for POC types
+    config.set(REPORTING, RPT_TYPES, "")
+    config.set(REPORTING, RPT_PERIOD, "")
     config.write(sys.stdout)
+
 
 def get_location_details(db, gnis_id):
     try:
         gnis_id = long(gnis_id)
     except ValueError:
-        print >> sys.stderr, 'Invalid GNIS ID: {} (must be a long integer)'.format(gnis_id)
+        print >> sys.stderr, "Invalid GNIS ID: {} (must be a long integer)".format(
+            gnis_id
+        )
         sys.exit(-1)
-    place = db.PlaceDoc.find_one({'_id':gnis_id})
+    place = db.PlaceDoc.find_one({"_id": gnis_id})
     if place:
-        location_dict = {'gnis_id':gnis_id, 'name':place['name'],
-                         'state':place['state'], 'state_fips':place['state_fips'], 'state_name':place['state_name'],
-                         'county':place['county'], 'county_fips':place['county_fips'],
-                         'country':place['country'], 'country_name':place['country_name']}
+        location_dict = {
+            "gnis_id": gnis_id,
+            "name": place["name"],
+            "state": place["state"],
+            "state_fips": place["state_fips"],
+            "state_name": place["state_name"],
+            "county": place["county"],
+            "county_fips": place["county_fips"],
+            "country": place["country"],
+            "country_name": place["country_name"],
+        }
         return location_dict
     else:
-        print >> sys.stderr, 'GNIS ID {} not found in database!'.format(gnis_id)
+        print >> sys.stderr, "GNIS ID {} not found in database!".format(gnis_id)
         sys.exit(-1)
+
 
 def fill_in(db, filename):
     request = db.RequestDoc()
     config = SafeConfigParser(allow_no_value=True)
     config.read([filename])
-    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
+    # import IPython; IPython.embed() #<<< BREAKPOINT >>>
 
-    request['period_start'] = THE_VERY_DISTANT_FUTURE
-    request['agency'] = dict()
-    request['agency'][NAME] = config.get(AGENCY, NAME)
-    request['agency'][ACRONYM] = config.get(AGENCY, ACRONYM)
-    request['agency'][TYPE] = config.get(AGENCY, TYPE)
-    request['agency'][LOCATION] = get_location_details(db, config.get(AGENCY, GNIS_ID))
+    request["period_start"] = THE_VERY_DISTANT_FUTURE
+    request["agency"] = dict()
+    request["agency"][NAME] = config.get(AGENCY, NAME)
+    request["agency"][ACRONYM] = config.get(AGENCY, ACRONYM)
+    request["agency"][TYPE] = config.get(AGENCY, TYPE)
+    request["agency"][LOCATION] = get_location_details(db, config.get(AGENCY, GNIS_ID))
     request[KEY] = config.get(AGENCY, KEY, raw=True)
-    request['_id'] = config.get(AGENCY, ACRONYM)
-    if config.get(AGENCY, STAKEHOLDER).lower() == 'true':
+    request["_id"] = config.get(AGENCY, ACRONYM)
+    if config.get(AGENCY, STAKEHOLDER).lower() == "true":
         request[STAKEHOLDER] = True
     else:
         request[STAKEHOLDER] = False
     if config.get(AGENCY, SCAN_TYPES):
-        request[SCAN_TYPES] = config.get(AGENCY, SCAN_TYPES).replace(' ','').split(',')
+        request[SCAN_TYPES] = config.get(AGENCY, SCAN_TYPES).replace(" ", "").split(",")
     if config.get(REPORTING, RPT_TYPES):
-        request[RPT_TYPES] = config.get(REPORTING, RPT_TYPES).replace(' ','').split(',')
-    contact = {NAME:config.get(POC, NAME),
-               PHONE:config.get(POC, PHONE),
-               EMAIL:config.get(POC, EMAIL),
-               TYPE:config.get(POC, TYPE) # addition for POC types
-               }
-    request['agency']['contacts'] = [contact]
+        request[RPT_TYPES] = (
+            config.get(REPORTING, RPT_TYPES).replace(" ", "").split(",")
+        )
+    contact = {
+        NAME: config.get(POC, NAME),
+        PHONE: config.get(POC, PHONE),
+        EMAIL: config.get(POC, EMAIL),
+        TYPE: config.get(POC, TYPE),  # addition for POC types
+    }
+    request["agency"]["contacts"] = [contact]
 
     if REPORTING in config.sections() and config.has_option(REPORTING, RPT_PERIOD):
         if config.get(REPORTING, RPT_PERIOD):
             request[RPT_PERIOD] = config.get(REPORTING, RPT_PERIOD)
 
     if POC2 in config.sections():
-        contact = {NAME:config.get(POC2, NAME),
-                   PHONE:config.get(POC2, PHONE),
-                   EMAIL:config.get(POC2, EMAIL),
-                   TYPE:config.get(POC2, TYPE) # addition for POC types
-                   }
-        request['agency']['contacts'].append(contact)
+        contact = {
+            NAME: config.get(POC2, NAME),
+            PHONE: config.get(POC2, PHONE),
+            EMAIL: config.get(POC2, EMAIL),
+            TYPE: config.get(POC2, TYPE),  # addition for POC types
+        }
+        request["agency"]["contacts"].append(contact)
 
-    if request['agency'][TYPE] not in AGENCY_TYPE:
-        print >> sys.stderr, 'Agency type is \'%s\' - must be one of %s' % (request['agency'][TYPE], AGENCY_TYPE)
+    if request["agency"][TYPE] not in AGENCY_TYPE:
+        print >> sys.stderr, "Agency type is '%s' - must be one of %s" % (
+            request["agency"][TYPE],
+            AGENCY_TYPE,
+        )
         sys.exit(-1)
 
     if request.get(SCAN_TYPES):
         for st in request[SCAN_TYPES]:
             if st not in SCAN_TYPE:
-                print >> sys.stderr, 'Unknown scan type \'%s\' - must be one of %s' % (st, SCAN_TYPE)
+                print >> sys.stderr, "Unknown scan type '%s' - must be one of %s" % (
+                    st,
+                    SCAN_TYPE,
+                )
                 sys.exit(-1)
 
     if request.get(RPT_TYPES):
         for rt in request[RPT_TYPES]:
             if rt not in REPORT_TYPE:
-                print >> sys.stderr, 'Unknown report type \'%s\' - must be one of %s' % (rt, REPORT_TYPE)
+                print >> sys.stderr, "Unknown report type '%s' - must be one of %s" % (
+                    rt,
+                    REPORT_TYPE,
+                )
                 sys.exit(-1)
 
     if request.get(RPT_PERIOD):
         if request[RPT_PERIOD] not in REPORT_PERIOD:
-            print >> sys.stderr, 'Report period is \'%s\' - must be one of %s' % (request[RPT_PERIOD], REPORT_PERIOD)
+            print >> sys.stderr, "Report period is '%s' - must be one of %s" % (
+                request[RPT_PERIOD],
+                REPORT_PERIOD,
+            )
             sys.exit(-1)
 
-    for contact in request['agency']['contacts']:
+    for contact in request["agency"]["contacts"]:
         if contact[TYPE] not in POC_TYPE:
-            print >> sys.stderr, 'POC type is \'%s\' - must be one of %s' % (contact[TYPE], POC_TYPE)
+            print >> sys.stderr, "POC type is '%s' - must be one of %s" % (
+                contact[TYPE],
+                POC_TYPE,
+            )
             sys.exit(-1)
 
     nets = netaddr.IPSet()
-    for k,v in config.items(NETWORKS):
-        if k.find('-') != -1:
+    for k, v in config.items(NETWORKS):
+        if k.find("-") != -1:
             # handle a range
-            start, end = k.split('-')
+            start, end = k.split("-")
             rng = netaddr.IPRange(start.strip(), end.strip())
             for i in rng.cidrs():
                 nets.add(i)
@@ -168,27 +199,29 @@ def fill_in(db, filename):
 
     return request
 
-def main():
-    args = docopt(__doc__, version='v0.0.1')
 
-    if args['--blank']:
+def main():
+    args = docopt(__doc__, version="v0.0.1")
+
+    if args["--blank"]:
         write_blank_config()
         sys.exit(0)
 
-    db = database.db_from_config(args['--section'])
+    db = database.db_from_config(args["--section"])
 
-    if not os.path.isfile(args['FILENAME']):
-        print >> sys.stderr, 'File not found:', args['FILENAME']
+    if not os.path.isfile(args["FILENAME"]):
+        print >> sys.stderr, "File not found:", args["FILENAME"]
         sys.exit(-1)
 
-    request = fill_in(db, args['FILENAME'])
+    request = fill_in(db, args["FILENAME"])
 
-    if args['--networks']:
-        for n in request['networks']:
+    if args["--networks"]:
+        for n in request["networks"]:
             print n
     else:
         util.pp(request)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()
-    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
+    # import IPython; IPython.embed() #<<< BREAKPOINT >>>
