@@ -28,7 +28,13 @@ def host_count_pl(owners):
 def vulnerable_host_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {"$group": {"_id": {"ip": "$ip"}}},
             {"$group": {"_id": {}, "vulnerable_host_count": {"$sum": 1}}},
         ],
@@ -52,7 +58,13 @@ def unique_operating_system_count_pl(snapshot_oid):
 def severity_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {},
@@ -79,7 +91,13 @@ def severity_count_pl(snapshot_oid):
 def unique_severity_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {"source_id": "$source_id", "severity": "$details.severity"}
@@ -171,7 +189,7 @@ def service_counts_simple_pl(snapshot_oid):
 def cvss_sum_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid}},
+            {"$match": {"snapshots": snapshot_oid, "source": "nessus"}},
             # host cvss is the max of any cvss for that host
             {
                 "$group": {
@@ -243,7 +261,7 @@ def clear_latest_vulns_pl(ip_ints, ports, source_ids, source):
 def max_severity_for_host(ip_int):
     return (
         [
-            {"$match": {"ip_int": ip_int, "open": True}},
+            {"$match": {"ip_int": ip_int, "open": True, "source": "nessus"}},
             # host cvss is the max of any cvss for that host
             {"$group": {"_id": {}, "severity_max": {"$max": "$details.severity"}}},
         ],
@@ -254,7 +272,13 @@ def max_severity_for_host(ip_int):
 def false_positives_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": True}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": True,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {},
@@ -281,7 +305,13 @@ def false_positives_pl(snapshot_oid):
 def open_ticket_age_in_snapshot_pl(open_as_of_date, snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$project": {
                     "_id": 0,
@@ -303,6 +333,7 @@ def closed_ticket_age_for_orgs_pl(closed_since_date, org_list):
                     "open": False,
                     "time_closed": {"$gte": closed_since_date},
                     "owner": {"$in": org_list},
+                    "source": "nessus",
                 }
             },
             {
