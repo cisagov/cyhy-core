@@ -30,7 +30,6 @@ from cyhy.core.common import *
 THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
 AGENCY = "AGENCY"
 POC = "POC"
-POC2 = "POC2"
 NETWORKS = "NETWORKS"
 NAME = "name"
 EMAIL = "email"
