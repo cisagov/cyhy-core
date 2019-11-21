@@ -106,24 +106,22 @@ def fill_in(db, filename):
         request[SCAN_TYPES] = config.get(AGENCY, SCAN_TYPES).replace(' ','').split(',')
     if config.get(REPORTING, RPT_TYPES):
         request[RPT_TYPES] = config.get(REPORTING, RPT_TYPES).replace(' ','').split(',')
-    contact = {NAME:config.get(POC, NAME),
-               PHONE:config.get(POC, PHONE),
-               EMAIL:config.get(POC, EMAIL),
-               TYPE:config.get(POC, TYPE) # addition for POC types
-               }
-    request['agency']['contacts'] = [contact]
 
     if REPORTING in config.sections() and config.has_option(REPORTING, RPT_PERIOD):
         if config.get(REPORTING, RPT_PERIOD):
             request[RPT_PERIOD] = config.get(REPORTING, RPT_PERIOD)
 
-    if POC2 in config.sections():
-        contact = {NAME:config.get(POC2, NAME),
-                   PHONE:config.get(POC2, PHONE),
-                   EMAIL:config.get(POC2, EMAIL),
-                   TYPE:config.get(POC2, TYPE) # addition for POC types
-                   }
-        request['agency']['contacts'].append(contact)
+    pocs = [section for section in config.sections() if section.startswith("POC")]
+    if len(pocs) > 0:
+        request['agency']['contacts'] = []
+        for poc in pocs:
+            contact = {
+                NAME: config.get(poc, NAME),
+                PHONE: config.get(poc, PHONE),
+                EMAIL: config.get(poc, EMAIL),
+                TYPE: config.get(poc, TYPE) # addition for POC types
+            }
+            request['agency']['contacts'].append(contact)
 
     if request['agency'][TYPE] not in AGENCY_TYPE:
         print >> sys.stderr, 'Agency type is \'%s\' - must be one of %s' % (request['agency'][TYPE], AGENCY_TYPE)
