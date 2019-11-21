@@ -466,6 +466,7 @@ class IPPortTicketManager(object):
             "cvss_base_score": None,
             "severity": 0,
             "name": portscan["name"],
+            "service": portscan["service"],
         }
 
         host = self.__db.HostDoc.get_by_ip(portscan["ip"])
