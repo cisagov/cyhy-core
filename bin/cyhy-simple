@@ -125,16 +125,15 @@ def fill_in(db, filename):
             request[RPT_PERIOD] = config.get(REPORTING, RPT_PERIOD)
 
     pocs = [section for section in config.sections() if section.startswith("POC")]
-    if len(pocs) > 0:
-        request["agency"]["contacts"] = []
-        for poc in pocs:
-            contact = {
-                NAME: config.get(poc, NAME),
-                PHONE: config.get(poc, PHONE),
-                EMAIL: config.get(poc, EMAIL),
-                TYPE: config.get(poc, TYPE),  # addition for POC types
-            }
-            request["agency"]["contacts"].append(contact)
+    request["agency"]["contacts"] = []
+    for poc in pocs:
+        contact = {
+            NAME: config.get(poc, NAME),
+            PHONE: config.get(poc, PHONE),
+            EMAIL: config.get(poc, EMAIL),
+            TYPE: config.get(poc, TYPE),  # addition for POC types
+        }
+        request["agency"]["contacts"].append(contact)
 
     if request["agency"][TYPE] not in AGENCY_TYPE:
         print >> sys.stderr, "Agency type is '%s' - must be one of %s" % (
@@ -169,12 +168,22 @@ def fill_in(db, filename):
             )
             sys.exit(-1)
 
-    for contact in request["agency"]["contacts"]:
+    contacts = request["agency"]["contacts"]
+    if len(contacts) == 0:
+        print >> sys.stderr, "No POCs associated with agency"
+        sys.exit(-1)
+
+    for contact in contacts:
         if contact[TYPE] not in POC_TYPE:
             print >> sys.stderr, "POC type is '%s' - must be one of %s" % (
                 contact[TYPE],
                 POC_TYPE,
             )
+            sys.exit(-1)
+
+        email = contact[EMAIL]
+        if email is None or email == "":
+            print >> sys.stderr, "All POCs must have an associated email"
             sys.exit(-1)
 
     nets = netaddr.IPSet()
