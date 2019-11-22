@@ -212,7 +212,7 @@ def fill_in(db, filename, force=False):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v0.0.2")
 
     if args["--blank"]:
         write_blank_config()
