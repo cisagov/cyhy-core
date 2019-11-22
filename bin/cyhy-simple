@@ -13,6 +13,7 @@ Options:
   --version                      Show version.
 
   -b --blank                     Output a blank form.
+  -f --force                     Override warnings and do it anyway.
   -n --networks                  Output networks only.
   -s SECTION --section=SECTION   Configuration section to use.
 """
@@ -95,7 +96,7 @@ def get_location_details(db, gnis_id):
         sys.exit(-1)
 
 
-def fill_in(db, filename):
+def fill_in(db, filename, force=False):
     request = db.RequestDoc()
     config = SafeConfigParser(allow_no_value=True)
     config.read([filename])
@@ -171,7 +172,10 @@ def fill_in(db, filename):
     contacts = request["agency"]["contacts"]
     if len(contacts) == 0:
         print >> sys.stderr, "No POCs associated with agency"
-        sys.exit(-1)
+        if not force:
+            sys.exit(-1)
+        else:
+            print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
 
     for contact in contacts:
         if contact[TYPE] not in POC_TYPE:
@@ -184,7 +188,10 @@ def fill_in(db, filename):
         email = contact[EMAIL]
         if email is None or email == "":
             print >> sys.stderr, "All POCs must have an associated email"
-            sys.exit(-1)
+            if not force:
+                sys.exit(-1)
+            else:
+                print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
 
     nets = netaddr.IPSet()
     for k, v in config.items(NETWORKS):
@@ -211,13 +218,15 @@ def main():
         write_blank_config()
         sys.exit(0)
 
+    force = args["--force"]
+
     db = database.db_from_config(args["--section"])
 
     if not os.path.isfile(args["FILENAME"]):
         print >> sys.stderr, "File not found:", args["FILENAME"]
         sys.exit(-1)
 
-    request = fill_in(db, args["FILENAME"])
+    request = fill_in(db, args["FILENAME"], force)
 
     if args["--networks"]:
         for n in request["networks"]:
