@@ -13,6 +13,7 @@ Options:
   --version                      Show version.
 
   -b --blank                     Output a blank form.
+  -f --force                     Override warnings and do it anyway.
   -n --networks                  Output networks only.
   -s SECTION --section=SECTION   Configuration section to use.
 """
@@ -30,7 +31,6 @@ from cyhy.core.common import *
 THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
 AGENCY = "AGENCY"
 POC = "POC"
-POC2 = "POC2"
 NETWORKS = "NETWORKS"
 NAME = "name"
 EMAIL = "email"
@@ -96,7 +96,7 @@ def get_location_details(db, gnis_id):
         sys.exit(-1)
 
 
-def fill_in(db, filename):
+def fill_in(db, filename, force=False):
     request = db.RequestDoc()
     config = SafeConfigParser(allow_no_value=True)
     config.read([filename])
@@ -120,24 +120,19 @@ def fill_in(db, filename):
         request[RPT_TYPES] = (
             config.get(REPORTING, RPT_TYPES).replace(" ", "").split(",")
         )
-    contact = {
-        NAME: config.get(POC, NAME),
-        PHONE: config.get(POC, PHONE),
-        EMAIL: config.get(POC, EMAIL),
-        TYPE: config.get(POC, TYPE),  # addition for POC types
-    }
-    request["agency"]["contacts"] = [contact]
 
     if REPORTING in config.sections() and config.has_option(REPORTING, RPT_PERIOD):
         if config.get(REPORTING, RPT_PERIOD):
             request[RPT_PERIOD] = config.get(REPORTING, RPT_PERIOD)
 
-    if POC2 in config.sections():
+    pocs = [section for section in config.sections() if section.startswith("POC")]
+    request["agency"]["contacts"] = []
+    for poc in pocs:
         contact = {
-            NAME: config.get(POC2, NAME),
-            PHONE: config.get(POC2, PHONE),
-            EMAIL: config.get(POC2, EMAIL),
-            TYPE: config.get(POC2, TYPE),  # addition for POC types
+            NAME: config.get(poc, NAME),
+            PHONE: config.get(poc, PHONE),
+            EMAIL: config.get(poc, EMAIL),
+            TYPE: config.get(poc, TYPE),  # addition for POC types
         }
         request["agency"]["contacts"].append(contact)
 
@@ -174,13 +169,29 @@ def fill_in(db, filename):
             )
             sys.exit(-1)
 
-    for contact in request["agency"]["contacts"]:
+    contacts = request["agency"]["contacts"]
+    if len(contacts) == 0:
+        print >> sys.stderr, "No POCs associated with agency"
+        if not force:
+            sys.exit(-1)
+        else:
+            print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
+
+    for contact in contacts:
         if contact[TYPE] not in POC_TYPE:
             print >> sys.stderr, "POC type is '%s' - must be one of %s" % (
                 contact[TYPE],
                 POC_TYPE,
             )
             sys.exit(-1)
+
+        email = contact[EMAIL]
+        if email is None or email == "":
+            print >> sys.stderr, "All POCs must have an associated email"
+            if not force:
+                sys.exit(-1)
+            else:
+                print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
 
     nets = netaddr.IPSet()
     for k, v in config.items(NETWORKS):
@@ -201,11 +212,13 @@ def fill_in(db, filename):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v0.0.2")
 
     if args["--blank"]:
         write_blank_config()
         sys.exit(0)
+
+    force = args["--force"]
 
     db = database.db_from_config(args["--section"])
 
@@ -213,7 +226,7 @@ def main():
         print >> sys.stderr, "File not found:", args["FILENAME"]
         sys.exit(-1)
 
-    request = fill_in(db, args["FILENAME"])
+    request = fill_in(db, args["FILENAME"], force)
 
     if args["--networks"]:
         for n in request["networks"]:
