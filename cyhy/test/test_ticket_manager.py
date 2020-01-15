@@ -1,11 +1,16 @@
 #!/usr/bin/env py.test -v
 
-import pytest
-from cyhy.db import VulnTicketManager, IPPortTicketManager, IPTicketManager
+# built-in python libraries
+
+# third-party libraries (install with pip)
 from bson.objectid import ObjectId
 from netaddr import IPSet, IPAddress as ip
+import pytest
+
+# local libraries
 from common_fixtures import database
 from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
+from cyhy.db import VulnTicketManager, IPPortTicketManager, IPTicketManager
 from cyhy.util import util
 
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
