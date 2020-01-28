@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Manage IP address assignments to owners.
+"""Manage IP address assignments to owners.
 
 Usage:
   cyhy-ip [--section SECTION] [--file FILENAME] (add | compare | remove) OWNER [ADDRESSES ...]
@@ -21,7 +21,7 @@ Options:
 Notes:
   Address can be read from standard input if no addresses are provided on the command line
   and the --file option is omitted.
-'''
+"""
 
 import sys
 import progressbar as pb
@@ -33,8 +33,9 @@ from cyhy.util import util
 from cyhy.core.geoloc import GeoLocDB
 from cyhy.core.common import *
 
+
 def munge(x):
-    '''Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
+    """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
     
     Args:
         x: A Python tuple or list containing IPNetwork and IPRange objects
@@ -42,7 +43,7 @@ def munge(x):
     Returns: 
         An IPSet corresponding to the Python tuple or list that was passed
         in.
-    '''
+    """
     ans = []
     for i in x:
         # IPSet doesn't like it when an IPRange appears in the tuple
@@ -53,30 +54,39 @@ def munge(x):
             ans.append(i)
     return IPSet(ans)
 
-PB_INIT_WIDGETS = ['Initializing: ', pb.SimpleProgress(),' ', pb.Bar(marker=unichr(0x25B6)),' ', pb.ETA()]
+
+PB_INIT_WIDGETS = [
+    "Initializing: ",
+    pb.SimpleProgress(),
+    " ",
+    pb.Bar(marker=unichr(0x25B6)),
+    " ",
+    pb.ETA(),
+]
 
 # Only IPV4_LOOPBACK and IPV4_RESERVED need to be munged, since the
 # others are not lists or tuples
 SPECIAL_RANGES = {
-    'IPv4 Loopback': IPSet(ip.IPV4_LOOPBACK),
-    'IPv4 Private': munge(ip.IPV4_PRIVATE),
-    'IPv4 Link Local': IPSet(ip.IPV4_LINK_LOCAL),
-    'IPv4 Multicast': IPSet(ip.IPV4_MULTICAST),
-    'IPv4 6 to 4': IPSet(ip.IPV4_6TO4),
-    'IPv4 Reserved': munge(ip.IPV4_RESERVED)
+    "IPv4 Loopback": IPSet(ip.IPV4_LOOPBACK),
+    "IPv4 Private": munge(ip.IPV4_PRIVATE),
+    "IPv4 Link Local": IPSet(ip.IPV4_LINK_LOCAL),
+    "IPv4 Multicast": IPSet(ip.IPV4_MULTICAST),
+    "IPv4 6 to 4": IPSet(ip.IPV4_6TO4),
+    "IPv4 Reserved": munge(ip.IPV4_RESERVED),
 }
+
 
 def parse_addresses(addresses):
     nets = IPSet()
     for a in addresses:
-        a = a.split('#',1)[0] # remove comments
+        a = a.split("#", 1)[0]  # remove comments
         a = a.strip()
         if not a:
             # skip blank lines
             continue
-        if a.find('-') != -1:
+        if a.find("-") != -1:
             # handle a range
-            start, end = a.split('-')
+            start, end = a.split("-")
             rng = IPRange(start.strip(), end.strip())
             for i in rng.cidrs():
                 nets.add(i)
@@ -86,69 +96,85 @@ def parse_addresses(addresses):
             nets.add(net)
     return nets
 
+
 def read_file(filename):
-    f = open(filename, 'r')
+    f = open(filename, "r")
     return parse_addresses(f.readlines())
-    
+
+
 def get_special_intersections(cidrs):
-    results = {} #{request: IPSet of intersections}
-    for description,special_set in SPECIAL_RANGES.items():
+    results = {}  # {request: IPSet of intersections}
+    for description, special_set in SPECIAL_RANGES.items():
         intersection = special_set & cidrs
         if intersection:
             results[description] = intersection
     return results
 
+
 def print_intersections(intersections):
     for request, intersecting_cidrs in intersections.iteritems():
         if type(request) == str:
-            print '# %s: %s' % (request, '{:,}'.format(len(intersecting_cidrs)))
+            print "# %s: %s" % (request, "{:,}".format(len(intersecting_cidrs)))
         else:
-            print '# %s (%s): %s' % (request['agency']['name'], request['_id'], '{:,}'.format(len(intersecting_cidrs)))
+            print "# %s (%s): %s" % (
+                request["agency"]["name"],
+                request["_id"],
+                "{:,}".format(len(intersecting_cidrs)),
+            )
         print_cidrs(intersecting_cidrs, indent=1)
         print
 
+
 def print_cidrs(cidrs, indent=0):
     for i in cidrs.iter_cidrs():
-        print '\t' * indent + str(i)
-   
+        print "\t" * indent + str(i)
+
+
 def check(db, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(cidrs) # intersections from database
-    intersections.update(get_special_intersections(cidrs)) # intersections with RFCs
+    intersections = db.RequestDoc.get_all_intersections(
+        cidrs
+    )  # intersections from database
+    intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     print_intersections(intersections)
     matched = IPSet()
     for request, intersecting_cidrs in intersections.iteritems():
         matched.update(intersecting_cidrs)
     unmatched = cidrs - matched
     if unmatched:
-        print 'Unmatched: %s' % '{:,}'.format(len(unmatched))
+        print "Unmatched: %s" % "{:,}".format(len(unmatched))
         print_cidrs(unmatched, indent=1)
-    
+
+
 def do_list(db, owner):
-    request = db.RequestDoc.find_one({'_id':owner})
+    request = db.RequestDoc.find_one({"_id": owner})
     if request:
-        for i in request['networks']:
+        for i in request["networks"]:
             print i
     else:
-        print 'ERROR: Organization %s not found in DB' % owner
-        
+        print "ERROR: Organization %s not found in DB" % owner
+
+
 def do_list_all(db):
-    intersections = db.RequestDoc.get_all_intersections(IPSet(['0.0.0.0/0']))
+    intersections = db.RequestDoc.get_all_intersections(IPSet(["0.0.0.0/0"]))
     print_intersections(intersections)
-    
+
+
 def add(db, owner, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(cidrs) # intersections from database
-    intersections.update(get_special_intersections(cidrs)) # intersections with RFCs
+    intersections = db.RequestDoc.get_all_intersections(
+        cidrs
+    )  # intersections from database
+    intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     if intersections:
-        print 'Cannot continue!\nSome addresses already allocated or reserved:'
+        print "Cannot continue!\nSome addresses already allocated or reserved:"
         print_intersections(intersections)
         sys.exit(-1)
-    request = db.RequestDoc.find_one({'_id':owner})
+    request = db.RequestDoc.find_one({"_id": owner})
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
-    stage = STAGE[request.get('init_stage', STAGE.NETSCAN1)]        
+    stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
     geo_loc_db = GeoLocDB()
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
-    pbar.widgets[0] = 'Adding %s: ' % owner
+    pbar.widgets[0] = "Adding %s: " % owner
     i = 0
     for ip in cidrs:
         location = geo_loc_db.lookup(ip)
@@ -160,43 +186,54 @@ def add(db, owner, cidrs):
     # update request with new networks
     request.add_networks(cidrs)
     request.save()
-    print 'IPs added to request, and initialized.  Tally sync required to start scan of new IPs.'
+    print "IPs added to request, and initialized.  Tally sync required to start scan of new IPs."
     sys.exit(0)
-    
+
+
 def remove(db, owner, cidrs):
     intersections = db.RequestDoc.get_all_intersections(cidrs)
     if len(intersections) == 0:
-        print 'Cannot continue!\nAddress is not allocated.'
+        print "Cannot continue!\nAddress is not allocated."
         sys.exit(-1)
-    if len(intersections) > 1 or intersections.keys()[0]['_id'] != owner: 
-        print 'Cannot continue!\nSome addresses are allocated to owners other than %s:' % owner
+    if len(intersections) > 1 or intersections.keys()[0]["_id"] != owner:
+        print "Cannot continue!\nSome addresses are allocated to owners other than %s:" % owner
         print_intersections(intersections)
         sys.exit(-1)
     request = intersections.keys()[0]
-    
+
     # clear latest flags and remove host documents
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
-    pbar.widgets[0] = 'Removing %s: ' % owner
+    pbar.widgets[0] = "Removing %s: " % owner
     i = 0
     ticket_closing_time = util.utcnow()
     for net in cidrs.iter_cidrs():
         # clear lastest flags on ip ranges
-        db.HostScanDoc.collection.update(spec={'ip_int':{'$gte':net.first, '$lte':net.last}},
-            document={'$set': {'latest':False}}, 
-            multi=True)
-        db.PortScanDoc.collection.update(spec={'ip_int':{'$gte':net.first, '$lte':net.last}},
-            document={'$set': {'latest':False}}, 
-            multi=True)
-        db.VulnScanDoc.collection.update(spec={'ip_int':{'$gte':net.first, '$lte':net.last}},
-            document={'$set': {'latest':False}}, 
-            multi=True)
+        db.HostScanDoc.collection.update(
+            spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
+            document={"$set": {"latest": False}},
+            multi=True,
+        )
+        db.PortScanDoc.collection.update(
+            spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
+            document={"$set": {"latest": False}},
+            multi=True,
+        )
+        db.VulnScanDoc.collection.update(
+            spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
+            document={"$set": {"latest": False}},
+            multi=True,
+        )
         # remove hosts by their integer ranges
-        db.HostDoc.collection.remove({'_id':{'$gte':net.first, '$lte':net.last}})
+        db.HostDoc.collection.remove({"_id": {"$gte": net.first, "$lte": net.last}})
         # close open tickets in this ip range
-        for t in db.TicketDoc.find({'ip_int':{'$gte':net.first, '$lte':net.last}, 'open':True}):
-            t['open'] = False
-            t['time_closed'] = ticket_closing_time
-            t.add_event(TICKET_EVENT.CLOSED, 'host moved out of scope', time=ticket_closing_time)
+        for t in db.TicketDoc.find(
+            {"ip_int": {"$gte": net.first, "$lte": net.last}, "open": True}
+        ):
+            t["open"] = False
+            t["time_closed"] = ticket_closing_time
+            t.add_event(
+                TICKET_EVENT.CLOSED, "host moved out of scope", time=ticket_closing_time
+            )
             t.save()
         i += len(net)
         pbar.update(i)
@@ -204,81 +241,106 @@ def remove(db, owner, cidrs):
     request.remove_networks(cidrs)
     request.save()
     print
-    print 'IPs removed from request, host documents deleted, open tickets closed, and relevant reports latest flags cleared.'
+    print "IPs removed from request, host documents deleted, open tickets closed, and relevant reports latest flags cleared."
+
 
 def wrapped_remove(db, owner, cidrs):
     remove(db, owner, cidrs)
     sys.exit(0)
-    
+
+
 def compare(db, owner, new_net_set):
-    old_net_set =  db.RequestDoc.find_one({'_id':owner}).networks
-    
+    old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+
     added = new_net_set - old_net_set
     removed = old_net_set - new_net_set
     unchanged = old_net_set.intersection(new_net_set)
-    
-    print 'New Network List (%s addresses)' % ('{:,}'.format(len(new_net_set)))
+
+    print "New Network List (%s addresses)" % ("{:,}".format(len(new_net_set)))
     for net in new_net_set.iter_cidrs():
         print net
 
-    print    
-    print 'Previous Network List (%s addresses)' % ('{:,}'.format(len(old_net_set)))
+    print
+    print "Previous Network List (%s addresses)" % ("{:,}".format(len(old_net_set)))
     for net in old_net_set.iter_cidrs():
         print net
-        
-    print    
-    print 'Unchanged Networks (%s addresses)' % ('{:,}'.format(len(unchanged)))
+
+    print
+    print "Unchanged Networks (%s addresses)" % ("{:,}".format(len(unchanged)))
     for net in unchanged.iter_cidrs():
         print net
 
     print
-    print 'Added Networks (%s addresses)' % ('{:,}'.format(len(added)))
+    print "Added Networks (%s addresses)" % ("{:,}".format(len(added)))
     for net in added.iter_cidrs():
         print net
 
     print
-    print 'Removed Networks (%s addresses)' % ('{:,}'.format(len(removed)))
+    print "Removed Networks (%s addresses)" % ("{:,}".format(len(removed)))
     for net in removed.iter_cidrs():
         print net
-    
+
     print
-    print 'Net address count change: %s' % ('{:,}'.format(len(new_net_set) - len(old_net_set)))
+    print "Net address count change: %s" % (
+        "{:,}".format(len(new_net_set) - len(old_net_set))
+    )
     sys.exit(0)
-    
+
+
 def move(db, orig_owner, new_owner, networks_to_move):
     if orig_owner == new_owner:
-        print 'ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes.' % orig_owner
+        print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
         sys.exit(-1)
     orig_owner_request = db.RequestDoc.get_by_owner(orig_owner)
     new_owner_request = db.RequestDoc.get_by_owner(new_owner)
-    for (org,req) in [(orig_owner, orig_owner_request), (new_owner, new_owner_request)]:
+    for (org, req) in [
+        (orig_owner, orig_owner_request),
+        (new_owner, new_owner_request),
+    ]:
         if not req:
-            print 'ERROR: Organization %s not found in DB' % org
+            print "ERROR: Organization %s not found in DB" % org
             sys.exit(-1)
-    
+
     orig_owner_nets = orig_owner_request.networks
     cidrs_not_in_orig_owner = networks_to_move - orig_owner_nets
     if cidrs_not_in_orig_owner:
-        print '\nERROR: The following networks are NOT part of %s:' % (orig_owner_request['_id'])
+        print "\nERROR: The following networks are NOT part of %s:" % (
+            orig_owner_request["_id"]
+        )
         for net in cidrs_not_in_orig_owner.iter_cidrs():
-            print '\t %s' % net
-        print 'EXITING without making any changes.'
+            print "\t %s" % net
+        print "EXITING without making any changes."
         sys.exit(-1)
-    
-    if not util.warn_and_confirm('This will modify database documents.  You should PAUSE the CyHy commander before continuing.'):
-        print 'Aborted.'
+
+    if not util.warn_and_confirm(
+        "This will modify database documents.  You should PAUSE the CyHy commander before continuing."
+    ):
+        print "Aborted."
         sys.exit(-2)
-        
+
     ch_db = CHDatabase(db)
     # Change owner on all relevant documents
-    ch_db.change_ownership(orig_owner_request['_id'], new_owner_request['_id'], networks_to_move, 'host owner changed')
-    
+    ch_db.change_ownership(
+        orig_owner_request["_id"],
+        new_owner_request["_id"],
+        networks_to_move,
+        "host owner changed",
+    )
+
     # Check to see if new_owner has a different scheduler than orig_owner (None == manual scheduler; not None == persistent scanning)
-    if (orig_owner_request.get('scheduler') == None) and (new_owner_request.get('scheduler') != None):
-        db.HostDoc.ensure_next_scan_set(new_owner_request['_id'])   # Ensure a next_scan date is set for all hosts in the new owner
-    elif (orig_owner_request.get('scheduler') != None) and (new_owner_request.get('scheduler') == None):
-        db.HostDoc.clear_next_scan_date(new_owner_request['_id'])    # Clear the next_scan date
-    
+    if (orig_owner_request.get("scheduler") == None) and (
+        new_owner_request.get("scheduler") != None
+    ):
+        db.HostDoc.ensure_next_scan_set(
+            new_owner_request["_id"]
+        )  # Ensure a next_scan date is set for all hosts in the new owner
+    elif (orig_owner_request.get("scheduler") != None) and (
+        new_owner_request.get("scheduler") == None
+    ):
+        db.HostDoc.clear_next_scan_date(
+            new_owner_request["_id"]
+        )  # Clear the next_scan date
+
     # Remove the networks_to_move from orig_owner's request doc
     orig_owner_request.remove_networks(networks_to_move)
     # Add the networks_to_move to new_owner's request doc
@@ -287,113 +349,134 @@ def move(db, orig_owner, new_owner, networks_to_move):
     # Save both request docs
     orig_owner_request.save()
     new_owner_request.save()
-    
-    orig_owner_tally = db.TallyDoc.get_by_owner(orig_owner_request['_id'])
-    new_owner_tally = db.TallyDoc.get_by_owner(new_owner_request['_id'])
 
-    #Sync from/to org tallies
-    for (org,tally) in [(orig_owner_request['_id'], orig_owner_tally), (new_owner_request['_id'], new_owner_tally)]:
+    orig_owner_tally = db.TallyDoc.get_by_owner(orig_owner_request["_id"])
+    new_owner_tally = db.TallyDoc.get_by_owner(new_owner_request["_id"])
+
+    # Sync from/to org tallies
+    for (org, tally) in [
+        (orig_owner_request["_id"], orig_owner_tally),
+        (new_owner_request["_id"], new_owner_tally),
+    ]:
         if not tally:
-            print 'WARNING: Organization %s does NOT have a tally document!' % org
+            print "WARNING: Organization %s does NOT have a tally document!" % org
         else:
-            print 'Syncing tally for %s' % org
+            print "Syncing tally for %s" % org
             tally.sync(db)
-    print 'SUCCESS!'
+    print "SUCCESS!"
     sys.exit(0)
-    
+
+
 def setstage(db, stage, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(cidrs)  # intersections from database
+    intersections = db.RequestDoc.get_all_intersections(
+        cidrs
+    )  # intersections from database
     matched = IPSet()
     for request, intersecting_cidrs in intersections.iteritems():
         matched.update(intersecting_cidrs)
 
-    special_intersections = get_special_intersections(cidrs)    # intersections with RFCs
+    special_intersections = get_special_intersections(cidrs)  # intersections with RFCs
     special = IPSet()
     for request, intersecting_cidrs in special_intersections.iteritems():
         special.update(intersecting_cidrs)
     unmatched = cidrs - matched - special
-    
+
     if unmatched:
-        print '\nThe following networks were not found in CyHy inventory and will be skipped: %s' % '{:,}'.format(len(unmatched))
+        print "\nThe following networks were not found in CyHy inventory and will be skipped: %s" % "{:,}".format(
+            len(unmatched)
+        )
         print_cidrs(unmatched, indent=1)
     if special:
-        print '\nThe following networks are reserved and will be skipped:'
+        print "\nThe following networks are reserved and will be skipped:"
         print_intersections(special_intersections)
     if not matched:
         print "No networks found; exiting!"
         sys.exit(0)
-    
-    print 'The following networks were found in CyHy inventory and their stage will be set to %s/WAITING:' % stage        
+
+    print "The following networks were found in CyHy inventory and their stage will be set to %s/WAITING:" % stage
     print_intersections(intersections)
-    if not util.warn_and_confirm('This will modify the host document for each address listed above!'):
-        print 'Aborted.'
+    if not util.warn_and_confirm(
+        "This will modify the host document for each address listed above!"
+    ):
+        print "Aborted."
         sys.exit(-2)
-    
-    print '\nUpdating host documents...'
+
+    print "\nUpdating host documents..."
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(matched)).start()
-    pbar.widgets[0] = 'Setting stage: '
+    pbar.widgets[0] = "Setting stage: "
     i = 0
     for net in matched.iter_cidrs():
-        db.HostDoc.collection.update(spec={'_id':{'$gte':net.first, '$lte':net.last}},
-                                     document={'$set': {'stage':STAGE[stage], 'status':STATUS.WAITING, 
-                                                        'next_scan':None, 'state.up':True,
-                                                        'state.reason':'set-stage'}}, multi=True)
+        db.HostDoc.collection.update(
+            spec={"_id": {"$gte": net.first, "$lte": net.last}},
+            document={
+                "$set": {
+                    "stage": STAGE[stage],
+                    "status": STATUS.WAITING,
+                    "next_scan": None,
+                    "state.up": True,
+                    "state.reason": "set-stage",
+                }
+            },
+            multi=True,
+        )
         i += len(net)
         pbar.update(i)
-    
-    print '\n'
+
+    print "\n"
     for org in intersections.keys():
-        tally = db.TallyDoc.get_by_owner(org['_id'])
-        print 'Syncing tally for %s' % org['_id']
+        tally = db.TallyDoc.get_by_owner(org["_id"])
+        print "Syncing tally for %s" % org["_id"]
         tally.sync(db)
-    print('SUCCESS!')
+    print ("SUCCESS!")
     sys.exit(0)
-    
+
+
 def main():
-    args = docopt(__doc__, version='v0.0.1')
-    
-    db = database.db_from_config(args['--section'])
-    
-    if args['list']:
-        do_list(db, args['OWNER'])
+    args = docopt(__doc__, version="v0.0.1")
+
+    db = database.db_from_config(args["--section"])
+
+    if args["list"]:
+        do_list(db, args["OWNER"])
         sys.exit(0)
-    
-    if args['list-all']:
+
+    if args["list-all"]:
         do_list_all(db)
         sys.exit(0)
-    
-    nets = parse_addresses(args['ADDRESSES'])
-    if args['--file'] != None:
-        f_nets = read_file(args['--file'])
+
+    nets = parse_addresses(args["ADDRESSES"])
+    if args["--file"] != None:
+        f_nets = read_file(args["--file"])
         nets.update(f_nets)
     elif len(nets) == 0:
         nets.update(parse_addresses(sys.stdin.readlines()))
-     
-    if args['check']:
+
+    if args["check"]:
         check(db, nets)
-    elif args['normalize']:
-        print '# %d' % len(nets)
+    elif args["normalize"]:
+        print "# %d" % len(nets)
         print_cidrs(nets, indent=0)
-    elif args['add']:
-        add(db, args['OWNER'], nets)
-    elif args['remove']:
-        wrapped_remove(db, args['OWNER'], nets)
-    elif args['compare']:
-        compare(db, args['OWNER'], nets)
-    elif args['move']:
-        move(db, args['OWNER'], args['NEW_OWNER'], nets)
-    elif args['setstage']:
-        stage = args['STAGE']
+    elif args["add"]:
+        add(db, args["OWNER"], nets)
+    elif args["remove"]:
+        wrapped_remove(db, args["OWNER"], nets)
+    elif args["compare"]:
+        compare(db, args["OWNER"], nets)
+    elif args["move"]:
+        move(db, args["OWNER"], args["NEW_OWNER"], nets)
+    elif args["setstage"]:
+        stage = args["STAGE"]
         # Make sure the stage the user specified is valid
         if stage not in STAGE:
-            sys.stderr.write(stage + ' is not a valid stage.\n')
-            sys.stderr.write('Valid stages are: ')
+            sys.stderr.write(stage + " is not a valid stage.\n")
+            sys.stderr.write("Valid stages are: ")
             for s in STAGE:
-                sys.stderr.write(s + ' ')
-            sys.stderr.write('\n')
+                sys.stderr.write(s + " ")
+            sys.stderr.write("\n")
             sys.exit(1)
-            
+
         setstage(db, stage, nets)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()

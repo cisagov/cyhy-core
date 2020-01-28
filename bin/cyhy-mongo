@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Connects to the mongo CLI using a CyHy configuration.
+"""Connects to the mongo CLI using a CyHy configuration.
 
 Usage:
   cyhy-mongo [options] [SECTION]
@@ -10,7 +10,7 @@ Options:
   -h --help                      Show this screen.
   -p --pretend                   Show the command that would run.
   --version                      Show version.
-'''
+"""
 
 import sys
 import os
@@ -19,39 +19,65 @@ from cyhy.core.config import Config
 import subprocess
 import re
 
-'''Start the mongo command using the parameters from the .cyhy config file'''
+"""Start the mongo command using the parameters from the .cyhy config file"""
 
-RE = re.compile('mongodb://((?P<username>.*?):(?P<password>.*?)@)?(?P<hostname>.*?):(?P<port>.*?)/(?P<path>.*)')
+RE = re.compile(
+    "mongodb://((?P<username>.*?):(?P<password>.*?)@)?(?P<hostname>.*?):(?P<port>.*?)/(?P<path>.*)"
+)
+
 
 def main():
-    args = docopt(__doc__, version='v0.0.1')
+    args = docopt(__doc__, version="v0.0.1")
 
-    config = Config(args['SECTION'])
+    config = Config(args["SECTION"])
     p = RE.match(config.db_uri).groupdict()
-    if p['username'] and p['password']:
-        cmd = 'mongo --host %s --port %s --authenticationDatabase %s -u %s --password=%s %s' % \
-            (p['hostname'], p['port'], p['path'], p['username'], p['password'], config.db_name)
+    if p["username"] and p["password"]:
+        cmd = (
+            "mongo --host %s --port %s --authenticationDatabase %s -u %s --password=%s %s"
+            % (
+                p["hostname"],
+                p["port"],
+                p["path"],
+                p["username"],
+                p["password"],
+                config.db_name,
+            )
+        )
     else:
-        cmd = 'mongo --host %s --port %s --authenticationDatabase %s %s' % \
-            (p['hostname'], p['port'], p['path'], config.db_name)
+        cmd = "mongo --host %s --port %s --authenticationDatabase %s %s" % (
+            p["hostname"],
+            p["port"],
+            p["path"],
+            config.db_name,
+        )
 
-    print >> sys.stderr, '=' * 80
-    print >> sys.stderr, 'Active CyHy configuration:', config.active_section
-    if p['username']:
-        print >> sys.stderr, 'Connecting to: %s@%s:%s/%s' % (p['username'], p['hostname'], p['port'], config.db_name)
+    print >> sys.stderr, "=" * 80
+    print >> sys.stderr, "Active CyHy configuration:", config.active_section
+    if p["username"]:
+        print >> sys.stderr, "Connecting to: %s@%s:%s/%s" % (
+            p["username"],
+            p["hostname"],
+            p["port"],
+            config.db_name,
+        )
     else:
-        print >> sys.stderr, 'Connecting to: %s:%s/%s' % (p['hostname'], p['port'], config.db_name)
-    print >> sys.stderr, '=' * 80
+        print >> sys.stderr, "Connecting to: %s:%s/%s" % (
+            p["hostname"],
+            p["port"],
+            config.db_name,
+        )
+    print >> sys.stderr, "=" * 80
     print >> sys.stderr
 
-    if args['--pretend']:
-        print 'set +o history'
+    if args["--pretend"]:
+        print "set +o history"
         print cmd
-        print 'set -o history'
+        print "set -o history"
     else:
         subprocess.call(cmd, shell=True)
 
-    #import IPython; IPython.embed() #<<< BREAKPOINT >>>
+    # import IPython; IPython.embed() #<<< BREAKPOINT >>>
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()

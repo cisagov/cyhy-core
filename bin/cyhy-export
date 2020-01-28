@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Export scan request documents.
+"""Export scan request documents.
 
 Usage:
   cyhy-export [--section SECTION] [--file-path PATH] [OWNER ...]
@@ -15,43 +15,53 @@ Options:
   
 Notes:
   If no owners are specified, all request documents will be output.
-'''
+"""
 import sys
 import os
 from docopt import docopt
 import progressbar as pb
 import json
- 
+
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
 
-PB_INIT_WIDGETS = ['Exporting: ', pb.SimpleProgress(),' ', pb.Bar(marker=unichr(0x25B6)),' ', pb.ETA()]
+PB_INIT_WIDGETS = [
+    "Exporting: ",
+    pb.SimpleProgress(),
+    " ",
+    pb.Bar(marker=unichr(0x25B6)),
+    " ",
+    pb.ETA(),
+]
+
 
 def get_all_owners(db):
     return db.RequestDoc.get_all_owners()
+
 
 def export_requests(db, owners, path):
     for owner in owners:
         request = db.RequestDoc.get_by_owner(owner)
         if not request:
-	    print 'Could not find request document for', owner
+            print "Could not find request document for", owner
             continue
-        filename = os.path.join(path, owner+'.json')
-        f = open(filename, 'wb')
+        filename = os.path.join(path, owner + ".json")
+        f = open(filename, "wb")
         f.write(util.to_json(request))
         f.close()
 
+
 def main():
-    args = docopt(__doc__, version='v0.0.1')
-    
-    db = database.db_from_config(args['--section'])
-        
-    if len(args['OWNER']) == 0:
-        args['OWNER'] = get_all_owners(db)
-        
-    export_requests(db, args['OWNER'], args['--file-path'])
+    args = docopt(__doc__, version="v0.0.1")
+
+    db = database.db_from_config(args["--section"])
+
+    if len(args["OWNER"]) == 0:
+        args["OWNER"] = get_all_owners(db)
+
+    export_requests(db, args["OWNER"], args["--file-path"])
 
 
-if __name__=='__main__':
+if __name__ == "__main__":
     main()
