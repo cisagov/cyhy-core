@@ -9,7 +9,7 @@ def addresses_scanned_pl(owners):
     return (
         [
             {"$match": {"owner": {"$in": owners}, "latest_scan.DONE": {"$ne": None}}},
-            {"$group": {"_id": {}, "addresses_scanned": {"$sum": 1},}},
+            {"$group": {"_id": {}, "addresses_scanned": {"$sum": 1}}},
         ],
         database.HOST_COLLECTION,
     )
@@ -19,7 +19,7 @@ def host_count_pl(owners):
     return (
         [
             {"$match": {"owner": {"$in": owners}, "state.up": True}},
-            {"$group": {"_id": {}, "host_count": {"$sum": 1},}},
+            {"$group": {"_id": {}, "host_count": {"$sum": 1}}},
         ],
         database.HOST_COLLECTION,
     )
@@ -28,9 +28,15 @@ def host_count_pl(owners):
 def vulnerable_host_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
-            {"$group": {"_id": {"ip": "$ip"},}},
-            {"$group": {"_id": {}, "vulnerable_host_count": {"$sum": 1},}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
+            {"$group": {"_id": {"ip": "$ip"}}},
+            {"$group": {"_id": {}, "vulnerable_host_count": {"$sum": 1}}},
         ],
         database.TICKET_COLLECTION,
     )
@@ -41,7 +47,7 @@ def unique_operating_system_count_pl(snapshot_oid):
     return (
         [
             {"$match": {"snapshots": snapshot_oid, "name": {"$exists": True}}},
-            {"$group": {"_id": {"ip": "$ip", "operating_system": "$name",}}},
+            {"$group": {"_id": {"ip": "$ip", "operating_system": "$name"}}},
             {"$group": {"_id": {"operating_system": "$_id.operating_system"}}},
             {"$group": {"_id": {}, "unique_operating_systems": {"$sum": 1}}},
         ],
@@ -52,7 +58,13 @@ def unique_operating_system_count_pl(snapshot_oid):
 def severity_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {},
@@ -79,7 +91,13 @@ def severity_count_pl(snapshot_oid):
 def unique_severity_count_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {"source_id": "$source_id", "severity": "$details.severity"}
@@ -108,8 +126,8 @@ def port_count_pl(snapshot_oid):
     return (
         [
             {"$match": {"snapshots": snapshot_oid}},
-            {"$group": {"_id": {"port": "$port", "ip": "$ip"},}},
-            {"$group": {"_id": {}, "port_count": {"$sum": 1},}},
+            {"$group": {"_id": {"port": "$port", "ip": "$ip"}}},
+            {"$group": {"_id": {}, "port_count": {"$sum": 1}}},
         ],
         database.PORT_SCAN_COLLECTION,
     )
@@ -119,8 +137,8 @@ def unique_port_count_pl(snapshot_oid):
     return (
         [
             {"$match": {"snapshots": snapshot_oid}},
-            {"$group": {"_id": {"port": "$port"},}},
-            {"$group": {"_id": {}, "unique_port_count": {"$sum": 1},}},
+            {"$group": {"_id": {"port": "$port"}}},
+            {"$group": {"_id": {}, "unique_port_count": {"$sum": 1}}},
         ],
         database.PORT_SCAN_COLLECTION,
     )
@@ -130,7 +148,7 @@ def silent_port_count_pl(owners):
     return (
         [
             {"$match": {"latest": True, "owner": {"$in": owners}, "state": "silent"}},
-            {"$group": {"_id": {}, "silent_port_count": {"$sum": 1},}},
+            {"$group": {"_id": {}, "silent_port_count": {"$sum": 1}}},
         ],
         database.PORT_SCAN_COLLECTION,
     )
@@ -158,7 +176,7 @@ def service_counts_simple_pl(snapshot_oid):
             },
             {
                 "$group": {
-                    "_id": {"service_name": "$_id.service_name",},
+                    "_id": {"service_name": "$_id.service_name"},
                     "count": {"$sum": 1},
                 }
             },
@@ -171,16 +189,16 @@ def service_counts_simple_pl(snapshot_oid):
 def cvss_sum_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid}},
+            {"$match": {"snapshots": snapshot_oid, "source": "nessus"}},
             # host cvss is the max of any cvss for that host
             {
                 "$group": {
-                    "_id": {"ip": "$ip",},
+                    "_id": {"ip": "$ip"},
                     "cvss_max": {"$max": "$details.cvss_base_score"},
                 }
             },
             # calculate sum of all host maximums
-            {"$group": {"_id": {}, "cvss_sum": {"$sum": "$cvss_max"},}},
+            {"$group": {"_id": {}, "cvss_sum": {"$sum": "$cvss_max"}}},
         ],
         database.TICKET_COLLECTION,
     )
@@ -243,9 +261,9 @@ def clear_latest_vulns_pl(ip_ints, ports, source_ids, source):
 def max_severity_for_host(ip_int):
     return (
         [
-            {"$match": {"ip_int": ip_int, "open": True}},
+            {"$match": {"ip_int": ip_int, "open": True, "source": "nessus"}},
             # host cvss is the max of any cvss for that host
-            {"$group": {"_id": {}, "severity_max": {"$max": "$details.severity"},}},
+            {"$group": {"_id": {}, "severity_max": {"$max": "$details.severity"}}},
         ],
         database.TICKET_COLLECTION,
     )
@@ -254,7 +272,13 @@ def max_severity_for_host(ip_int):
 def false_positives_pl(snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": True}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": True,
+                    "source": "nessus",
+                }
+            },
             {
                 "$group": {
                     "_id": {},
@@ -281,7 +305,13 @@ def false_positives_pl(snapshot_oid):
 def open_ticket_age_in_snapshot_pl(open_as_of_date, snapshot_oid):
     return (
         [
-            {"$match": {"snapshots": snapshot_oid, "false_positive": False}},
+            {
+                "$match": {
+                    "snapshots": snapshot_oid,
+                    "false_positive": False,
+                    "source": "nessus",
+                }
+            },
             {
                 "$project": {
                     "_id": 0,
@@ -303,6 +333,7 @@ def closed_ticket_age_for_orgs_pl(closed_since_date, org_list):
                     "open": False,
                     "time_closed": {"$gte": closed_since_date},
                     "owner": {"$in": org_list},
+                    "source": "nessus",
                 }
             },
             {

@@ -1,24 +1,80 @@
 #!/usr/bin/env py.test -v
 
-import os
-import sys
-import itertools
-from datetime import datetime
-import pytest
-from cyhy.db import CHDatabase, VulnTicketManager, IPPortTicketManager, IPTicketManager
+# built-in python libraries
+
+# third-party libraries (install with pip)
 from bson.objectid import ObjectId
 from netaddr import IPSet, IPAddress as ip
-from common_fixtures import database, ch_db
-from cyhy.core.common import *
+import pytest
+
+# local libraries
+from common_fixtures import database
+from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
+from cyhy.db import VulnTicketManager, IPPortTicketManager, IPTicketManager
 from cyhy.util import util
 
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
 IPS = [ip("10.0.0.1"), ip("192.168.1.1"), ip("172.20.20.20"), ip("10.0.0.2")]
 PORTS = [0, 123, 456, 10123]
+PORTSCAN_PORTS = [21, 23, 389]
 SOURCE_IDS = [1, 2, 3]
+SOURCE_NMAP = "nmap"
 SOURCE_NESSUS = "nessus"
 OWNER = "TEST"
 PROTOCOLS = ["tcp"]
+
+PS_1 = {
+    "ip": IPS[0],
+    "ip_int": long(IPS[0]),
+    "port": PORTSCAN_PORTS[1],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "telnet",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: telnet",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+PS_2 = {
+    "ip": IPS[1],
+    "ip_int": long(IPS[1]),
+    "port": PORTSCAN_PORTS[2],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "ldap",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: ldap",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+PS_3 = {
+    "ip": IPS[2],
+    "ip_int": long(IPS[2]),
+    "port": PORTSCAN_PORTS[0],
+    "state": "open",
+    "protocol": "tcp",
+    "service": "ftp",
+    "source": SOURCE_NMAP,
+    "source_id": SOURCE_IDS[0],
+    "owner": UNKNOWN_OWNER,
+    "severity": 0,
+    "cvss_base_score": None,
+    "name": "Potentially Risky Service Detected: ftp",
+    "_id": ObjectId(),
+    "time": util.utcnow(),
+    "latest": True,
+}
+
 VULN_1 = {
     "ip": IPS[0],
     "ip_int": long(IPS[0]),
@@ -137,6 +193,14 @@ def ip_port_ticket_manager3(database):
 
 
 @pytest.fixture
+def ip_port_ticket_manager4(database):
+    ptm = IPPortTicketManager(database, PROTOCOLS)
+    ptm.ips = IPS
+    ptm.ports = PORTSCAN_PORTS
+    return ptm
+
+
+@pytest.fixture
 def ip_ticket_manager1(database):
     ptm = IPTicketManager(database)
     return ptm
@@ -178,7 +242,7 @@ def database_w_udp_vulns(database):
 # @pytest.mark.parametrize(('sources'), [SOURCE_NESSUSS_1, SOURCE_NESSUSS_2, SOURCE_NESSUSS_3, SOURCE_NESSUSS_4], scope='class')
 class TestVulnTickets:
     def test_clear_tickets(self, database):
-        print "number of tickets to remove:", database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
         assert database.tickets.count() == 0, "tickets did not clear from database"
 
@@ -312,7 +376,7 @@ class TestVulnTickets:
 
 class TestIPPortTickets:
     def test_clear_tickets(self, database):
-        print "number of tickets to remove:", database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
         assert database.tickets.count() == 0, "tickets did not clear from database"
 
@@ -383,7 +447,7 @@ class TestIPPortTickets:
 
 class TestIPTickets:
     def test_clear_tickets(self, database):
-        print "number of tickets to remove:", database.tickets.count()
+        print("number of tickets to remove:", database.tickets.count())
         database.tickets.remove()
         assert database.tickets.count() == 0, "tickets did not clear from database"
 
@@ -639,3 +703,114 @@ class TestUDPVulnClose:
             database_w_udp_vulns.tickets.find({"open": True, "protocol": "tcp"}).count()
             == 0
         ), "tcp tickets should have been closed"
+
+
+class TestIPPortNonVulnScanTickets:
+    """CYHYDEV-777"""
+
+    def test_add_two_ps_tickets(self, database, ip_port_ticket_manager4):
+        database.tickets.remove()
+        assert database.tickets.count() == 0, "collection should be empty"
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.port_open(PS_2["ip"], PS_2["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        ip_port_ticket_manager4.open_ticket(PS_2, "potentially risky service detected")
+        assert database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+
+    def test_ps_tickets_closed(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        # Next lines should close the PS_1 and PS_2 tickets since they were not seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be closed"
+        ticket = database.tickets.find_one({"open": False, "source": SOURCE_NMAP})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.CLOSED
+        ), "last event of ticket should be closed"
+
+    def test_reopen_ps_tickets(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be closed"
+        # Next lines should re-open the PS_1 and PS_2 tickets
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.port_open(PS_2["ip"], PS_2["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        ip_port_ticket_manager4.open_ticket(PS_2, "potentially risky service detected")
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap ticket should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        ticket = database.tickets.find_one({"open": True, "source": SOURCE_NMAP})
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.REOPENED
+        ), "last event of nmap ticket should be reopened"
+        # Next line should should not close either ticket since they were both seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap ticket should be closed"
+
+    def test_verify_ps_ticket(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find({"source": SOURCE_NMAP}).count() == 2
+        ), "collection should have 2 nmap tickets"
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        # Next lines should verify the already-open PS_1 ticket
+        ip_port_ticket_manager4.port_open(PS_1["ip"], PS_1["port"])
+        ip_port_ticket_manager4.open_ticket(PS_1, "potentially risky service detected")
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 2
+        ), "2 nmap tickets should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 0
+        ), "0 nmap tickets should be closed"
+        # Next line should:
+        #  Close the ticket for PS_2, since ip/port was not seen
+        #  Not close the ticket for PS_1, since ip/port was just seen
+        ip_port_ticket_manager4.close_tickets()
+        assert (
+            database.tickets.find({"open": True, "source": SOURCE_NMAP}).count() == 1
+        ), "1 nmap ticket should be open"
+        assert (
+            database.tickets.find({"open": False, "source": SOURCE_NMAP}).count() == 1
+        ), "1 nmap ticket should be closed"
+        ticket = database.tickets.find_one({"open": True, "source": SOURCE_NMAP})
+        assert len(ticket["events"]) == 4, "nmap ticket should have 4 events"
+        assert (
+            ticket["events"][-1]["action"] == TICKET_EVENT.VERIFIED
+        ), "last event of nmap ticket should be verified"
+
+    def test_add_unknown_ps_ticket(self, database, ip_port_ticket_manager4):
+        assert (
+            database.tickets.find(
+                {"owner": UNKNOWN_OWNER, "source": SOURCE_NMAP}
+            ).count()
+            == 0
+        ), "collection should have 0 UNKNOWN_OWNER nmap tickets"
+        ip_port_ticket_manager4.open_ticket(PS_3, "potentially risky service detected")
+        assert (
+            database.tickets.find(
+                {"open": False, "owner": UNKNOWN_OWNER, "source": SOURCE_NMAP}
+            ).count()
+            == 1
+        ), "collection should have 1 closed UNKNOWN_OWNER nmap ticket"

@@ -322,13 +322,15 @@ class VulnTicketManager(object):
 
 
 class IPPortTicketManager(object):
-    """Handles the closing of tickets for a port scan (PORTSCAN)"""
+    """Handles the opening and closing of tickets for a port scan (PORTSCAN)"""
 
-    def __init__(self, db, protocols):
+    def __init__(self, db, protocols, reopen_days=90):
+        self.__closing_time = None
         self.__db = db
         self.__ips = IPSet()  # ips that were scanned
         self.__ports = set()  # ports that were scanned
         self.__protocols = set(protocols)  # protocols that were scanned
+        self.__reopen_delta = relativedelta.relativedelta(days=-reopen_days)
         self.__seen_ip_port = defaultdict(set)  # {ip:set({1,2,3}), ...}
 
     @property
@@ -390,6 +392,112 @@ class IPPortTicketManager(object):
             }
         ticket["events"].append(event)
         ticket.save()
+
+    def open_ticket(self, portscan, reason):
+        if self.__closing_time is None or self.__closing_time < portscan["time"]:
+            self.__closing_time = portscan["time"]
+
+        # search for previous open ticket that matches
+        prev_open_ticket = self.__db.TicketDoc.find_one(
+            {
+                "ip_int": portscan["ip_int"],
+                "port": portscan["port"],
+                "protocol": portscan["protocol"],
+                "source": portscan["source"],
+                "source_id": portscan["source_id"],
+                "open": True,
+            }
+        )
+        if prev_open_ticket:
+            self.__check_false_positive_expiration(
+                prev_open_ticket, portscan["time"].replace(tzinfo=tz.tzutc())
+            )  # explicitly set to UTC (see CYHY-286)
+            # add an entry to the existing open ticket
+            event = {
+                "time": portscan["time"],
+                "action": TICKET_EVENT.VERIFIED,
+                "reason": reason,
+                "reference": portscan["_id"],
+            }
+            prev_open_ticket["events"].append(event)
+            prev_open_ticket.save()
+            return
+
+        # no matching tickets are currently open
+        # search for a previously closed ticket that was closed before the cutoff
+        cutoff_date = util.utcnow() + self.__reopen_delta
+        reopen_ticket = self.__db.TicketDoc.find_one(
+            {
+                "ip_int": portscan["ip_int"],
+                "port": portscan["port"],
+                "protocol": portscan["protocol"],
+                "source": portscan["source"],
+                "source_id": portscan["source_id"],
+                "open": False,
+                "time_closed": {"$gt": cutoff_date},
+            }
+        )
+
+        if reopen_ticket:
+            event = {
+                "time": portscan["time"],
+                "action": TICKET_EVENT.REOPENED,
+                "reason": reason,
+                "reference": portscan["_id"],
+            }
+            reopen_ticket["events"].append(event)
+            reopen_ticket["time_closed"] = None
+            reopen_ticket["open"] = True
+            reopen_ticket.save()
+            return
+
+        # time to open a new ticket
+        new_ticket = self.__db.TicketDoc()
+        new_ticket.ip = portscan["ip"]
+        new_ticket["port"] = portscan["port"]
+        new_ticket["protocol"] = portscan["protocol"]
+        new_ticket["source"] = portscan["source"]
+        new_ticket["source_id"] = portscan["source_id"]
+        new_ticket["owner"] = portscan["owner"]
+        new_ticket["time_opened"] = portscan["time"]
+        new_ticket["details"] = {
+            "cve": None,
+            "score_source": None,
+            "cvss_base_score": None,
+            "severity": 0,
+            "name": portscan["name"],
+            "service": portscan["service"],
+        }
+
+        host = self.__db.HostDoc.get_by_ip(portscan["ip"])
+        if host is not None:
+            new_ticket["loc"] = host["loc"]
+
+        event = {
+            "time": portscan["time"],
+            "action": TICKET_EVENT.OPENED,
+            "reason": reason,
+            "reference": portscan["_id"],
+        }
+        new_ticket["events"].append(event)
+
+        if (
+            new_ticket["owner"] == UNKNOWN_OWNER
+        ):  # close tickets with no owner immediately
+            event = {
+                "time": portscan["time"],
+                "action": TICKET_EVENT.CLOSED,
+                "reason": "No associated owner",
+                "reference": None,
+            }
+            new_ticket["events"].append(event)
+            new_ticket["open"] = False
+            new_ticket["time_closed"] = self.__closing_time
+
+        new_ticket.save()
+
+        # TODO: Create a "risky service" notification (part of CYHYDEV-779)
+        # self.__create_notification(new_ticket)
 
     def close_tickets(self, closing_time=None):
         if closing_time is None:
