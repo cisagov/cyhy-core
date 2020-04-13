@@ -496,8 +496,8 @@ class IPPortTicketManager(object):
 
         new_ticket.save()
 
-        # TODO: Create a "risky service" notification (part of CYHYDEV-779)
-        # self.__create_notification(new_ticket)
+        # Create a notification for this ticket
+        self.__create_notification(new_ticket)
 
     def close_tickets(self, closing_time=None):
         if closing_time is None:
