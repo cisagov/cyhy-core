@@ -10,6 +10,7 @@ __all__ = [
     "POC_TYPE",
     "CONTROL_ACTION",
     "CONTROL_TARGET",
+    "PortScanNotFoundException",
     "VulnScanNotFoundException",
 ]
 
@@ -32,6 +33,17 @@ REPORT_PERIOD = Enumerator("WEEKLY", "MONTHLY", "QUARTERLY")
 POC_TYPE = Enumerator("DISTRO", "TECHNICAL")  # addition for POC types
 CONTROL_ACTION = Enumerator("PAUSE", "STOP")
 CONTROL_TARGET = Enumerator("COMMANDER")
+
+
+class PortScanNotFoundException(Exception):
+    def __init__(self, ticket_id, port_scan_id, port_scan_time, *args):
+        message = "Ticket {}: referenced PortScanDoc {} not found".format(
+            ticket_id, port_scan_id, port_scan_time
+        )
+        self.ticket_id = ticket_id
+        self.port_scan_id = port_scan_id
+        self.port_scan_time = port_scan_time
+        super(PortScanNotFoundException, self).__init__(message)
 
 
 class VulnScanNotFoundException(Exception):
