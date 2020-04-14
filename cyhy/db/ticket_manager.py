@@ -393,6 +393,19 @@ class IPPortTicketManager(object):
         ticket["events"].append(event)
         ticket.save()
 
+    def __create_notification(self, ticket):
+        """Create a notification from a ticket and save it in the database."""
+        new_notification = self.__db.NotificationDoc()
+        new_notification["ticket_id"] = ticket["_id"]
+        new_notification["ticket_owner"] = ticket["owner"]
+        # generated_for is initialized as an empty list.  Whenever a
+        # notification PDF is generated using this NotificationDoc
+        # (by cyhy-reports), the owner _id for that PDF is added to the
+        # generated_for list.  It's a list because the same NotificationDoc
+        # can get used in both a parent and a descendant PDF.
+        new_notification["generated_for"] = list()
+        new_notification.save()
+
     def open_ticket(self, portscan, reason):
         if self.__closing_time is None or self.__closing_time < portscan["time"]:
             self.__closing_time = portscan["time"]
