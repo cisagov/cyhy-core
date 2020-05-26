@@ -9,11 +9,11 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -i STAGE --init-stage STAGE    Override the init-stage specified in file
   -f --force                     Force import of existing request, destroying original
   -s SECTION --section=SECTION   Configuration section to use.
-  
+
 Notes:
   If no FILE is specified, the document will be read from standard in.
 """
@@ -22,6 +22,7 @@ import sys
 from docopt import docopt
 import progressbar as pb
 import json
+from datetime import datetime
 import dateutil
 import netaddr
 
@@ -36,6 +37,16 @@ PB_INIT_WIDGETS = [
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
+]
+
+VALID_WEEKDAYS = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
 ]
 
 
@@ -79,6 +90,17 @@ def import_request(db, request, source, force=False, init_stage=None):
     if has_intersections(db, nets, source, owner):
         return False
     request["networks"] = nets.iter_cidrs()
+
+    for window in request["windows"]:
+        if window["day"] not in VALID_WEEKDAYS:
+            print "Scanning window day must be a day of the week."
+            return False
+        try:
+            datetime.strptime(window["start"], "%H:%M:%S")
+        except:
+            print "Invalid window start time."
+            return False
+
     doc = db.RequestDoc()
     util.copy_attrs(request, doc)
     doc.save()
