@@ -97,15 +97,15 @@ def import_request(db, request, source, force=False, init_stage=None):
 
     for window in request["windows"]:
         if window["day"] not in VALID_WEEKDAYS:
-            print "Scanning window day must be a day of the week."
+            print "Scan window day must be a day of the week."
             return False
         if not isinstance(window["duration"], int) or window["duration"] < 1:
-            print "Window duration must be a positive whole number."
+            print "Scan window duration must be a positive whole number."
             return False
         try:
             datetime.datetime.strptime(window["start"], "%H:%M:%S")
         except:
-            print "Invalid window start time."
+            print "Invalid scan window start time."
             return False
 
     doc = db.RequestDoc()
