@@ -44,13 +44,13 @@ PB_INIT_WIDGETS = [
 ]
 
 VALID_WEEKDAYS = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
 ]
 
 
@@ -96,7 +96,7 @@ def import_request(db, request, source, force=False, init_stage=None):
     request["networks"] = nets.iter_cidrs()
 
     for window in request["windows"]:
-        if window["day"] not in VALID_WEEKDAYS:
+        if window["day"].lower() not in VALID_WEEKDAYS:
             print "Scan window day '{}' must be a day of the week.".format(
                 window["day"]
             )
