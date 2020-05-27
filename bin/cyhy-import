@@ -43,7 +43,7 @@ PB_INIT_WIDGETS = [
     pb.ETA(),
 ]
 
-VALID_WEEKDAYS = [
+DAYS_OF_WEEK = [
     "sunday",
     "monday",
     "tuesday",
@@ -96,7 +96,7 @@ def import_request(db, request, source, force=False, init_stage=None):
     request["networks"] = nets.iter_cidrs()
 
     for window in request["windows"]:
-        if window["day"].lower() not in VALID_WEEKDAYS:
+        if window["day"].lower() not in DAYS_OF_WEEK:
             print "Scan window day '{}' must be a day of the week.".format(
                 window["day"]
             )
