@@ -18,14 +18,18 @@ Notes:
   If no FILE is specified, the document will be read from standard in.
 """
 
+# Standard Python Libraries
+import datetime
+import json
 import sys
+
+# Third-Party Libraries
+import dateutil
 from docopt import docopt
 import progressbar as pb
-import json
-from datetime import datetime
-import dateutil
 import netaddr
 
+# cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
@@ -99,7 +103,7 @@ def import_request(db, request, source, force=False, init_stage=None):
             print "Window duration must be a positive whole number."
             return False
         try:
-            datetime.strptime(window["start"], "%H:%M:%S")
+            datetime.datetime.strptime(window["start"], "%H:%M:%S")
         except:
             print "Invalid window start time."
             return False
