@@ -9,22 +9,27 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -i STAGE --init-stage STAGE    Override the init-stage specified in file
   -f --force                     Force import of existing request, destroying original
   -s SECTION --section=SECTION   Configuration section to use.
-  
+
 Notes:
   If no FILE is specified, the document will be read from standard in.
 """
 
+# Standard Python Libraries
+import datetime
+import json
 import sys
+
+# Third-Party Libraries
+import dateutil
 from docopt import docopt
 import progressbar as pb
-import json
-import dateutil
 import netaddr
 
+# cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
@@ -36,6 +41,16 @@ PB_INIT_WIDGETS = [
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
+]
+
+DAYS_OF_WEEK = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
 ]
 
 
@@ -79,6 +94,24 @@ def import_request(db, request, source, force=False, init_stage=None):
     if has_intersections(db, nets, source, owner):
         return False
     request["networks"] = nets.iter_cidrs()
+
+    for window in request["windows"]:
+        if window["day"].lower() not in DAYS_OF_WEEK:
+            print "Scan window day '{}' must be a day of the week.".format(
+                window["day"]
+            )
+            return False
+        if not isinstance(window["duration"], int) or window["duration"] < 1:
+            print "Scan window duration '{}' must be a positive whole number.".format(
+                window["duration"]
+            )
+            return False
+        try:
+            datetime.datetime.strptime(window["start"], "%H:%M:%S")
+        except:
+            print "Scan window start time '{}' is invalid.".format(window["start"])
+            return False
+
     doc = db.RequestDoc()
     util.copy_attrs(request, doc)
     doc.save()
