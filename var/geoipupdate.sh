@@ -1,15 +1,41 @@
 #!/bin/sh
 
-# this script was copied and modifed from the dev-libs/geoip-1.6.9 ebuild
+set -o nounset
+set -o errexit
+set -o pipefail
 
-set -o verbose
+function usage {
+  echo "Usage:"
+  echo "  ${0##*/} (free|paid) <license key>"
+  echo ""
+  echo "Arguments:"
+  echo "  free  The license key is for the free GeoLite2 database."
+  echo "  paid  The license key is for the paid GeoIP2 database."
+  echo ""
+  echo "Options:"
+  echo "  license_key  The license key to use."
+  exit 1
+}
 
-if [ -z $1 ]
+if [ $# -ne 2 ]
 then
-  GEOIP_CITY_URI="https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz"
-else
-  GEOIP_CITY_URI="https://download.maxmind.com/app/geoip_download?edition_id=GeoIP2-City&suffix=tar.gz&license_key=$1"
+  usage
 fi
+
+license_type=$(echo $1 | tr '[:upper:]' '[:lower:]')
+license_key=$2
+
+if [ "$license_type" == "free" ]
+then
+  edition="GeoLite2-City"
+elif [ "$license_type" == "paid" ]
+then
+  edition="GeoIP2-City"
+else
+  usage
+fi
+
+GEOIP_CITY_URI="https://download.maxmind.com/app/geoip_download?edition_id=$edition&license_key=$license_key&suffix=tar.gz"
 GEOIP_CITY_DIR="/usr/local/share/GeoIP/"
 
 mkdir -p ${GEOIP_CITY_DIR}
