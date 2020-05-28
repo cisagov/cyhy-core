@@ -1,8 +1,6 @@
-.DS_Store
-.python-version
+*.egg-info
 *.pyc
 ._*
-var/GeoLiteCity.dat*
-*.egg-info
+.DS_Store
 .ipynb_checkpoints
-bin/cyhy-toolc
+.python-version
