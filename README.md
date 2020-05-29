@@ -86,12 +86,26 @@ docker build --tag ncats/cyhy-core \
 ```
 
 ### Building a cyhy-core image for distribution
-The helper script `generate_cyhy_docker_image.sh` can be used to automate building
-and saving a Docker image. It requires a file named `maxmind_license.txt` that
-contains the MaxMind GeoIP2 license. Once you have created the appropriate file,
-you can create the image by calling:
+The helper script `generate_cyhy_docker_image.sh` can be used to automate
+building and saving a Docker image. It requires a file named
+`maxmind_license.txt` that contains the MaxMind GeoIP2 license. It can be run
+without arguments, with the default image name and a specified tag, or with a
+specified image name and tag. The default configuration is
+`ncats/cyhy-core:latest`.
+
+#### Default name and tag
 ```console
 ./generate_cyhy_docker_image.sh
+```
+
+#### Default name and specified tag
+```console
+./generate_cyhy_docker_image.sh testing
+```
+
+#### Specified name and tag
+```console
+./generate_cyhy_docker_image.sh cisa/cyhy-core testing
 ```
 
 ## Manual Installation
