@@ -34,7 +34,7 @@ eval "$(docker run ncats/cyhy-core)"
 ```
 
 To run a CyHy command:
-```bash
+```console
 cyhy-tool status NASA
 ```
 
@@ -60,10 +60,34 @@ export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
 ```
 
 ### Building the cyhy-core container
-To build the Docker container for cyhy-core:
+If you want to include a MaxMind GeoIP2 database in the docker image you must
+provide a key and optionally the type of key to Docker. The default type is "free",
+but if you have the subscription license you can instead use the "paid" type.
 
-```bash
-docker build -t ncats/cyhy-core .
+The following commands show how to build the Docker container for cyhy-core.
+
+No MaxMind license:
+```console
+docker build --tag ncats/cyhy-core .
+```
+
+Free MaxMind license:
+```console
+docker build --tag ncats/cyhy-core --build-arg geoip_license_key=<license key> .
+```
+
+Subscription MaxMind license:
+```console
+docker build --tag ncats/cyhy-core --build-arg geoip_license_type="paid"--build-arg geoip_license_key=<license key> .
+```
+
+### Building a cyhy-core image for distribution
+The helper script `generate_cyhy_docker_image.sh` can be used to automate building
+and saving a Docker image. It requires a file named `maxmind_license.txt` that
+contains the MaxMind GeoIP2 license. Once you have created the appropriate file,
+you can create the image by calling:
+```console
+./generate_cyhy_docker_image.sh
 ```
 
 ## Manual Installation
