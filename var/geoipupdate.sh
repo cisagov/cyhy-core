@@ -14,7 +14,7 @@ function usage {
   echo ""
   echo "Options:"
   echo "  license_key  The license key to use."
-  exit 1
+  exit 0
 }
 
 if [ $# -ne 2 ]
