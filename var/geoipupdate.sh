@@ -6,11 +6,11 @@ set -o pipefail
 
 function usage {
   echo "Usage:"
-  echo "  ${0##*/} (free|paid) <license key>"
+  echo "  ${0##*/} (lite|full) <license key>"
   echo ""
   echo "Arguments:"
-  echo "  free  The license key is for the free GeoLite2 database."
-  echo "  paid  The license key is for the paid GeoIP2 database."
+  echo "  lite  The license key is for the GeoLite2 database."
+  echo "  full  The license key is for the GeoIP2 database."
   echo ""
   echo "Options:"
   echo "  license_key  The license key to use."
@@ -25,10 +25,10 @@ fi
 license_type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 license_key=$2
 
-if [ "$license_type" == "free" ]
+if [ "$license_type" == "lite" ]
 then
   edition="GeoLite2-City"
-elif [ "$license_type" == "paid" ]
+elif [ "$license_type" == "full" ]
 then
   edition="GeoIP2-City"
 else

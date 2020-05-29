@@ -1,6 +1,6 @@
 # NCATS: Cyber Hygiene Core Libraries
 
-This project contains the core libraries and executables for the NCATS Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.  
+This project contains the core libraries and executables for the NCATS Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.
 
 ## CyHy Configuration
 
@@ -40,7 +40,7 @@ cyhy-tool status NASA
 
 ### Caveats, and Gotchas
 
-Whenever an aliased CyHy command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the current working directory, or a subdirectory.  
+Whenever an aliased CyHy command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the current working directory, or a subdirectory.
 
 | Do this?        | Command                                   | Reason  |
 | ------------- |---------------------------------------------| --------|
@@ -61,24 +61,28 @@ export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
 
 ### Building the cyhy-core container
 If you want to include a MaxMind GeoIP2 database in the docker image you must
-provide a key and optionally the type of key to Docker. The default type is "free",
-but if you have the subscription license you can instead use the "paid" type.
+provide a key and optionally the type of key to Docker. The default type is
+"lite", but if you have the subscription license you can instead use the
+"full" type.
 
 The following commands show how to build the Docker container for cyhy-core.
 
-No MaxMind license:
+#### No MaxMind license
 ```console
 docker build --tag ncats/cyhy-core .
 ```
 
-Free MaxMind license:
+#### MaxMind GeoLite2 license
 ```console
-docker build --tag ncats/cyhy-core --build-arg geoip_license_key=<license key> .
+docker build --tag ncats/cyhy-core \
+             --build-arg maxmind_license_key=<license key> .
 ```
 
-Subscription MaxMind license:
+#### MaxMind GeoIP2 license
 ```console
-docker build --tag ncats/cyhy-core --build-arg geoip_license_type="paid"--build-arg geoip_license_key=<license key> .
+docker build --tag ncats/cyhy-core \
+             --build-arg maxmind_license_type="full" \
+             --build-arg maxmind_license_key=<license key> .
 ```
 
 ### Building a cyhy-core image for distribution
