@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -o nounset
 set -o errexit
@@ -22,7 +22,7 @@ then
   usage
 fi
 
-license_type=$(echo $1 | tr '[:upper:]' '[:lower:]')
+license_type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 license_key=$2
 
 if [ "$license_type" == "free" ]
@@ -38,6 +38,6 @@ fi
 GEOIP_CITY_URI="https://download.maxmind.com/app/geoip_download?edition_id=$edition&license_key=$license_key&suffix=tar.gz"
 GEOIP_CITY_DIR="/usr/local/share/GeoIP/"
 
-mkdir -p ${GEOIP_CITY_DIR}
+mkdir -p "$GEOIP_CITY_DIR"
 
-curl ${GEOIP_CITY_URI} | tar zxf - --strip-components=1 --directory=${GEOIP_CITY_DIR}
+curl "$GEOIP_CITY_URI" | tar zxf - --strip-components=1 --directory="$GEOIP_CITY_DIR"
