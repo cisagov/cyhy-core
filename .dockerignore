@@ -1,1 +1,3 @@
 *.egg-info
+.git
+maxmind_license.txt

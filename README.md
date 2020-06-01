@@ -1,6 +1,6 @@
-# NCATS: Cyber Hygiene Core Libraries
+# CISA: Cyber Hygiene Core Libraries
 
-This project contains the core libraries and executables for the NCATS Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.  
+This project contains the core libraries and executables for the CISA Cyber Hygiene program.  It coordinates the multiple scanners and allows the creation of pretty reports.
 
 ## CyHy Configuration
 
@@ -30,17 +30,17 @@ The CyHy commands implemented in the docker container can be aliased into the ho
 
 Alias the container commands to the local environment:
 ```bash
-eval "$(docker run ncats/cyhy-core)"
+eval "$(docker run cisa/cyhy-core)"
 ```
 
 To run a CyHy command:
-```bash
+```console
 cyhy-tool status NASA
 ```
 
 ### Caveats, and Gotchas
 
-Whenever an aliased CyHy command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the current working directory, or a subdirectory.  
+Whenever an aliased CyHy command is executed, it will use the current working directory as its home volume.  This limits your ability to use absolute paths as parameters to commands, or relative paths that reference parent directories, e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the current working directory, or a subdirectory.
 
 | Do this?        | Command                                   | Reason  |
 | ------------- |---------------------------------------------| --------|
@@ -51,7 +51,7 @@ Whenever an aliased CyHy command is executed, it will use the current working di
 
 ### Advanced configuration
 
-By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `ncats/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
+By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `cisa/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
 
 Example:
 ```
@@ -60,10 +60,52 @@ export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
 ```
 
 ### Building the cyhy-core container
-To build the Docker container for cyhy-core:
+If you want to include a MaxMind GeoIP2 database in the docker image you must
+provide a key and optionally the type of key to Docker. The default type is
+"lite", but if you have the subscription license you can instead use the
+"full" type.
 
-```bash
-docker build -t ncats/cyhy-core .
+The following commands show how to build the Docker container for cyhy-core.
+
+#### No MaxMind license
+```console
+docker build --tag cisa/cyhy-core .
+```
+
+#### MaxMind GeoLite2 license
+```console
+docker build --tag cisa/cyhy-core \
+             --build-arg maxmind_license_key=<license key> .
+```
+
+#### MaxMind GeoIP2 license
+```console
+docker build --tag cisa/cyhy-core \
+             --build-arg maxmind_license_type="full" \
+             --build-arg maxmind_license_key=<license key> .
+```
+
+### Building a cyhy-core image for distribution
+The helper script `generate_cyhy_docker_image.sh` can be used to automate
+building and saving a Docker image. It requires a file named
+`maxmind_license.txt` that contains the MaxMind GeoIP2 license. It can be run
+without arguments, with the default image name and a specified tag, or with a
+specified image name and tag. The default configuration is
+`cisa/cyhy-core:latest`.
+
+#### Default name and tag
+```console
+./generate_cyhy_docker_image.sh
+```
+
+#### Default name and specified tag
+```console
+./generate_cyhy_docker_image.sh testing
+```
+
+#### Specified name and tag
+```console
+./generate_cyhy_docker_image.sh cisa/cyhy-core testing
 ```
 
 ## Manual Installation
