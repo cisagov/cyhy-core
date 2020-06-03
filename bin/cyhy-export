@@ -9,18 +9,22 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -f PATH --file-path PATH       Output to a path [default: .].
   -s SECTION --section=SECTION   Configuration section to use.
-  
+
 Notes:
   If no owners are specified, all request documents will be output.
 """
-import sys
+
+from __future__ import print_function
+
+import json
 import os
+import sys
+
 from docopt import docopt
 import progressbar as pb
-import json
 
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
@@ -30,6 +34,7 @@ PB_INIT_WIDGETS = [
     "Exporting: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Py3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -44,12 +49,11 @@ def export_requests(db, owners, path):
     for owner in owners:
         request = db.RequestDoc.get_by_owner(owner)
         if not request:
-            print "Could not find request document for", owner
+            print("Could not find request document for {}".format(owner))
             continue
         filename = os.path.join(path, owner + ".json")
-        f = open(filename, "wb")
-        f.write(util.to_json(request))
-        f.close()
+        with open(filename, "wb") as f:
+            f.write(util.to_json(request))
 
 
 def main():
