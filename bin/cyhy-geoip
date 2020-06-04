@@ -18,6 +18,8 @@ Options:
 
 """
 
+from __future__ import print_function
+
 import logging
 
 from docopt import docopt
@@ -92,9 +94,9 @@ def get_special_intersections(cidrs):
 def check_special_intersections(ip_addr):
     intersections = get_special_intersections(IPSet([ip_addr]))
     if intersections:
-        print "Problem with provided address:"
-        for group, intersecting_cidrs in intersections.iteritems():
-            print "\t{!s} found in {!s}".format(intersecting_cidrs.pop(), group)
+        print("Problem with provided address:")
+        for group, intersecting_cidrs in intersections.items():
+            print("\t{!s} found in {!s}".format(intersecting_cidrs.pop(), group))
         return True
 
     return False
@@ -104,17 +106,20 @@ def do_check(chdb, gidb, address):
     ip_to_check = IPAddress(address)
 
     if not check_special_intersections(ip_to_check):
+        # MIGRATION : long() is Py2 only, replace with int()
         cyhy_info = chdb.HostDoc.find_one({"_id": long(ip_to_check)})
         geoip_loc = list(gidb.lookup(ip_to_check))
 
         if cyhy_info["loc"] != geoip_loc:
-            print "{!s} location in CyHy database does not match GeoIP database.".format(
-                ip_to_check
+            print(
+                "{!s} location in CyHy database does not match GeoIP database.".format(
+                    ip_to_check
+                )
             )
-            print "\tCyHy Location (long, lat): {}".format(cyhy_info["loc"])
-            print "\tGeoIP Location (long, lat): {}".format(geoip_loc)
+            print("\tCyHy Location (long, lat): {}".format(cyhy_info["loc"]))
+            print("\tGeoIP Location (long, lat): {}".format(geoip_loc))
         else:
-            print "CyHy location is up to date."
+            print("CyHy location is up to date.")
 
 
 def do_update(chdb, gidb, up_only=False, owner=None):
