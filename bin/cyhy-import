@@ -18,6 +18,8 @@ Notes:
   If no FILE is specified, the document will be read from standard in.
 """
 
+from __future__ import print_function
+
 # Standard Python Libraries
 import datetime
 import json
@@ -38,6 +40,7 @@ PB_INIT_WIDGETS = [
     "Importing: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Py3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -62,10 +65,14 @@ def already_exists(db, request):
 
 
 def print_intersections(intersections):
-    for request, cidrs in intersections.iteritems():
-        print "%s (%s): %d" % (request["agency"]["name"], request["_id"], len(cidrs))
+    for request, cidrs in intersections.items():
+        print(
+            "{!s} ({!s}): {!d}".format(
+                request["agency"]["name"], request["_id"], len(cidrs)
+            )
+        )
         for i in cidrs.iter_cidrs():
-            print "\t", i
+            print("\t {}".format(i))
 
 
 def has_intersections(db, nets, filename, owner):
@@ -75,7 +82,7 @@ def has_intersections(db, nets, filename, owner):
     if len(intersections) == 1 and intersections.keys()[0]["_id"] == owner:
         return False
     else:
-        print "Cannot import %s\nSome addresses already allocated:" % filename
+        print("Cannot import %s\nSome addresses already allocated: {}".format(filename))
         print_intersections(intersections)
         return True
 
@@ -83,9 +90,9 @@ def has_intersections(db, nets, filename, owner):
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
     if not force and already_exists(db, request):
-        print "Cannot import, owner already exists:", owner
-        print "Use --force to destroy the currently stored document"
-        print "and replace it with the imported version."
+        print("Cannot import, owner already exists: {}".format(owner))
+        print("Use --force to destroy the currently stored document")
+        print("and replace it with the imported version.")
         return False
     request["period_start"] = dateutil.parser.parse(request["period_start"])
     nets = netaddr.IPSet(request["networks"])
@@ -97,19 +104,21 @@ def import_request(db, request, source, force=False, init_stage=None):
 
     for window in request["windows"]:
         if window["day"].lower() not in DAYS_OF_WEEK:
-            print "Scan window day '{}' must be a day of the week.".format(
-                window["day"]
+            print(
+                "Scan window day '{}' must be a day of the week.".format(window["day"])
             )
             return False
         if not isinstance(window["duration"], int) or window["duration"] < 1:
-            print "Scan window duration '{}' must be a positive whole number.".format(
-                window["duration"]
+            print(
+                "Scan window duration '{}' must be a positive whole number.".format(
+                    window["duration"]
+                )
             )
             return False
         try:
             datetime.datetime.strptime(window["start"], "%H:%M:%S")
         except:
-            print "Scan window start time '{}' is invalid.".format(window["start"])
+            print("Scan window start time '{}' is invalid.".format(window["start"]))
             return False
 
     doc = db.RequestDoc()
