@@ -12,14 +12,17 @@ Options:
   --version                      Show version.
 """
 
-import sys
-import os
-from docopt import docopt
-from cyhy.core.config import Config
-import subprocess
-import re
+from __future__ import print_function
 
-"""Start the mongo command using the parameters from the .cyhy config file"""
+import re
+import subprocess
+import sys
+
+from docopt import docopt
+
+from cyhy.core.config import Config
+
+# Start the mongo command using the parameters from the .cyhy config file
 
 RE = re.compile(
     "mongodb://((?P<username>.*?):(?P<password>.*?)@)?(?P<hostname>.*?):(?P<port>.*?)/(?P<path>.*)"
@@ -32,47 +35,44 @@ def main():
     config = Config(args["SECTION"])
     p = RE.match(config.db_uri).groupdict()
     if p["username"] and p["password"]:
-        cmd = (
-            "mongo --host %s --port %s --authenticationDatabase %s -u %s --password=%s %s"
-            % (
-                p["hostname"],
-                p["port"],
-                p["path"],
-                p["username"],
-                p["password"],
-                config.db_name,
-            )
-        )
-    else:
-        cmd = "mongo --host %s --port %s --authenticationDatabase %s %s" % (
+        cmd = "mongo --host {!s} --port {!s} --authenticationDatabase {!s} -u {!s} --password={!s} {!s}".format(
             p["hostname"],
             p["port"],
             p["path"],
-            config.db_name,
-        )
-
-    print >> sys.stderr, "=" * 80
-    print >> sys.stderr, "Active CyHy configuration:", config.active_section
-    if p["username"]:
-        print >> sys.stderr, "Connecting to: %s@%s:%s/%s" % (
             p["username"],
-            p["hostname"],
-            p["port"],
+            p["password"],
             config.db_name,
         )
     else:
-        print >> sys.stderr, "Connecting to: %s:%s/%s" % (
-            p["hostname"],
-            p["port"],
-            config.db_name,
+        cmd = "mongo --host {!s} --port {!s} --authenticationDatabase {!s} {!s}".format(
+            p["hostname"], p["port"], p["path"], config.db_name
         )
-    print >> sys.stderr, "=" * 80
-    print >> sys.stderr
+
+    print("=" * 80, file=sys.stderr)
+    print(
+        "Active CyHy configuration: {}".format(config.active_section), file=sys.stderr
+    )
+    if p["username"]:
+        print(
+            "Connecting to: {!s}@{!s}:{!s}/{!s}".format(
+                p["username"], p["hostname"], p["port"], config.db_name
+            ),
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "Connecting to: {!s}:{!s}/{!s}".format(
+                p["hostname"], p["port"], config.db_name
+            ),
+            file=sys.stderr,
+        )
+    print("=" * 80, file=sys.stderr)
+    print("", file=sys.stderr)
 
     if args["--pretend"]:
-        print "set +o history"
-        print cmd
-        print "set -o history"
+        print("set +o history")
+        print(cmd)
+        print("set -o history")
     else:
         subprocess.call(cmd, shell=True)
 
