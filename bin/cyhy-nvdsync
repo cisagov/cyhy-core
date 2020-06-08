@@ -17,11 +17,11 @@ Options:
 
 """
 
+from __future__ import print_function
+
 # standard python libraries
 import gzip
 import json
-import urllib
-from StringIO import StringIO
 
 # third-party libraries (install with pip)
 from docopt import docopt
@@ -29,6 +29,14 @@ from docopt import docopt
 # intra-project modules
 from cyhy.db import database
 from cyhy.util import util
+
+# This is the way to do Py2/3 imports if sys isn't being imported.
+try:
+    from urllib import urlopen
+    from StringIO import StringIO
+except ImportError:
+    from urllib.request import urlopen
+    from io import StringIO
 
 NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
@@ -46,13 +54,13 @@ def parse_json(db, json_stream):
             # NVD 'reject' CVEs do not have 'baseMetricV2' CVSS data
             # Make sure they are removed from our db.
             db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
-            print "x",
+            print("x", end="")
         else:
-            print ".",
+            print(".", end="")
             cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
             entry_doc = db.CVEDoc({"_id": cve_id, "cvss_score": float(cvss_base_score)})
             entry_doc.save(safe=False)
-    print "\n\n"
+    print("\n\n")
 
 
 def process_file(db, filename, gzipped=False):
@@ -64,7 +72,7 @@ def process_file(db, filename, gzipped=False):
 
 
 def process_url(db, url):
-    socket = urllib.urlopen(url)
+    socket = urlopen(url)
     buf = StringIO(socket.read())
     f = gzip.GzipFile(fileobj=buf)
     parse_json(db, f)
@@ -72,7 +80,7 @@ def process_url(db, url):
 
 def generate_urls():
     current_year = util.utcnow().year
-    years = range(NVD_FIRST_YEAR, current_year + 1)
+    years = list(range(NVD_FIRST_YEAR, current_year + 1))
     return [NVD_URL.format(**{"year": year}) for year in years]
 
 
@@ -84,11 +92,11 @@ def main():
     if args["--use-network"]:
         urls = generate_urls()
         for url in urls:
-            print "-" * 10, url, "-" * 10
+            print("-" * 10, url, "-" * 10)
             process_url(db, url)
     else:
         for filename in args["<file>"]:
-            print "-" * 10, filename, "-" * 10
+            print("-" * 10, filename, "-" * 10)
             process_file(db, filename, gzipped=args["--gzipped"])
 
 
