@@ -17,12 +17,14 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
-import sys
+from __future__ import print_function
+
 import os
+import sys
+
 from docopt import docopt
 import dateutil.parser
 import dateutil.tz as tz
-import datetime
 
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
@@ -33,18 +35,21 @@ THE_ONLY_SCHEDULER = "PERSISTENT1"
 THE_DISTANT_FUTURE = dateutil.parser.parse("9999-01-01")
 
 
-def set_start_date(db, request, start_time, clear_scheduler=False):
+def set_start_date(request, start_time, clear_scheduler=False):
     # set new start date
-    print >> sys.stderr, "\tSetting start time to %s" % start_time
-    if clear_scheduler and request.get("scheduler") != None:
-        print >> sys.stderr, "\tRemoving persistent scheduler."
+    print("\tSetting start time to", start_time, file=sys.stderr)
+    if clear_scheduler and request.get("scheduler") is not None:
+        print("\tRemoving persistent scheduler.", file=sys.stderr)
         request["scheduler"] = None
     request.start_time = start_time
     request.save()
-    print >> sys.stderr, "\tModified request saved."
+    print("\tModified request saved.", file=sys.stderr)
 
 
 def reset_state(db, request, start_time):
+    # MIGRATION : This entire approach was deprecated, please see:
+    # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
+    # for alternatives (we should use the Python 3.5+ approach).
     # crazy hack to import cyhy-tool
     import imp
 
@@ -54,36 +59,37 @@ def reset_state(db, request, start_time):
 
     # get the init_stage, if it doesn't have one assume NETSCAN1
     init_stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
-    set_start_date(db, request, start_time, clear_scheduler=True)
+    set_start_date(request, start_time, clear_scheduler=True)
     # reset state of all hosts
-    print >> sys.stderr, "\tResetting state of hosts to %s and PORTSCAN ..." % (
-        init_stage
+    print(
+        "\tResetting state of hosts to {!s} and PORTSCAN ...".format(init_stage),
+        file=sys.stderr,
     )
     db.HostDoc.reset_state_by_owner(request["_id"], init_stage, jump_start=True)
     # sync tallies
-    print >> sys.stderr, "\tSynchronizing tallies..."
+    print("\tSynchronizing tallies...", file=sys.stderr)
     ch_tool.sync_tallies(db, request["_id"])
 
 
 def make_persistent(db, request, update_hosts, start_date):
-    print >> sys.stderr, "\tSetting scheduler to %s" % THE_ONLY_SCHEDULER
+    print("\tSetting scheduler to", THE_ONLY_SCHEDULER, file=sys.stderr)
     request["scheduler"] = THE_ONLY_SCHEDULER
     request.start_time = start_date
     request.save()
-    print >> sys.stderr, "\tModified request saved."
+    print("\tModified request saved.", file=sys.stderr)
     if update_hosts:
-        print >> sys.stderr, '\tEnsuring all hosts have a "next scan" date.'
+        print('\tEnsuring all hosts have a "next scan" date.', file=sys.stderr)
         db.HostDoc.ensure_next_scan_set(request["_id"])
 
 
 def parse_date(args):
     try:
         start_time_local = dateutil.parser.parse(args["DATE"])
-    except:
-        print >> sys.stderr, "Could not parse the date: ", args["DATE"]
+    except Exception:
+        print("Could not parse the date:", args["DATE"], file=sys.stderr)
         sys.exit(-1)
 
-    if start_time_local.tzinfo == None:
+    if start_time_local.tzinfo is None:
         start_time_local = start_time_local.replace(tzinfo=tz.tzlocal())
     start_time_utc = time_to_utc(start_time_local)
 
@@ -96,7 +102,7 @@ def build_owner_list(db, args):
     for owner in args["OWNER"]:
         result.append(owner)
         descendants = db.RequestDoc.get_all_descendants(owner)
-        if len(descendants) > 0 and not args["--no-descendants"]:
+        if descendants and not args["--no-descendants"]:
             args["descendants-included"] = True
             result.extend(descendants)
 
@@ -108,8 +114,8 @@ def parse_owners(db, args):
     requests = []
     for owner in build_owner_list(db, args):
         request = db.RequestDoc.get_by_owner(owner)
-        if request == None:
-            print >> sys.stderr, 'No request with "%s" found.' % owner
+        if request is None:
+            print('No request with "{!s}" found.'.format(owner), file=sys.stderr)
             all_requests_found = False
         else:
             requests.append(request)
@@ -121,14 +127,15 @@ def parse_owners(db, args):
 
 def prompt(args):
     if not args["--no-prompt"]:
-        print >> sys.stderr
+        print("", file=sys.stderr)
         if args["descendants-included"]:
-            print "To exclude descendants use the --no-descendants flag.\n"
-        yes = raw_input('Type "yes" if you sure that you want to do this? ')
+            print("To exclude descendants use the --no-descendants flag.\n")
+        # MIGRATION : raw_input() becomes input() in Python 3
+        yes = raw_input('Type "yes" if you are sure that you want to do this? ')
         if yes != "yes":
-            print >> sys.stderr, "Aborted."
+            print("Aborted.", file=sys.stderr)
             sys.exit(-2)
-        print >> sys.stderr
+        print("", file=sys.stderr)
 
 
 def main():
@@ -137,57 +144,66 @@ def main():
     requests = parse_owners(db, args)
 
     for request in requests:
-        print >> sys.stderr, "Modifying owner:\t%s: %s (%s)" % (
-            request["_id"],
-            request["agency"]["name"],
-            request["agency"]["acronym"],
+        print(
+            "Modifying owner:\t{!s}: {!s} ({!s})".format(
+                request["_id"], request["agency"]["name"], request["agency"]["acronym"],
+            ),
+            file=sys.stderr,
         )
 
     if args["single-scan"]:
         start_time_local, start_time_utc = parse_date(args)
-        print >> sys.stderr, "WARNING: This will modify many of the Host documents."
-        print >> sys.stderr, "Do not scan before:\t%s (%s)" % (
-            start_time_local,
-            start_time_utc,
+        print("WARNING: This will modify many of the Host documents.", file=sys.stderr)
+        print(
+            "Do not scan before:\t{!s} ({!s})".format(
+                start_time_local, start_time_utc,
+            ),
+            file=sys.stderr,
         )
         prompt(args)
         for request in requests:
-            print >> sys.stderr, "Processing: %s" % (request["_id"])
+            print("Processing:", request["_id"], file=sys.stderr)
             reset_state(db, request, start_time_utc)
     elif args["persistent-scan"]:
         if args["--update-hosts"]:
-            print >> sys.stderr, "WARNING: This will modify many of the Host documents."
+            print(
+                "WARNING: This will modify many of the Host documents.", file=sys.stderr
+            )
         if args["--start-on"]:
             args["DATE"] = args["--start-on"]
             start_time_local, start_time_utc = parse_date(args)
             start_time = start_time_utc
-            print >> sys.stderr, "Do not scan before:\t%s (%s)" % (
-                start_time_local,
-                start_time_utc,
+            print(
+                "Do not scan before:\t{!s} ({!s})".format(
+                    start_time_local, start_time_utc,
+                ),
+                file=sys.stderr,
             )
         else:
             start_time = utcnow()
         prompt(args)
         for request in requests:
-            print >> sys.stderr, "Processing: %s" % (request["_id"])
+            print("Processing:", request["_id"], file=sys.stderr)
             make_persistent(db, request, args["--update-hosts"], start_time)
     elif args["pause"]:
-        print >> sys.stderr, "Pausing scans."
+        print("Pausing scans.", file=sys.stderr)
         prompt(args)
         for request in requests:
-            print >> sys.stderr, "Processing: %s" % (request["_id"])
-            set_start_date(db, request, THE_DISTANT_FUTURE)
+            print("Processing:", request["_id"], file=sys.stderr)
+            set_start_date(request, THE_DISTANT_FUTURE)
     elif args["unpause"]:
         start_time_local, start_time_utc = parse_date(args)
-        print >> sys.stderr, "Unpausing scans by setting new start time."
-        print >> sys.stderr, "Do not scan before:\t%s (%s)" % (
-            start_time_local,
-            start_time_utc,
+        print("Unpausing scans by setting new start time.", file=sys.stderr)
+        print(
+            "Do not scan before:\t{!s} ({!s})".format(
+                start_time_local, start_time_utc,
+            ),
+            file=sys.stderr,
         )
         prompt(args)
         for request in requests:
-            print >> sys.stderr, "Processing: %s" % (request["_id"])
-            set_start_date(db, request, start_time_utc)
+            print("Processing:", request["_id"], file=sys.stderr)
+            set_start_date(request, start_time_utc)
 
 
 if __name__ == "__main__":
