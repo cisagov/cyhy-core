@@ -18,15 +18,23 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
-import sys
+from __future__ import print_function
+
+import datetime
 import os
+import sys
+
 from docopt import docopt
 import netaddr
-import datetime
+
 from cyhy.db import database
 from cyhy.util import util
-from ConfigParser import SafeConfigParser
 from cyhy.core.common import *
+
+if sys.version_info.major == 2:
+    from ConfigParser import SafeConfigParser
+else:
+    from configparser import SafeConfigParser
 
 THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
 AGENCY = "AGENCY"
@@ -71,10 +79,12 @@ def write_blank_config():
 
 def get_location_details(db, gnis_id):
     try:
+        # MIGRATION : long() is Py2 only, replace with int()
         gnis_id = long(gnis_id)
     except ValueError:
-        print >> sys.stderr, "Invalid GNIS ID: {} (must be a long integer)".format(
-            gnis_id
+        print(
+            "Invalid GNIS ID: {} (must be a long integer)".format(gnis_id),
+            file=sys.stderr,
         )
         sys.exit(-1)
     place = db.PlaceDoc.find_one({"_id": gnis_id})
@@ -92,7 +102,7 @@ def get_location_details(db, gnis_id):
         }
         return location_dict
     else:
-        print >> sys.stderr, "GNIS ID {} not found in database!".format(gnis_id)
+        print("GNIS ID {} not found in database!".format(gnis_id), file=sys.stderr)
         sys.exit(-1)
 
 
@@ -137,61 +147,77 @@ def fill_in(db, filename, force=False):
         request["agency"]["contacts"].append(contact)
 
     if request["agency"][TYPE] not in AGENCY_TYPE:
-        print >> sys.stderr, "Agency type is '%s' - must be one of %s" % (
-            request["agency"][TYPE],
-            AGENCY_TYPE,
+        print(
+            "Agency type is '{!s}' - must be one of {!s}".format(
+                request["agency"][TYPE], AGENCY_TYPE,
+            ),
+            file=sys.stderr,
         )
         sys.exit(-1)
 
     if request.get(SCAN_TYPES):
         for st in request[SCAN_TYPES]:
             if st not in SCAN_TYPE:
-                print >> sys.stderr, "Unknown scan type '%s' - must be one of %s" % (
-                    st,
-                    SCAN_TYPE,
+                print(
+                    "Unknown scan type '{!s}' - must be one of {!s}".format(
+                        st, SCAN_TYPE,
+                    ),
+                    file=sys.stderr,
                 )
                 sys.exit(-1)
 
     if request.get(RPT_TYPES):
         for rt in request[RPT_TYPES]:
             if rt not in REPORT_TYPE:
-                print >> sys.stderr, "Unknown report type '%s' - must be one of %s" % (
-                    rt,
-                    REPORT_TYPE,
+                print(
+                    "Unknown report type '{!s}' - must be one of {!s}".format(
+                        rt, REPORT_TYPE,
+                    ),
+                    file=sys.stderr,
                 )
                 sys.exit(-1)
 
     if request.get(RPT_PERIOD):
         if request[RPT_PERIOD] not in REPORT_PERIOD:
-            print >> sys.stderr, "Report period is '%s' - must be one of %s" % (
-                request[RPT_PERIOD],
-                REPORT_PERIOD,
+            print(
+                "Report period is '{!s}' - must be one of {!s}".format(
+                    request[RPT_PERIOD], REPORT_PERIOD,
+                ),
+                file=sys.stderr,
             )
             sys.exit(-1)
 
     contacts = request["agency"]["contacts"]
-    if len(contacts) == 0:
-        print >> sys.stderr, "No POCs associated with agency"
+    if contacts:
+        print("No POCs associated with agency", file=sys.stderr)
         if not force:
             sys.exit(-1)
         else:
-            print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
+            print(
+                "Continuing DESPITE WARNING because --force option is on",
+                file=sys.stderr,
+            )
 
     for contact in contacts:
         if contact[TYPE] not in POC_TYPE:
-            print >> sys.stderr, "POC type is '%s' - must be one of %s" % (
-                contact[TYPE],
-                POC_TYPE,
+            print(
+                "POC type is '{!s}' - must be one of {!s}".format(
+                    contact[TYPE], POC_TYPE,
+                ),
+                file=sys.stderr,
             )
             sys.exit(-1)
 
         email = contact[EMAIL]
         if email is None or email == "":
-            print >> sys.stderr, "All POCs must have an associated email"
+            print("All POCs must have an associated email", file=sys.stderr)
             if not force:
                 sys.exit(-1)
             else:
-                print >> sys.stderr, "Continuing DESPITE WARNING because --force option is on"
+                print(
+                    "Continuing DESPITE WARNING because --force option is on",
+                    file=sys.stderr,
+                )
 
     nets = netaddr.IPSet()
     for k, v in config.items(NETWORKS):
@@ -223,14 +249,14 @@ def main():
     db = database.db_from_config(args["--section"])
 
     if not os.path.isfile(args["FILENAME"]):
-        print >> sys.stderr, "File not found:", args["FILENAME"]
+        print("File not found:", args["FILENAME"], file=sys.stderr)
         sys.exit(-1)
 
     request = fill_in(db, args["FILENAME"], force)
 
     if args["--networks"]:
         for n in request["networks"]:
-            print n
+            print(n)
     else:
         util.pp(request)
 
