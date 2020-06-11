@@ -16,14 +16,17 @@ Options:
 NOTE: set-false-positive can be used to set the false_positive flag to True or False
 """
 
+from __future__ import print_function
+
+import datetime
 import sys
-import os
+
+from bson import ObjectId
 from docopt import docopt
 from netaddr import IPNetwork, IPRange, IPSet
-import datetime
+
 from cyhy.db import database
 from cyhy.util import util
-from bson import ObjectId
 
 FP_EXPIRATION_DAYS_DEFAULT = 365  # Days a false-positive ticket is effective for
 SEVERITY_LEVELS = ["Info", "Low", "Medium", "High", "Critical"]
@@ -56,17 +59,19 @@ def read_file(filename):
 
 
 def print_ticket_details(tickets):
-    print "{:<26}{:<7}{:<7}{:<19}{:<10}{:<14}{:<15}{:<7}{:<10}{:}".format(
-        "Ticket ID",
-        "Open?",
-        "FP?",
-        "Time Opened (UTC)",
-        "Severity",
-        "FP Effective",
-        "FP Expiration",
-        "Port",
-        "Protocol",
-        "Vulnerability Name",
+    print(
+        "{:<26}{:<7}{:<7}{:<19}{:<10}{:<14}{:<15}{:<7}{:<10}{:}".format(
+            "Ticket ID",
+            "Open?",
+            "FP?",
+            "Time Opened (UTC)",
+            "Severity",
+            "FP Effective",
+            "FP Expiration",
+            "Port",
+            "Protocol",
+            "Vulnerability Name",
+        )
     )
 
     for t in tickets:
@@ -75,13 +80,17 @@ def print_ticket_details(tickets):
         t["severity_str"] = SEVERITY_LEVELS[t["details"]["severity"]]
         if t["false_positive"]:
             t["fp_effective_date"], t["fp_expiration_date"] = t.false_positive_dates
-            print "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<10}{fp_effective_date:%Y-%m-%d}    {fp_expiration_date:%Y-%m-%d}     {port:<7}{protocol:<10}{details[name]}".format(
-                **t
+            print(
+                "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<10}{fp_effective_date:%Y-%m-%d}    {fp_expiration_date:%Y-%m-%d}     {port:<7}{protocol:<10}{details[name]}".format(
+                    **t
+                )
             )
         else:
             t["fp_effective_date"], t["fp_expiration_date"] = None, None
-            print "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<39}{port:<7}{protocol:<10}{details[name]}".format(
-                **t
+            print(
+                "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<39}{port:<7}{protocol:<10}{details[name]}".format(
+                    **t
+                )
             )
 
         t.pop(
@@ -99,8 +108,8 @@ def list_false_positive(db, cidrs):
             tickets = list(
                 db.TicketDoc.find({"ip_int": int(ip), "false_positive": True})
             )
-            if len(tickets) == 0:
-                print "{} has no false-positive tickets\n".format(str(ip))
+            if not tickets:
+                print("{!s} has no false-positive tickets\n".format(ip))
             else:
                 tickets.sort(
                     key=lambda x: (
@@ -110,11 +119,13 @@ def list_false_positive(db, cidrs):
                     ),
                     reverse=True,
                 )
-                print "\nFalse-positive tickets for {} ({}):".format(
-                    str(ip), tickets[0]["owner"]
+                print(
+                    "\nFalse-positive tickets for {!s} ({}):".format(
+                        ip, tickets[0]["owner"]
+                    )
                 )
                 print_ticket_details(tickets)
-                print
+                print()
 
 
 def set_false_positive(db, cidrs):
@@ -122,9 +133,9 @@ def set_false_positive(db, cidrs):
         for ip in cidr:
             tickets = list(db.TicketDoc.find({"ip_int": int(ip)}))
 
-            if len(tickets) == 0:
-                print "No vulnerability tickets found for {} - SKIPPING!\n".format(
-                    str(ip)
+            if not tickets:
+                print(
+                    "No vulnerability tickets found for {!s} - SKIPPING!\n".format(ip)
                 )
                 break  # Move on to next ip (if present)
 
@@ -137,20 +148,21 @@ def set_false_positive(db, cidrs):
                     ),
                     reverse=True,
                 )
-                print "\nTickets for {} ({}):".format(str(ip), tickets[0]["owner"])
+                print("\nTickets for {!s} ({}):".format(ip, tickets[0]["owner"]))
                 print_ticket_details(tickets)
 
                 # choose vuln ticket ID
+                # MIGRATION : raw_input() becomes input() in Python 3
                 r = raw_input(
                     "Enter ticket id or press return if done with this IP address: "
                 )
                 if not r:
-                    print "Done with %s\n" % str(ip)
+                    print("Done with {!s}\n".format(ip))
                     break  # Move on to next ip (if present)
                 try:
                     golden_ticketID = ObjectId(r)
-                except:
-                    print >> sys.stderr, "Invalid ticket id provided: ", r
+                except Exception:
+                    print("Invalid ticket id provided: ", r, file=sys.stderr)
                 else:
                     valid_ticketID = False
                     for t in tickets:
@@ -159,18 +171,21 @@ def set_false_positive(db, cidrs):
                             golden_ticket = t
                             break  # Found our ticket, now ask if the user wants to flip the false_positive flag
 
-                    if valid_ticketID == False:
-                        print "ERROR: TicketID %s is not valid for %s" % (
-                            golden_ticketID,
-                            str(ip),
+                    if not valid_ticketID:
+                        print(
+                            "ERROR: TicketID {!s} is not valid for {!s}".format(
+                                golden_ticketID, ip,
+                            )
                         )
                     else:
                         # retrieve current false_positive flag value & ask if user wants to flip it
-                        print "\nfalse_positive flag for %s is currently: %s" % (
-                            golden_ticketID,
-                            golden_ticket["false_positive"],
+                        print(
+                            "\nfalse_positive flag for {!s} is currently: {!s}".format(
+                                golden_ticketID, golden_ticket["false_positive"],
+                            )
                         )
 
+                        # MIGRATION : raw_input() becomes input() in Python 3
                         yes = raw_input(
                             'Type "yes" to flip the false_positive flag for %s from "%s" to "%s": '
                             % (
@@ -181,12 +196,14 @@ def set_false_positive(db, cidrs):
                         )
 
                         if yes != "yes":
-                            print '\nfalse_positive flag for %s was NOT modified from current value of "%s".' % (
-                                golden_ticketID,
-                                golden_ticket["false_positive"],
+                            print(
+                                '\nfalse_positive flag for {!s} was NOT modified from current value of "{!s}".'.format(
+                                    golden_ticketID, golden_ticket["false_positive"],
+                                )
                             )
                             continue  # Go back to start of while loop (show open tickets for this ip)
 
+                        # MIGRATION : raw_input() becomes input() in Python 3
                         reason = raw_input(
                             "Enter the reason why you are changing the false_positive flag: "
                         )
@@ -198,10 +215,13 @@ def set_false_positive(db, cidrs):
                                 fp_expiration_date = util.utcnow() + datetime.timedelta(
                                     days=fp_expiration_days
                                 )
-                                print "\nDefault is %s days until the false_positive expires [%s]." % (
-                                    FP_EXPIRATION_DAYS_DEFAULT,
-                                    fp_expiration_date.strftime("%Y-%m-%d"),
+                                print(
+                                    "\nDefault is {!s} days until the false_positive expires [{!s}].".format(
+                                        FP_EXPIRATION_DAYS_DEFAULT,
+                                        fp_expiration_date.strftime("%Y-%m-%d"),
+                                    )
                                 )
+                                # MIGRATION : raw_input() becomes input() in Python 3
                                 expiration_input = raw_input(
                                     "Enter a new number of days or press return to accept the default: "
                                 )
@@ -213,17 +233,22 @@ def set_false_positive(db, cidrs):
                                                 "Days until the false_positive expires must be an integer greater than zero!"
                                             )
                                         valid_expiration_days = True
-                                    except:
+                                    except Exception:
                                         fp_expiration_days = FP_EXPIRATION_DAYS_DEFAULT
-                                        print >> sys.stderr, "ERROR: Number of days until the false_positive expires must be an integer greater than zero!"
+                                        print(
+                                            "ERROR: Number of days until the false_positive expires must be an integer greater than zero!",
+                                            file=sys.stderr,
+                                        )
                                 else:  # Just use FP_EXPIRATION_DAYS_DEFAULT
                                     valid_expiration_days = True
                             fp_expiration_date = util.utcnow() + datetime.timedelta(
                                 days=fp_expiration_days
                             )
-                            print "\nThe false_positive flag will automatically reset to false in %s days [%s]." % (
-                                fp_expiration_days,
-                                fp_expiration_date.strftime("%Y-%m-%d"),
+                            print(
+                                "\nThe false_positive flag will automatically reset to false in {!s} days [{!s}].".format(
+                                    fp_expiration_days,
+                                    fp_expiration_date.strftime("%Y-%m-%d"),
+                                )
                             )
 
                         # update ticket in DB
@@ -234,11 +259,12 @@ def set_false_positive(db, cidrs):
                         )
                         golden_ticket.save()
 
-                        print "\nfalse_positive flag successfully changed!"
+                        print("\nfalse_positive flag successfully changed!")
                         upd_ticket = db.TicketDoc.find({"_id": golden_ticket["_id"]})
-                        print "false_positive flag for %s is now set to: %s" % (
-                            golden_ticketID,
-                            upd_ticket[0]["false_positive"],
+                        print(
+                            "false_positive flag for {!s} is now set to: {!s}".format(
+                                golden_ticketID, upd_ticket[0]["false_positive"],
+                            )
                         )
 
 
@@ -247,10 +273,10 @@ def main():
     db = database.db_from_config(args["--section"])
 
     nets = parse_addresses(args["ADDRESSES"])
-    if args["--file"] != None:
+    if args["--file"] is not None:
         f_nets = read_file(args["--file"])
         nets.update(f_nets)
-    elif len(nets) == 0:
+    elif not nets:
         nets.update(parse_addresses(sys.stdin.readlines()))
 
     if args["list-false-positive"]:
