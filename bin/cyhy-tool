@@ -15,7 +15,7 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -f --foreground                Build indices in the foreground
   -q --quiet                     Do not display progress bars
   -S --sync                      Update tally counts by scanning database
@@ -23,12 +23,15 @@ Options:
   -d --debug                     Output debug messages
 """
 
+from __future__ import print_function
+
 import os
 import sys
-from docopt import docopt
-import datetime
+
 import dateutil
+from docopt import docopt
 import progressbar as pb
+
 from cyhy.core import Config, STATUS, STAGE, SCAN_TYPE
 from cyhy.db import CHDatabase, database
 from cyhy.core.geoloc import GeoLocDB
@@ -38,6 +41,7 @@ PB_UPDATING_WIDGETS = [
     "Updating: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Python 3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -46,6 +50,7 @@ PB_GATHER_WIDGETS = [
     "Gathering: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Python 3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -54,6 +59,7 @@ PB_INIT_WIDGETS = [
     "Initializing: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Python 3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -62,6 +68,7 @@ PB_RESET_WIDGETS = [
     "Resetting: ",
     pb.SimpleProgress(),
     " ",
+    # MIGRATION : unichr becomes chr in Python 3
     pb.Bar(marker=unichr(0x25B6)),
     " ",
     pb.ETA(),
@@ -71,19 +78,21 @@ PB_RESET_WIDGETS = [
 def init_scan(db, owner, quiet=False):
     request = db.RequestDoc.get_by_owner(owner)
     if not request:
-        print >> sys.stderr, 'No request with "%s" found.' % owner
+        print('No request with "{!s}" found.'.format(owner), file=sys.stderr)
         return -1
     if SCAN_TYPE.CYHY not in request["scan_types"]:
         if quiet:
-            print >> sys.stderr, 'Request for %s does not have "%s" in scan_types; to override, disable --quiet flag.' % (
-                owner,
-                SCAN_TYPE.CYHY,
+            print(
+                'Request for {!s} does not have "{!s}" in scan_types; to override, disable --quiet flag.'.format(
+                    owner, SCAN_TYPE.CYHY,
+                ),
+                file=sys.stderr,
             )
             return -1
         if not util.warn_and_confirm(
             'Request for %s does not have "%s" in scan_types!' % (owner, SCAN_TYPE.CYHY)
         ):
-            print >> sys.stderr, "Init aborted for %s." % owner
+            print("Init aborted for {!s}.".format(owner), file=sys.stderr)
             return -2
 
     owner_id = request["_id"]
@@ -99,7 +108,7 @@ def init_scan(db, owner, quiet=False):
     pbar = pb.ProgressBar(
         widgets=PB_INIT_WIDGETS if not quiet else [], maxval=len(nets)
     ).start()
-    if len(pbar.widgets):
+    if pbar.widgets:
         pbar.widgets[0] = "Initializing %s: " % owner
 
     i = 0
@@ -112,6 +121,8 @@ def init_scan(db, owner, quiet=False):
         pbar.update(i)
     pbar.finish()
 
+    return 0
+
 
 def sync_tallies(db, owner_id):
     if SCAN_TYPE.CYHY not in db.RequestDoc.get_by_owner(owner_id)["scan_types"]:
@@ -119,14 +130,16 @@ def sync_tallies(db, owner_id):
             'Request for %s does not have "%s" in scan_types - continuing will create/update a tally document.'
             % (owner_id, SCAN_TYPE.CYHY)
         ):
-            print >> sys.stderr, "Tally sync aborted for %s." % owner_id
+            print("Tally sync aborted for {!s}.".format(owner_id), file=sys.stderr)
             return -2
     tallies = db.TallyDoc.get_by_owner(owner_id)
-    if tallies == None:
+    if tallies is None:
         # couldn't find an existing doc, create new
         tallies = db.TallyDoc()
         tallies["_id"] = owner_id
     tallies.sync(db)
+
+    return 0
 
 
 def purge_running(db):
@@ -142,28 +155,34 @@ def all_status(db, sync=False):
 
 def status(db, owners, sync=False):
     for owner in owners:
-        print owner
+        print(owner)
         if sync:
             sync_tallies(db, owner)
         tally = db.TallyDoc.get_by_owner(owner)
-        if tally == None:
-            print >> sys.stderr, "Tally document not found for: %s" % owner
+        if tally is None:
+            print("Tally document not found for:", owner, file=sys.stderr)
             continue
         for stage in list(STAGE):
-            for status in list(STATUS):
-                print "%8s:%8s = %d" % (stage, status, tally["counts"][stage][status])
-        print
+            for stat in list(STATUS):
+                print(
+                    "{!s:8}:{!s:8} = {}".format(
+                        stage, stat, tally["counts"][stage][stat]
+                    )
+                )
+        print()
 
 
 def retire(db, owner):
-    # crazy hack to import cyhy-sched, cyhy-ip, and sub-org-manage
+    # MIGRATION : This entire approach was deprecated, please see:
+    # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
+    # for alternatives (we should use the Python 3.5+ approach).
+    # crazy hack to import cyhy-sched and cyhy-ip
     import imp
 
     me = os.path.realpath(__file__)
     myDir = os.path.dirname(me)
     ch_sched = imp.load_source("ch_sched", os.path.join(myDir, "cyhy-sched"))
     ch_ip = imp.load_source("ch_ip", os.path.join(myDir, "cyhy-ip"))
-    ch_suborg = imp.load_source("ch_suborg", os.path.join(myDir, "cyhy-suborg"))
 
     # Grab the request doc and recursively retire the children
     requestDoc = db.RequestDoc.get_by_owner(owner)
@@ -172,34 +191,34 @@ def retire(db, owner):
             retire(db, childId)
 
     # Pause indefinitely
-    print "Indefinitely pausing " + owner
+    print("Indefinitely pausing", owner)
     ch_sched.set_start_date(db, requestDoc, ch_sched.THE_DISTANT_FUTURE)
 
     # Update request document and remove children
-    print "Setting stakeholder to false for " + owner
+    print("Setting stakeholder to false for", owner)
     requestDoc["stakeholder"] = False
-    print "Setting report types to empty list for " + owner
+    print("Setting report types to empty list for", owner)
     requestDoc["report_types"] = []
-    print "Setting scan types to empty list for " + owner
+    print("Setting scan types to empty list for", owner)
     requestDoc["scan_types"] = []
-    print "Setting retired field for " + owner
+    print("Setting retired field for", owner)
     requestDoc["retired"] = True
-    print "Saving request document for " + owner
+    print("Saving request document for", owner)
     requestDoc.save()
 
     # Remove networks, if they exist
     networks = requestDoc.networks
-    if len(networks) != 0:
-        print "Removing the following networks from " + owner + ": " + str(networks)
+    if networks:
+        print("Removing the following networks from {}: {!s}".format(owner, networks))
         ch_ip.remove(db, owner, networks)
     else:
-        print "Organization " + owner + " contains no networks"
+        print("Organization {} contains no networks".format(owner))
     # Delete tally document, if it exists
     tallyDoc = db.TallyDoc.get_by_owner(owner)
     if tallyDoc:
         tallyDoc.delete()
     else:
-        print "No tally document for " + owner
+        print("No tally document for", owner)
 
 
 def main():
@@ -207,7 +226,11 @@ def main():
 
     config = Config(args["--section"])
     if config.config_created:
-        print >> sys.stderr, "A default configuration file was created at: %s" % config.config_created
+        print(
+            "A default configuration file was created at:",
+            config.config_created,
+            file=sys.stderr,
+        )
 
     db = database.db_from_config(args["--section"])
     ch_db = CHDatabase(db)
@@ -215,7 +238,7 @@ def main():
     if args["--debug"]:
         import logging
 
-        root = util.setup_logging(logging.DEBUG, console=True)
+        util.setup_logging(logging.DEBUG, console=True)
 
     if args["ensure-indices"]:
         database.ensure_indices(db, args["--foreground"])
@@ -226,10 +249,10 @@ def main():
         if not util.warn_and_confirm(
             "Make sure ALL running jobs on scanners were stopped and processed by commander before continuing! See CYHY-287 for details."
         ):
-            print >> sys.stderr, "purge-running command aborted."
+            print("purge-running command aborted.", file=sys.stderr)
             return -2
         purge_running(db)
-        print >> sys.stderr, "status sync required after purge"
+        print("status sync required after purge", file=sys.stderr)
     elif args["status"]:
         status(db, args["OWNER"], args["--sync"])
     elif args["status-all"]:
@@ -237,12 +260,12 @@ def main():
     elif args["done-scanning"]:
         if args["AFTER_DATE"]:
             after_date = dateutil.parser.parse(args["AFTER_DATE"])
-            if after_date.tzinfo == None:
+            if after_date.tzinfo is None:
                 after_date_local = after_date.replace(tzinfo=dateutil.tz.tzlocal())
             after_date_utc = time_to_utc(after_date_local)
         else:
             after_date_utc = None
-        print "\n".join(ch_db.done_scanning(after_date_utc))
+        print("\n".join(ch_db.done_scanning(after_date_utc)))
     elif args["retire"]:
         orgIds = args["OWNER"]
         # Compile a list of all the child org IDs
@@ -257,14 +280,18 @@ def main():
             + str(childIds)
             + "?"
         ):
-            print "Aborted."
+            print("Aborted.")
             return -2
 
         for orgId in orgIds:
             retire(db, orgId)
-        print "Do not forget to move " + str(
-            orgIds
-        ) + ' to the "Retired CyHy Orgs" tab in the Google Spreadsheet!'
+        print(
+            'Do not forget to move {!s} to the "Retired CyHy Orgs" tab in the Google Spreadsheet!'.format(
+                orgIds
+            )
+        )
+
+    return 0
 
 
 if __name__ == "__main__":
