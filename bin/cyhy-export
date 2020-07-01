@@ -15,18 +15,16 @@ Options:
 
 Notes:
   If no owners are specified, all request documents will be output.
+
 """
 
 from __future__ import print_function
 
-import json
 import os
-import sys
 
 from docopt import docopt
 import progressbar as pb
 
-from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
 
@@ -41,15 +39,17 @@ PB_INIT_WIDGETS = [
 ]
 
 
-def get_all_owners(db):
-    return db.RequestDoc.get_all_owners()
+def get_all_owners(mongo_db):
+    """Return all owners in the database."""
+    return mongo_db.RequestDoc.get_all_owners()
 
 
-def export_requests(db, owners, path):
+def export_requests(mongo_db, owners, path):
+    """Export requests from a given owner to a file."""
     for owner in owners:
-        request = db.RequestDoc.get_by_owner(owner)
+        request = mongo_db.RequestDoc.get_by_owner(owner)
         if not request:
-            print("Could not find request document for {}".format(owner))
+            print("Could not find request document for ", owner)
             continue
         filename = os.path.join(path, owner + ".json")
         with open(filename, "wb") as f:
@@ -57,14 +57,15 @@ def export_requests(db, owners, path):
 
 
 def main():
+    """Export request documents for a given (or all) owner(s) to a file."""
     args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
-    if len(args["OWNER"]) == 0:
-        args["OWNER"] = get_all_owners(db)
+    if not args["OWNER"]:
+        args["OWNER"] = get_all_owners(mongo_db)
 
-    export_requests(db, args["OWNER"], args["--file-path"])
+    export_requests(mongo_db, args["OWNER"], args["--file-path"])
 
 
 if __name__ == "__main__":
