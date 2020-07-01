@@ -21,7 +21,6 @@ Options:
 from __future__ import print_function
 
 import sys
-import time
 
 from bson import ObjectId
 from docopt import docopt
@@ -29,9 +28,10 @@ from docopt import docopt
 from cyhy.db import database, CHDatabase
 
 
-def pause_commander(db, sender, reason, wait=False, timeout=None, quiet=False):
-    ch = CHDatabase(db)
-    doc = ch.pause_commander(sender, reason)
+def pause_commander(mongo_db, sender, reason, wait=False, timeout=None, quiet=False):
+    """Pause the commander and return True or the result of the wait."""
+    cyhy_db = CHDatabase(mongo_db)
+    doc = cyhy_db.pause_commander(sender, reason)
     if quiet:
         print(doc["_id"])
     else:
@@ -67,8 +67,9 @@ def pause_commander(db, sender, reason, wait=False, timeout=None, quiet=False):
     return True
 
 
-def list_control_docs(db, quiet=False):
-    docs = db.SystemControlDoc.find()
+def list_control_docs(mongo_db, quiet=False):
+    """Search for control documents in the database and output any found."""
+    docs = mongo_db.SystemControlDoc.find()
     if docs.count() == 0:
         if not quiet:
             print("There are currently no system control documents.")
@@ -83,8 +84,9 @@ def list_control_docs(db, quiet=False):
     return True
 
 
-def delete_control_doc(db, doc_id, quiet=False):
-    doc = db.SystemControlDoc.find_one({"_id": ObjectId(doc_id)})
+def delete_control_doc(mongo_db, doc_id, quiet=False):
+    """Delete a specified control document from the database."""
+    doc = mongo_db.SystemControlDoc.find_one({"_id": ObjectId(doc_id)})
     if not doc:
         if not quiet:
             print("Could not find a control document with ID {}".format(doc_id))
@@ -94,8 +96,9 @@ def delete_control_doc(db, doc_id, quiet=False):
 
 
 def main():
+    """Create, list, and remove control documents for cyhy-commander."""
     args = docopt(__doc__, version="v0.0.1")
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     if args["--timeout"]:
         timeout = int(args["--timeout"])
@@ -104,7 +107,7 @@ def main():
 
     if args["pause"]:
         success = pause_commander(
-            db,
+            mongo_db,
             args["<sender>"],
             args["<reason>"],
             args["--wait"],
@@ -112,9 +115,9 @@ def main():
             args["--quiet"],
         )
     elif args["list"]:
-        success = list_control_docs(db, args["--quiet"])
+        success = list_control_docs(mongo_db, args["--quiet"])
     elif args["delete"]:
-        success = delete_control_doc(db, args["<id>"], args["--quiet"])
+        success = delete_control_doc(mongo_db, args["<id>"], args["--quiet"])
 
     if not success:
         sys.exit(-1)
