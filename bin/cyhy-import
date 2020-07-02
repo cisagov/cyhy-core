@@ -16,6 +16,7 @@ Options:
 
 Notes:
   If no FILE is specified, the document will be read from standard in.
+
 """
 
 from __future__ import print_function
@@ -32,7 +33,6 @@ import progressbar as pb
 import netaddr
 
 # cisagov Libraries
-from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
 
@@ -57,39 +57,42 @@ DAYS_OF_WEEK = [
 ]
 
 
-def already_exists(db, request):
+def already_exists(mongo_db, request):
+    """Check if a request document for an owner already exists."""
     owner = request["_id"]
-    db_request = db.RequestDoc.get_by_owner(owner)
+    db_request = mongo_db.RequestDoc.get_by_owner(owner)
     if db_request:
         return True
+    return False
 
 
 def print_intersections(intersections):
+    """Print all IP range intersections."""
     for request, cidrs in intersections.items():
         print(
-            "{!s} ({!s}): {!d}".format(
-                request["agency"]["name"], request["_id"], len(cidrs)
-            )
+            "{} ({}): {}".format(request["agency"]["name"], request["_id"], len(cidrs))
         )
         for i in cidrs.iter_cidrs():
-            print("\t {}".format(i))
+            print("\t", i)
 
 
-def has_intersections(db, nets, filename, owner):
-    intersections = db.RequestDoc.get_all_intersections(nets)
-    if len(intersections) == 0:
+def has_intersections(mongo_db, nets, filename, owner):
+    """Check if IPs to import already exist in the database."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(nets)
+    if not intersections:
         return False
     if len(intersections) == 1 and intersections.keys()[0]["_id"] == owner:
         return False
-    else:
-        print("Cannot import %s\nSome addresses already allocated: {}".format(filename))
-        print_intersections(intersections)
-        return True
+
+    print("Cannot import {}\nSome addresses already allocated:".format(filename))
+    print_intersections(intersections)
+    return True
 
 
-def import_request(db, request, source, force=False, init_stage=None):
+def import_request(mongo_db, request, source, force=False, init_stage=None):
+    """Try to import the given request into the database."""
     owner = request["_id"]
-    if not force and already_exists(db, request):
+    if not force and already_exists(mongo_db, request):
         print("Cannot import, owner already exists: {}".format(owner))
         print("Use --force to destroy the currently stored document")
         print("and replace it with the imported version.")
@@ -98,7 +101,7 @@ def import_request(db, request, source, force=False, init_stage=None):
     nets = netaddr.IPSet(request["networks"])
     if init_stage:
         request["init_stage"] = init_stage
-    if has_intersections(db, nets, source, owner):
+    if has_intersections(mongo_db, nets, source, owner):
         return False
     request["networks"] = nets.iter_cidrs()
 
@@ -117,36 +120,40 @@ def import_request(db, request, source, force=False, init_stage=None):
             return False
         try:
             datetime.datetime.strptime(window["start"], "%H:%M:%S")
-        except:
+        except Exception:
             print("Scan window start time '{}' is invalid.".format(window["start"]))
             return False
 
-    doc = db.RequestDoc()
+    doc = mongo_db.RequestDoc()
     util.copy_attrs(request, doc)
     doc.save()
     return True
 
 
-def import_file(db, filename, force, init_stage=None):
-    f = open(filename, "rb")
-    request = json.load(f)
-    f.close()
-    return import_request(db, request, filename, force, init_stage)
+def import_file(mongo_db, filename, force, init_stage=None):
+    """Get the request from a file."""
+    with open(filename, "rb") as f:
+        request = json.load(f)
+    return import_request(mongo_db, request, filename, force, init_stage)
 
 
-def import_stdin(db, force, init_stage=None):
+def import_stdin(mongo_db, force, init_stage=None):
+    """Get the request from standard input."""
     request = json.load(sys.stdin)
-    return import_request(db, request, "from stdin", force, init_stage)
+    return import_request(mongo_db, request, "from stdin", force, init_stage)
 
 
 def main():
+    """Import a request from a file or standard input into the database."""
     args = docopt(__doc__, version="v0.0.1")
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
-    if args["FILE"] != None:
-        success = import_file(db, args["FILE"], args["--force"], args["--init-stage"])
+    if args["FILE"] is not None:
+        success = import_file(
+            mongo_db, args["FILE"], args["--force"], args["--init-stage"]
+        )
     else:
-        success = import_stdin(db, args["--force"], args["--init-stage"])
+        success = import_stdin(mongo_db, args["--force"], args["--init-stage"])
 
     if not success:
         sys.exit(-1)
