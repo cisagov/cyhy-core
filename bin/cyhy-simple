@@ -29,7 +29,13 @@ import netaddr
 
 from cyhy.db import database
 from cyhy.util import util
-from cyhy.core.common import *
+from cyhy.core.common import (
+    AGENCY_TYPE,
+    POC_TYPE,
+    REPORT_PERIOD,
+    REPORT_TYPE,
+    SCAN_TYPE,
+)
 
 if sys.version_info.major == 2:
     from ConfigParser import SafeConfigParser
@@ -56,6 +62,7 @@ GNIS_ID = "gnis_id"
 
 
 def write_blank_config():
+    """Create a blank configuration file."""
     config = SafeConfigParser()
     config.add_section(AGENCY)
     config.add_section(POC)
@@ -77,7 +84,8 @@ def write_blank_config():
     config.write(sys.stdout)
 
 
-def get_location_details(db, gnis_id):
+def get_location_details(mongo_db, gnis_id):
+    """Get a dictionary containing details for the provided GNIS ID."""
     try:
         # MIGRATION : long() is Py2 only, replace with int()
         gnis_id = long(gnis_id)
@@ -87,7 +95,7 @@ def get_location_details(db, gnis_id):
             file=sys.stderr,
         )
         sys.exit(-1)
-    place = db.PlaceDoc.find_one({"_id": gnis_id})
+    place = mongo_db.PlaceDoc.find_one({"_id": gnis_id})
     if place:
         location_dict = {
             "gnis_id": gnis_id,
@@ -106,8 +114,9 @@ def get_location_details(db, gnis_id):
         sys.exit(-1)
 
 
-def fill_in(db, filename, force=False):
-    request = db.RequestDoc()
+def fill_in(mongo_db, filename, force=False):
+    """Create a RequestDoc from the provided file."""
+    request = mongo_db.RequestDoc()
     config = SafeConfigParser(allow_no_value=True)
     config.read([filename])
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
@@ -117,7 +126,9 @@ def fill_in(db, filename, force=False):
     request["agency"][NAME] = config.get(AGENCY, NAME)
     request["agency"][ACRONYM] = config.get(AGENCY, ACRONYM)
     request["agency"][TYPE] = config.get(AGENCY, TYPE)
-    request["agency"][LOCATION] = get_location_details(db, config.get(AGENCY, GNIS_ID))
+    request["agency"][LOCATION] = get_location_details(
+        mongo_db, config.get(AGENCY, GNIS_ID)
+    )
     request[KEY] = config.get(AGENCY, KEY, raw=True)
     request["_id"] = config.get(AGENCY, ACRONYM)
     if config.get(AGENCY, STAKEHOLDER).lower() == "true":
@@ -148,7 +159,7 @@ def fill_in(db, filename, force=False):
 
     if request["agency"][TYPE] not in AGENCY_TYPE:
         print(
-            "Agency type is '{!s}' - must be one of {!s}".format(
+            "Agency type is '{}' - must be one of {}".format(
                 request["agency"][TYPE], AGENCY_TYPE,
             ),
             file=sys.stderr,
@@ -156,22 +167,22 @@ def fill_in(db, filename, force=False):
         sys.exit(-1)
 
     if request.get(SCAN_TYPES):
-        for st in request[SCAN_TYPES]:
-            if st not in SCAN_TYPE:
+        for scan_type in request[SCAN_TYPES]:
+            if scan_type not in SCAN_TYPE:
                 print(
                     "Unknown scan type '{!s}' - must be one of {!s}".format(
-                        st, SCAN_TYPE,
+                        scan_type, SCAN_TYPE,
                     ),
                     file=sys.stderr,
                 )
                 sys.exit(-1)
 
     if request.get(RPT_TYPES):
-        for rt in request[RPT_TYPES]:
-            if rt not in REPORT_TYPE:
+        for report_type in request[RPT_TYPES]:
+            if report_type not in REPORT_TYPE:
                 print(
                     "Unknown report type '{!s}' - must be one of {!s}".format(
-                        rt, REPORT_TYPE,
+                        report_type, REPORT_TYPE,
                     ),
                     file=sys.stderr,
                 )
@@ -220,16 +231,16 @@ def fill_in(db, filename, force=False):
                 )
 
     nets = netaddr.IPSet()
-    for k, v in config.items(NETWORKS):
-        if k.find("-") != -1:
+    for ip_addr in config.options(NETWORKS):
+        if ip_addr.find("-") != -1:
             # handle a range
-            start, end = k.split("-")
-            rng = netaddr.IPRange(start.strip(), end.strip())
-            for i in rng.cidrs():
+            start, end = ip_addr.split("-")
+            ip_range = netaddr.IPRange(start.strip(), end.strip())
+            for i in ip_range.cidrs():
                 nets.add(i)
         else:
             # handle single cidr
-            net = netaddr.IPNetwork(k)
+            net = netaddr.IPNetwork(ip_addr)
             nets.add(net)
 
     request.add_networks(nets)
@@ -238,25 +249,24 @@ def fill_in(db, filename, force=False):
 
 
 def main():
+    """Generate a JSON file from a given request text file."""
     args = docopt(__doc__, version="v0.0.2")
 
     if args["--blank"]:
         write_blank_config()
         sys.exit(0)
 
-    force = args["--force"]
-
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     if not os.path.isfile(args["FILENAME"]):
         print("File not found:", args["FILENAME"], file=sys.stderr)
         sys.exit(-1)
 
-    request = fill_in(db, args["FILENAME"], force)
+    request = fill_in(mongo_db, args["FILENAME"], args["--force"])
 
     if args["--networks"]:
-        for n in request["networks"]:
-            print(n)
+        for network in request["networks"]:
+            print(network)
     else:
         util.pp(request)
 
