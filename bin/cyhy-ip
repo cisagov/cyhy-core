@@ -21,6 +21,7 @@ Options:
 Notes:
   Address can be read from standard input if no addresses are provided on the command line
   and the --file option is omitted.
+
 """
 
 from __future__ import print_function
@@ -29,25 +30,25 @@ import sys
 import progressbar as pb
 from docopt import docopt
 from netaddr import ip, IPNetwork, IPRange, IPSet
-from cyhy.core import Config, STATUS, STAGE
+from cyhy.core import STATUS, STAGE
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
 from cyhy.core.geoloc import GeoLocDB
-from cyhy.core.common import *
+from cyhy.core.common import TICKET_EVENT
 
 
-def munge(x):
+def munge(ip_addrs):
     """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
 
     Args:
         x: A Python tuple or list containing IPNetwork and IPRange objects
 
     Returns:
-        An IPSet corresponding to the Python tuple or list that was passed
-        in.
+        An IPSet corresponding to the Python tuple or list that was passed in.
+
     """
     ans = []
-    for i in x:
+    for i in ip_addrs:
         # IPSet doesn't like it when an IPRange appears in the tuple
         # or list in its constructor.  It only likes IPNetworks.
         if isinstance(i, IPRange):
@@ -80,32 +81,36 @@ SPECIAL_RANGES = {
 
 
 def parse_addresses(addresses):
+    """Parse the provided addresses to create an IPSet."""
     nets = IPSet()
-    for a in addresses:
-        a = a.split("#", 1)[0]  # remove comments
-        a = a.strip()
-        if not a:
+    for addr in addresses:
+        addr = addr.split("#", 1)[0]  # remove comments
+        addr = addr.strip()
+        if not addr:
             # skip blank lines
             continue
-        if a.find("-") != -1:
+        if addr.find("-") != -1:
             # handle a range
-            start, end = a.split("-")
+            start, end = addr.split("-")
             rng = IPRange(start.strip(), end.strip())
             for i in rng.cidrs():
                 nets.add(i)
         else:
             # handle single cidr
-            net = IPNetwork(a)
+            net = IPNetwork(addr)
             nets.add(net)
     return nets
 
 
 def read_file(filename):
-    f = open(filename, "r")
-    return parse_addresses(f.readlines())
+    """Read in a file and parse it for IP addresses."""
+    with open(filename) as f:
+        contents = f.readlines()
+    return parse_addresses(contents)
 
 
 def get_special_intersections(cidrs):
+    """Get the intersection of the given CIDRs with special IP ranges."""
     results = {}  # {request: IPSet of intersections}
     for description, special_set in SPECIAL_RANGES.items():
         intersection = special_set & cidrs
@@ -115,8 +120,9 @@ def get_special_intersections(cidrs):
 
 
 def print_intersections(intersections):
+    """Print the provided IP intersections."""
     for request, intersecting_cidrs in intersections.items():
-        if type(request) == str:
+        if isinstance(request, str):
             print("# {!s}: {:,}".format(request, len(intersecting_cidrs)))
         else:
             print(
@@ -129,18 +135,20 @@ def print_intersections(intersections):
 
 
 def print_cidrs(cidrs, indent=0):
+    """Print the provided CIDRs."""
     for i in cidrs.iter_cidrs():
         print("\t" * indent + str(i))
 
 
-def check(db, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
+def check(mongo_db, cidrs):
+    """Check if the given CIDRs are already in the database."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     print_intersections(intersections)
     matched = IPSet()
-    for request, intersecting_cidrs in intersections.items():
+    for intersecting_cidrs in intersections.values():
         matched.update(intersecting_cidrs)
     unmatched = cidrs - matched
     if unmatched:
@@ -148,8 +156,9 @@ def check(db, cidrs):
         print_cidrs(unmatched, indent=1)
 
 
-def do_list(db, owner):
-    request = db.RequestDoc.find_one({"_id": owner})
+def do_list(mongo_db, owner):
+    """List the IP ranges owned by the given org."""
+    request = mongo_db.RequestDoc.find_one({"_id": owner})
     if request:
         for i in request["networks"]:
             print(i)
@@ -157,13 +166,15 @@ def do_list(db, owner):
         print("ERROR: Organization {!s} not found in DB".format(owner))
 
 
-def do_list_all(db):
-    intersections = db.RequestDoc.get_all_intersections(IPSet(["0.0.0.0/0"]))
+def do_list_all(mongo_db):
+    """Print all owned IP addresses in the database."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(IPSet(["0.0.0.0/0"]))
     print_intersections(intersections)
 
 
-def add(db, owner, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
+def add(mongo_db, owner, cidrs):
+    """Add the given CIDRs to the provided owner's inventory."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
@@ -171,7 +182,7 @@ def add(db, owner, cidrs):
         print("Cannot continue!\nSome addresses already allocated or reserved:")
         print_intersections(intersections)
         sys.exit(-1)
-    request = db.RequestDoc.find_one({"_id": owner})
+    request = mongo_db.RequestDoc.find_one({"_id": owner})
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
     stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
@@ -179,10 +190,10 @@ def add(db, owner, cidrs):
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
     pbar.widgets[0] = "Adding %s: " % owner
     i = 0
-    for ip in cidrs:
-        location = geo_loc_db.lookup(ip)
-        host = db.HostDoc()
-        host.init(ip, owner, location, stage)
+    for ipa in cidrs:
+        location = geo_loc_db.lookup(ipa)
+        host = mongo_db.HostDoc()
+        host.init(ipa, owner, location, stage)
         host.save()
         i += 1
         pbar.update(i)
@@ -195,9 +206,10 @@ def add(db, owner, cidrs):
     sys.exit(0)
 
 
-def remove(db, owner, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(cidrs)
-    if len(intersections) == 0:
+def remove(mongo_db, owner, cidrs):
+    """Remove the given CIDRs from the specified owner's inventory."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(cidrs)
+    if not intersections:
         print("Cannot continue!\nAddress is not allocated.")
         sys.exit(-1)
     if len(intersections) > 1 or intersections.keys()[0]["_id"] != owner:
@@ -217,33 +229,35 @@ def remove(db, owner, cidrs):
     ticket_closing_time = util.utcnow()
     for net in cidrs.iter_cidrs():
         # clear lastest flags on ip ranges
-        db.HostScanDoc.collection.update(
+        mongo_db.HostScanDoc.collection.update(
             spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
             document={"$set": {"latest": False}},
             multi=True,
         )
-        db.PortScanDoc.collection.update(
+        mongo_db.PortScanDoc.collection.update(
             spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
             document={"$set": {"latest": False}},
             multi=True,
         )
-        db.VulnScanDoc.collection.update(
+        mongo_db.VulnScanDoc.collection.update(
             spec={"ip_int": {"$gte": net.first, "$lte": net.last}},
             document={"$set": {"latest": False}},
             multi=True,
         )
         # remove hosts by their integer ranges
-        db.HostDoc.collection.remove({"_id": {"$gte": net.first, "$lte": net.last}})
+        mongo_db.HostDoc.collection.remove(
+            {"_id": {"$gte": net.first, "$lte": net.last}}
+        )
         # close open tickets in this ip range
-        for t in db.TicketDoc.find(
+        for ticket in mongo_db.TicketDoc.find(
             {"ip_int": {"$gte": net.first, "$lte": net.last}, "open": True}
         ):
-            t["open"] = False
-            t["time_closed"] = ticket_closing_time
-            t.add_event(
+            ticket["open"] = False
+            ticket["time_closed"] = ticket_closing_time
+            ticket.add_event(
                 TICKET_EVENT.CLOSED, "host moved out of scope", time=ticket_closing_time
             )
-            t.save()
+            ticket.save()
         i += len(net)
         pbar.update(i)
     # update request with new networks
@@ -251,17 +265,20 @@ def remove(db, owner, cidrs):
     request.save()
     print()
     print(
-        "IPs removed from request, host documents deleted, open tickets closed, and relevant reports latest flags cleared."
+        "IPs removed from request, host documents deleted, open tickets "
+        "closed, and relevant reports latest flags cleared."
     )
 
 
-def wrapped_remove(db, owner, cidrs):
-    remove(db, owner, cidrs)
+def wrapped_remove(mongo_db, owner, cidrs):
+    """Remove IP addresses and then exit."""
+    remove(mongo_db, owner, cidrs)
     sys.exit(0)
 
 
-def compare(db, owner, new_net_set):
-    old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+def compare(mongo_db, owner, new_net_set):
+    """Show changes between new and old CIDRs for the given owner."""
+    old_net_set = mongo_db.RequestDoc.find_one({"_id": owner}).networks
 
     added = new_net_set - old_net_set
     removed = old_net_set - new_net_set
@@ -296,16 +313,16 @@ def compare(db, owner, new_net_set):
     sys.exit(0)
 
 
-def move(db, orig_owner, new_owner, networks_to_move):
+def move(mongo_db, orig_owner, new_owner, networks_to_move):
+    """Transfer the given CIDRs from the current owner to a new owner."""
     if orig_owner == new_owner:
         print(
-            "ERROR: OWNER is the same as NEW_OWNER ({!s}). EXITING without making any changes.".format(
-                orig_owner
-            )
+            "ERROR: OWNER is the same as NEW_OWNER ({!s}).".format(orig_owner),
+            "EXITING without making any changes.",
         )
         sys.exit(-1)
-    orig_owner_request = db.RequestDoc.get_by_owner(orig_owner)
-    new_owner_request = db.RequestDoc.get_by_owner(new_owner)
+    orig_owner_request = mongo_db.RequestDoc.get_by_owner(orig_owner)
+    new_owner_request = mongo_db.RequestDoc.get_by_owner(new_owner)
     for (org, req) in [
         (orig_owner, orig_owner_request),
         (new_owner, new_owner_request),
@@ -328,31 +345,33 @@ def move(db, orig_owner, new_owner, networks_to_move):
         sys.exit(-1)
 
     if not util.warn_and_confirm(
-        "This will modify database documents.  You should PAUSE the CyHy commander before continuing."
+        "This will modify database documents.  "
+        "You should PAUSE the CyHy commander before continuing."
     ):
         print("Aborted.")
         sys.exit(-2)
 
-    ch_db = CHDatabase(db)
+    cyhy_db = CHDatabase(mongo_db)
     # Change owner on all relevant documents
-    ch_db.change_ownership(
+    cyhy_db.change_ownership(
         orig_owner_request["_id"],
         new_owner_request["_id"],
         networks_to_move,
         "host owner changed",
     )
 
-    # Check to see if new_owner has a different scheduler than orig_owner (None == manual scheduler; not None == persistent scanning)
-    if (orig_owner_request.get("scheduler") == None) and (
-        new_owner_request.get("scheduler") != None
+    # Check to see if new_owner has a different scheduler than orig_owner
+    # (None == manual scheduler; not None == persistent scanning)
+    if (orig_owner_request.get("scheduler") is None) and (
+        new_owner_request.get("scheduler") is not None
     ):
-        db.HostDoc.ensure_next_scan_set(
+        mongo_db.HostDoc.ensure_next_scan_set(
             new_owner_request["_id"]
         )  # Ensure a next_scan date is set for all hosts in the new owner
-    elif (orig_owner_request.get("scheduler") != None) and (
-        new_owner_request.get("scheduler") == None
+    elif (orig_owner_request.get("scheduler") is not None) and (
+        new_owner_request.get("scheduler") is None
     ):
-        db.HostDoc.clear_next_scan_date(
+        mongo_db.HostDoc.clear_next_scan_date(
             new_owner_request["_id"]
         )  # Clear the next_scan date
 
@@ -365,8 +384,8 @@ def move(db, orig_owner, new_owner, networks_to_move):
     orig_owner_request.save()
     new_owner_request.save()
 
-    orig_owner_tally = db.TallyDoc.get_by_owner(orig_owner_request["_id"])
-    new_owner_tally = db.TallyDoc.get_by_owner(new_owner_request["_id"])
+    orig_owner_tally = mongo_db.TallyDoc.get_by_owner(orig_owner_request["_id"])
+    new_owner_tally = mongo_db.TallyDoc.get_by_owner(new_owner_request["_id"])
 
     # Sync from/to org tallies
     for (org, tally) in [
@@ -379,30 +398,31 @@ def move(db, orig_owner, new_owner, networks_to_move):
             )
         else:
             print("Syncing tally for {!s}".format(org))
-            tally.sync(db)
+            tally.sync(mongo_db)
     print("SUCCESS!")
     sys.exit(0)
 
 
-def setstage(db, stage, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
+def setstage(mongo_db, stage, cidrs):
+    """Set the scanning stage for the given CIDRs to the given stage."""
+    intersections = mongo_db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
     matched = IPSet()
-    for request, intersecting_cidrs in intersections.items():
+    for intersecting_cidrs in intersections.values():
         matched.update(intersecting_cidrs)
 
     special_intersections = get_special_intersections(cidrs)  # intersections with RFCs
     special = IPSet()
-    for request, intersecting_cidrs in special_intersections.items():
+    for intersecting_cidrs in special_intersections.values():
         special.update(intersecting_cidrs)
     unmatched = cidrs - matched - special
 
     if unmatched:
         print(
-            "\nThe following networks were not found in CyHy inventory and will be skipped: {:,}".format(
-                len(unmatched)
-            )
+            "\nThe following networks were not found in CyHy inventory",
+            "and will be skipped:",
+            len(unmatched),
         )
         print_cidrs(unmatched, indent=1)
     if special:
@@ -413,9 +433,8 @@ def setstage(db, stage, cidrs):
         sys.exit(0)
 
     print(
-        "The following networks were found in CyHy inventory and their stage will be set to {!s}/WAITING:".format(
-            stage
-        )
+        "The following networks were found in CyHy inventory",
+        "and their stage will be set to {!s}/WAITING:".format(stage),
     )
     print_intersections(intersections)
     if not util.warn_and_confirm(
@@ -429,7 +448,7 @@ def setstage(db, stage, cidrs):
     pbar.widgets[0] = "Setting stage: "
     i = 0
     for net in matched.iter_cidrs():
-        db.HostDoc.collection.update(
+        mongo_db.HostDoc.collection.update(
             spec={"_id": {"$gte": net.first, "$lte": net.last}},
             document={
                 "$set": {
@@ -447,58 +466,56 @@ def setstage(db, stage, cidrs):
 
     print("\n")
     for org in intersections.keys():
-        tally = db.TallyDoc.get_by_owner(org["_id"])
+        tally = mongo_db.TallyDoc.get_by_owner(org["_id"])
         print("Syncing tally for {!s}".format(org["_id"]))
-        tally.sync(db)
+        tally.sync(mongo_db)
     print("SUCCESS!")
     sys.exit(0)
 
 
 def main():
+    """Provide utilities to manage IP inventories in the CyHy database."""
     args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     if args["list"]:
-        do_list(db, args["OWNER"])
+        do_list(mongo_db, args["OWNER"])
         sys.exit(0)
 
     if args["list-all"]:
-        do_list_all(db)
+        do_list_all(mongo_db)
         sys.exit(0)
 
     nets = parse_addresses(args["ADDRESSES"])
-    if args["--file"] != None:
+    if args["--file"] is not None:
         f_nets = read_file(args["--file"])
         nets.update(f_nets)
-    elif len(nets) == 0:
+    elif not nets:
         nets.update(parse_addresses(sys.stdin.readlines()))
 
     if args["check"]:
-        check(db, nets)
+        check(mongo_db, nets)
     elif args["normalize"]:
-        print("# {!d}".format(len(nets)))
+        print("#", len(nets))
         print_cidrs(nets, indent=0)
     elif args["add"]:
-        add(db, args["OWNER"], nets)
+        add(mongo_db, args["OWNER"], nets)
     elif args["remove"]:
-        wrapped_remove(db, args["OWNER"], nets)
+        wrapped_remove(mongo_db, args["OWNER"], nets)
     elif args["compare"]:
-        compare(db, args["OWNER"], nets)
+        compare(mongo_db, args["OWNER"], nets)
     elif args["move"]:
-        move(db, args["OWNER"], args["NEW_OWNER"], nets)
+        move(mongo_db, args["OWNER"], args["NEW_OWNER"], nets)
     elif args["setstage"]:
         stage = args["STAGE"]
         # Make sure the stage the user specified is valid
         if stage not in STAGE:
-            sys.stderr.write(stage + " is not a valid stage.\n")
-            sys.stderr.write("Valid stages are: ")
-            for s in STAGE:
-                sys.stderr.write(s + " ")
-            sys.stderr.write("\n")
+            print(stage + " is not a valid stage.", file=sys.stderr)
+            print("Valid stages are: {}".format(" ".join(STAGE)), file=sys.stderr)
             sys.exit(1)
 
-        setstage(db, stage, nets)
+        setstage(mongo_db, stage, nets)
 
 
 if __name__ == "__main__":
