@@ -26,7 +26,7 @@ from docopt import docopt
 import dateutil.parser
 import dateutil.tz as tz
 
-from cyhy.core import Config, STATUS, STAGE
+from cyhy.core import STAGE
 from cyhy.db import database
 from cyhy.util import time_to_utc, utcnow
 
@@ -36,7 +36,7 @@ THE_DISTANT_FUTURE = dateutil.parser.parse("9999-01-01")
 
 
 def set_start_date(request, start_time, clear_scheduler=False):
-    # set new start date
+    """Set a new start date for the given request."""
     print("\tSetting start time to", start_time, file=sys.stderr)
     if clear_scheduler and request.get("scheduler") is not None:
         print("\tRemoving persistent scheduler.", file=sys.stderr)
@@ -46,16 +46,17 @@ def set_start_date(request, start_time, clear_scheduler=False):
     print("\tModified request saved.", file=sys.stderr)
 
 
-def reset_state(db, request, start_time):
+def reset_state(mongo_db, request, start_time):
+    """Reset the state of the given request."""
     # MIGRATION : This entire approach was deprecated, please see:
     # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
     # for alternatives (we should use the Python 3.5+ approach).
     # crazy hack to import cyhy-tool
     import imp
 
-    me = os.path.realpath(__file__)
-    myDir = os.path.dirname(me)
-    ch_tool = imp.load_source("ch_tool", os.path.join(myDir, "cyhy-tool"))
+    this_file = os.path.realpath(__file__)
+    this_dir = os.path.dirname(this_file)
+    ch_tool = imp.load_source("ch_tool", os.path.join(this_dir, "cyhy-tool"))
 
     # get the init_stage, if it doesn't have one assume NETSCAN1
     init_stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
@@ -65,13 +66,14 @@ def reset_state(db, request, start_time):
         "\tResetting state of hosts to {!s} and PORTSCAN ...".format(init_stage),
         file=sys.stderr,
     )
-    db.HostDoc.reset_state_by_owner(request["_id"], init_stage, jump_start=True)
+    mongo_db.HostDoc.reset_state_by_owner(request["_id"], init_stage, jump_start=True)
     # sync tallies
     print("\tSynchronizing tallies...", file=sys.stderr)
-    ch_tool.sync_tallies(db, request["_id"])
+    ch_tool.sync_tallies(mongo_db, request["_id"])
 
 
-def make_persistent(db, request, update_hosts, start_date):
+def make_persistent(mongo_db, request, update_hosts, start_date):
+    """Update a given request to be the 'PERSISTENT1' scheduler."""
     print("\tSetting scheduler to", THE_ONLY_SCHEDULER, file=sys.stderr)
     request["scheduler"] = THE_ONLY_SCHEDULER
     request.start_time = start_date
@@ -79,14 +81,21 @@ def make_persistent(db, request, update_hosts, start_date):
     print("\tModified request saved.", file=sys.stderr)
     if update_hosts:
         print('\tEnsuring all hosts have a "next scan" date.', file=sys.stderr)
-        db.HostDoc.ensure_next_scan_set(request["_id"])
+        mongo_db.HostDoc.ensure_next_scan_set(request["_id"])
 
 
 def parse_date(args):
+    """Try to parse a date from the given string."""
     try:
         start_time_local = dateutil.parser.parse(args["DATE"])
-    except Exception:
+    except ValueError:
         print("Could not parse the date:", args["DATE"], file=sys.stderr)
+        sys.exit(-1)
+    except OverflowError:
+        print(
+            "Provided date '{}' is too large for this system.".format(args["DATE"]),
+            file=sys.stderr,
+        )
         sys.exit(-1)
 
     if start_time_local.tzinfo is None:
@@ -96,12 +105,13 @@ def parse_date(args):
     return start_time_local, start_time_utc
 
 
-def build_owner_list(db, args):
+def build_owner_list(mongo_db, args):
+    """Build a list of all owners (and optionally their descendants)."""
     result = []
     args["descendants-included"] = False
     for owner in args["OWNER"]:
         result.append(owner)
-        descendants = db.RequestDoc.get_all_descendants(owner)
+        descendants = mongo_db.RequestDoc.get_all_descendants(owner)
         if descendants and not args["--no-descendants"]:
             args["descendants-included"] = True
             result.extend(descendants)
@@ -109,13 +119,14 @@ def build_owner_list(db, args):
     return result
 
 
-def parse_owners(db, args):
+def parse_owners(mongo_db, args):
+    """Verify that all the provided owners are in the database."""
     all_requests_found = True
     requests = []
-    for owner in build_owner_list(db, args):
-        request = db.RequestDoc.get_by_owner(owner)
+    for owner in build_owner_list(mongo_db, args):
+        request = mongo_db.RequestDoc.get_by_owner(owner)
         if request is None:
-            print('No request with "{!s}" found.'.format(owner), file=sys.stderr)
+            print('No request with "{}" found.'.format(owner), file=sys.stderr)
             all_requests_found = False
         else:
             requests.append(request)
@@ -126,6 +137,7 @@ def parse_owners(db, args):
 
 
 def prompt(args):
+    """Verify that the user wants to include descendants."""
     if not args["--no-prompt"]:
         print("", file=sys.stderr)
         if args["descendants-included"]:
@@ -139,9 +151,10 @@ def prompt(args):
 
 
 def main():
+    """Manage scheduling for owners and optionally their descendants."""
     args = docopt(__doc__, version="v0.0.1")
-    db = database.db_from_config(args["--section"])
-    requests = parse_owners(db, args)
+    mongo_db = database.db_from_config(args["--section"])
+    requests = parse_owners(mongo_db, args)
 
     for request in requests:
         print(
@@ -163,7 +176,7 @@ def main():
         prompt(args)
         for request in requests:
             print("Processing:", request["_id"], file=sys.stderr)
-            reset_state(db, request, start_time_utc)
+            reset_state(mongo_db, request, start_time_utc)
     elif args["persistent-scan"]:
         if args["--update-hosts"]:
             print(
@@ -184,7 +197,7 @@ def main():
         prompt(args)
         for request in requests:
             print("Processing:", request["_id"], file=sys.stderr)
-            make_persistent(db, request, args["--update-hosts"], start_time)
+            make_persistent(mongo_db, request, args["--update-hosts"], start_time)
     elif args["pause"]:
         print("Pausing scans.", file=sys.stderr)
         prompt(args)
