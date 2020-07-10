@@ -25,44 +25,49 @@ from cyhy.core.config import Config
 # Start the mongo command using the parameters from the .cyhy config file
 
 RE = re.compile(
-    "mongodb://((?P<username>.*?):(?P<password>.*?)@)?(?P<hostname>.*?):(?P<port>.*?)/(?P<path>.*)"
+    "mongodb://((?P<username>.*?):(?P<password>.*?)@)?"
+    "(?P<hostname>.*?):(?P<port>.*?)/(?P<path>.*)"
 )
 
 
 def main():
+    """Connect to a MongoDB server using a CyHy configuration file."""
     args = docopt(__doc__, version="v0.0.1")
 
     config = Config(args["SECTION"])
-    p = RE.match(config.db_uri).groupdict()
-    if p["username"] and p["password"]:
-        cmd = "mongo --host {!s} --port {!s} --authenticationDatabase {!s} -u {!s} --password={!s} {!s}".format(
-            p["hostname"],
-            p["port"],
-            p["path"],
-            p["username"],
-            p["password"],
+    uri_dict = RE.match(config.db_uri).groupdict()
+    if uri_dict["username"] and uri_dict["password"]:
+        cmd = "mongo --host {} --port {} --authenticationDatabase {} -u {} --password={} {}".format(
+            uri_dict["hostname"],
+            uri_dict["port"],
+            uri_dict["path"],
+            uri_dict["username"],
+            uri_dict["password"],
             config.db_name,
         )
     else:
-        cmd = "mongo --host {!s} --port {!s} --authenticationDatabase {!s} {!s}".format(
-            p["hostname"], p["port"], p["path"], config.db_name
+        cmd = "mongo --host {} --port {} --authenticationDatabase {} {}".format(
+            uri_dict["hostname"], uri_dict["port"], uri_dict["path"], config.db_name
         )
 
     print("=" * 80, file=sys.stderr)
     print(
         "Active CyHy configuration: {}".format(config.active_section), file=sys.stderr
     )
-    if p["username"]:
+    if uri_dict["username"]:
         print(
-            "Connecting to: {!s}@{!s}:{!s}/{!s}".format(
-                p["username"], p["hostname"], p["port"], config.db_name
+            "Connecting to: {}@{}:{}/{}".format(
+                uri_dict["username"],
+                uri_dict["hostname"],
+                uri_dict["port"],
+                config.db_name,
             ),
             file=sys.stderr,
         )
     else:
         print(
             "Connecting to: {!s}:{!s}/{!s}".format(
-                p["hostname"], p["port"], config.db_name
+                uri_dict["hostname"], uri_dict["port"], config.db_name
             ),
             file=sys.stderr,
         )
