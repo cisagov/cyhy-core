@@ -42,7 +42,8 @@ NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
 
 
-def parse_json(db, json_stream):
+def parse_json(mongo_db, json_stream):
+    """Update the 'cves' collection from the given JSON data."""
     data = json.load(json_stream)
 
     if data.get("CVE_data_type") != "CVE":
@@ -53,51 +54,57 @@ def parse_json(db, json_stream):
         if "baseMetricV2" not in entry["impact"]:
             # NVD 'reject' CVEs do not have 'baseMetricV2' CVSS data
             # Make sure they are removed from our db.
-            db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
+            mongo_db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
             print("x", end="")
         else:
             print(".", end="")
             cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
-            entry_doc = db.CVEDoc({"_id": cve_id, "cvss_score": float(cvss_base_score)})
+            entry_doc = mongo_db.CVEDoc(
+                {"_id": cve_id, "cvss_score": float(cvss_base_score)}
+            )
             entry_doc.save(safe=False)
     print("\n\n")
 
 
-def process_file(db, filename, gzipped=False):
+def process_file(mongo_db, filename, gzipped=False):
+    """Use a file for CVE data."""
     if gzipped:
         stream = gzip.GzipFile(filename)
     else:
         stream = open(filename, "rb")
-    parse_json(db, stream)
+    parse_json(mongo_db, stream)
 
 
-def process_url(db, url):
+def process_url(mongo_db, url):
+    """Use a URL for CVE data."""
     socket = urlopen(url)
     buf = StringIO(socket.read())
     f = gzip.GzipFile(fileobj=buf)
-    parse_json(db, f)
+    parse_json(mongo_db, f)
 
 
 def generate_urls():
+    """Generate a current NVD URL."""
     current_year = util.utcnow().year
     years = list(range(NVD_FIRST_YEAR, current_year + 1))
     return [NVD_URL.format(**{"year": year}) for year in years]
 
 
 def main():
+    """Update the 'cves' collection from file(s) or the NIST website."""
     args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     if args["--use-network"]:
         urls = generate_urls()
         for url in urls:
             print("-" * 10, url, "-" * 10)
-            process_url(db, url)
+            process_url(mongo_db, url)
     else:
         for filename in args["<file>"]:
             print("-" * 10, filename, "-" * 10)
-            process_file(db, filename, gzipped=args["--gzipped"])
+            process_file(mongo_db, filename, gzipped=args["--gzipped"])
 
 
 if __name__ == "__main__":
