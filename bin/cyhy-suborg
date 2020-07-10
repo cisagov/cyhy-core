@@ -33,36 +33,39 @@ from cyhy.util import util
 
 
 def parse_addresses(addresses):
+    """Parse given IP addresses and return an IPSet of them."""
     nets = IPSet()
-    for a in addresses:
-        a = a.split("#", 1)[0]  # remove comments
-        a = a.strip()
-        if not a:
+    for addr in addresses:
+        addr = addr.split("#", 1)[0]  # remove comments
+        addr = addr.strip()
+        if not addr:
             # skip blank lines
             continue
-        if a.find("-") != -1:
+        if addr.find("-") != -1:
             # handle a range
-            start, end = a.split("-")
-            rng = IPRange(start.strip(), end.strip())
-            for i in rng.cidrs():
-                nets.add(i)
+            start, end = addr.split("-")
+            ip_range = IPRange(start.strip(), end.strip())
+            for ip_addr in ip_range.cidrs():
+                nets.add(ip_addr)
         else:
             # handle single cidr
-            net = IPNetwork(a)
+            net = IPNetwork(addr)
             nets.add(net)
     return nets
 
 
-def already_exists(db, request):
+def already_exists(mongo_db, request):
+    """Check if an owner already exists in the database."""
     owner = request["_id"]
-    db_request = db.RequestDoc.get_by_owner(owner)
+    db_request = mongo_db.RequestDoc.get_by_owner(owner)
     return bool(db_request)
 
 
-def import_child_request(db, parent_org_request, child_org_request):
-    if already_exists(db, child_org_request):
+def import_child_request(mongo_db, parent_org_request, child_org_request):
+    """Create a child from the provided parent based on the given requests."""
+    if already_exists(mongo_db, child_org_request):
         print(
-            "ERROR: Child organization {!s} already exists in database".format(
+            "ERROR: Child organization {} already exists in database".format(
                 child_org_request["_id"]
             )
         )
@@ -74,17 +77,19 @@ def import_child_request(db, parent_org_request, child_org_request):
     intersecting_cidrs = child_org_nets & parent_org_request.networks
     child_org_outlier_cidrs = child_org_nets - parent_org_request.networks
 
-    if not util.warn_and_confirm(
-        "About to create new child {} based on networks from parent {}. This will modify database documents.  You should PAUSE the CyHy commander before continuing.".format(
-            child_org_request["_id"], parent_org_request["_id"]
-        )
-    ):
+    warning_message = "About to create new child {} ".format(child_org_request["_id"])
+    warning_message += "based on networks from parent {}. ".format(
+        parent_org_request["_id"]
+    )
+    warning_message += "This will modify database documents. "
+    warning_message += "You should PAUSE the CyHy commander before continuing."
+    if not util.warn_and_confirm(warning_message):
         print("Aborted.")
         sys.exit(-2)
 
-    ch_db = CHDatabase(db)
+    cyhy_db = CHDatabase(mongo_db)
     # Change owner on all relevant documents
-    ch_db.change_ownership(
+    cyhy_db.change_ownership(
         parent_org_request["_id"],
         child_org_request["_id"],
         intersecting_cidrs,
@@ -92,14 +97,15 @@ def import_child_request(db, parent_org_request, child_org_request):
     )
     # Remove the intersecting_cidrs from the parent org's request doc
     parent_org_request.remove_networks(intersecting_cidrs)
-    # Set child_org_request's networks to only include the intersecting_cidrs; we don't want the child_org_outlier_cidrs in there
+    # Set child_org_request's networks to only include the intersecting_cidrs;
+    # we don't want the child_org_outlier_cidrs in there
     child_org_request["networks"] = intersecting_cidrs.iter_cidrs()
 
     if child_org_outlier_cidrs:
         print(
-            "\nWARNING: The following networks are NOT part of the parent org ({!s}) and are NOT being added to the child organization ({!s}):".format(
-                parent_org_request["_id"], child_org_request["_id"],
-            )
+            "\nWARNING: The following networks are NOT part of the",
+            "parent org ({}) and are NOT being added".format(parent_org_request["_id"]),
+            "to the child organization ({}):".format(child_org_request["_id"]),
         )
         for net in child_org_outlier_cidrs.iter_cidrs():
             print("\t", net)
@@ -107,15 +113,15 @@ def import_child_request(db, parent_org_request, child_org_request):
         outliers_str = " ".join([str(x) for x in child_org_outlier_cidrs.iter_cidrs()])
         print(" cyhy-ip add {!s} {!s}".format(child_org_request["_id"], outliers_str))
 
-    child_org_request_doc = db.RequestDoc()
+    child_org_request_doc = mongo_db.RequestDoc()
     util.copy_attrs(child_org_request, child_org_request_doc)
     child_org_request_doc.save()
     # Add the new child_org's id to the list of children in the parent_org_request
-    parent_org_request.add_children(db, [child_org_request["_id"]])
+    parent_org_request.add_children(mongo_db, [child_org_request["_id"]])
     parent_org_request.save()
 
     # Sync parent_org's tally
-    parent_org_tally = db.TallyDoc.get_by_owner(parent_org_request["_id"])
+    parent_org_tally = mongo_db.TallyDoc.get_by_owner(parent_org_request["_id"])
     if not parent_org_tally:
         print(
             "WARNING: Organization {!s} does NOT have a tally document!".format(
@@ -124,39 +130,38 @@ def import_child_request(db, parent_org_request, child_org_request):
         )
     else:
         print("Syncing tally for", parent_org_request["_id"])
-        parent_org_tally.sync(db)
+        parent_org_tally.sync(mongo_db)
 
     # Create tally doc for new child_org
-    child_org_tally = db.TallyDoc()
+    child_org_tally = mongo_db.TallyDoc()
     child_org_tally["_id"] = child_org_request["_id"]
     print("Creating new tally for", child_org_request["_id"])
-    child_org_tally.sync(db)
+    child_org_tally.sync(mongo_db)
     return True
 
 
-def import_child_file(db, parent_org_request, filename):
-    f = open(filename, "rb")
-    child_org_request = json.load(f)
-    f.close()
-    return import_child_request(db, parent_org_request, child_org_request)
+def import_child_file(mongo_db, parent_org_request, filename):
+    """Read a child request from a given file."""
+    with open(filename, "rb") as f:
+        child_org_request = json.load(f)
+    return import_child_request(mongo_db, parent_org_request, child_org_request)
 
 
-def add_children(db, parent_org_request, child_ids):
+def add_children(mongo_db, parent_org_request, child_ids):
+    """Add the provided orgs as children to the provided parent."""
     child_descendant_map = dict()
 
     for child in child_ids:
-        if not db.RequestDoc.find_one({"_id": child}):
+        if not mongo_db.RequestDoc.find_one({"_id": child}):
             print(
-                "ERROR: Child organization {!s} not found in DB. EXITING without making any changes.".format(
-                    child
-                )
+                "ERROR: Child organization {} not found in DB.".format(child),
+                "EXITING without making any changes.",
             )
             return False
         if child == parent_org_request["_id"]:
             print(
-                "ERROR: Cannot add own id ({!s}) to list of children. EXITING without making any changes.".format(
-                    child
-                )
+                "ERROR: Cannot add own id ({}) to list of children.".format(child),
+                "EXITING without making any changes.",
             )
             return False
         if (
@@ -164,18 +169,20 @@ def add_children(db, parent_org_request, child_ids):
             and child in parent_org_request["children"]
         ):
             print(
-                "ERROR: Child ({!s}) cannot be added; it is already in list of children of {!s}. EXITING without making any changes.".format(
-                    child, parent_org_request["_id"],
-                )
+                "ERROR: Child ({}) cannot be added;".format(child),
+                "it is already in list of children of {}.".format(
+                    parent_org_request["_id"]
+                ),
+                "EXITING without making any changes.",
             )
             return False
 
-        all_descendants = db.RequestDoc.get_all_descendants(child)
+        all_descendants = mongo_db.RequestDoc.get_all_descendants(child)
         if parent_org_request["_id"] in all_descendants:
             print(
-                "ERROR: Parent org ({!s}) is already a descendant of {!s} - no circular relationships allowed! EXITING without making any changes.".format(
-                    parent_org_request["_id"], child,
-                )
+                "ERROR: Parent org ({}) is already a".format(parent_org_request["_id"]),
+                "descendant of {} - no circular".format(child),
+                "relationships allowed! EXITING without making any changes.",
             )
             return False
         child_descendant_map[child] = all_descendants
@@ -199,12 +206,13 @@ def add_children(db, parent_org_request, child_ids):
         print("Aborted.")
         sys.exit(-2)
 
-    parent_org_request.add_children(db, child_ids)
+    parent_org_request.add_children(mongo_db, child_ids)
     parent_org_request.save()
     return True
 
 
 def remove_children(parent_org_request, child_ids):
+    """Remove the provided children orgs from the provided parent."""
     if not parent_org_request.get("children"):
         print(
             "ERROR: {!s} has no children to remove. EXITING without making any changes.".format(
@@ -218,9 +226,11 @@ def remove_children(parent_org_request, child_ids):
             and child not in parent_org_request["children"]
         ):
             print(
-                "ERROR: Child ({!s}) cannot be removed; it is NOT in list of children of {!s}. EXITING without making any changes.".format(
-                    child, parent_org_request["_id"],
-                )
+                "ERROR: Child ({}) cannot be removed;".format(child),
+                "it is NOT in list of children of {}.".format(
+                    parent_org_request["_id"]
+                ),
+                "EXITING without making any changes.",
             )
             return False
 
@@ -244,48 +254,56 @@ def remove_children(parent_org_request, child_ids):
     return True
 
 
-def list_children(db, parent_org_request, include_retired):
+def list_children(mongo_db, parent_org_request, include_retired):
+    """Print all children of the parent organization."""
     if parent_org_request.get("children"):
         for child in parent_org_request["children"]:
-            if include_retired or not db.RequestDoc.get_by_owner(child).get("retired"):
+            if include_retired or not mongo_db.RequestDoc.get_by_owner(child).get(
+                "retired"
+            ):
                 print(child)
 
 
-def list_all_descendants(db, parent_org_id, include_retired):
-    for descendant in db.RequestDoc.get_all_descendants(parent_org_id, include_retired):
+def list_all_descendants(mongo_db, parent_org_id, include_retired):
+    """Print all descendants of the parent organization."""
+    for descendant in mongo_db.RequestDoc.get_all_descendants(
+        parent_org_id, include_retired
+    ):
         print(descendant)
 
 
 def main():
+    """Provide functionality to manage parent and child organizations."""
     args = docopt(__doc__, version="v0.0.1")
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     parent_org_id = args["PARENT_ORG_ID"]
-    parent_org_request = db.RequestDoc.find_one({"_id": parent_org_id})
+    parent_org_request = mongo_db.RequestDoc.find_one({"_id": parent_org_id})
     if parent_org_request is None:
         print("ERROR: Parent organization {!s} not found in DB".format(parent_org_id))
         sys.exit(-1)
 
     if args["import-child"]:
         success = import_child_file(
-            db, parent_org_request, args["CHILD_ORG_IMPORT_FILE"]
+            mongo_db, parent_org_request, args["CHILD_ORG_IMPORT_FILE"]
         )
     elif args["add-children"]:
-        success = add_children(db, parent_org_request, args["CHILD_ORG_IDS"])
+        success = add_children(mongo_db, parent_org_request, args["CHILD_ORG_IDS"])
     elif args["remove-children"]:
         success = remove_children(parent_org_request, args["CHILD_ORG_IDS"])
     elif args["list-children"]:
-        list_children(db, parent_org_request, args["--include-retired"])
+        list_children(mongo_db, parent_org_request, args["--include-retired"])
         sys.exit(0)
     elif args["list-all-descendants"]:
-        list_all_descendants(db, parent_org_id, args["--include-retired"])
+        list_all_descendants(mongo_db, parent_org_id, args["--include-retired"])
         sys.exit(0)
 
     if not success:
-        sys.exit(-1)
-    else:
-        print("SUCCESS!")
+        return -1
+
+    print("SUCCESS!")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
