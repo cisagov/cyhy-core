@@ -75,31 +75,34 @@ PB_RESET_WIDGETS = [
 ]
 
 
-def init_scan(db, owner, quiet=False):
-    request = db.RequestDoc.get_by_owner(owner)
+def init_scan(mongo_db, owner, quiet=False):
+    """Initialize scanning for the provided owner."""
+    request = mongo_db.RequestDoc.get_by_owner(owner)
     if not request:
-        print('No request with "{!s}" found.'.format(owner), file=sys.stderr)
+        print('No request with "{}" found.'.format(owner), file=sys.stderr)
         return -1
     if SCAN_TYPE.CYHY not in request["scan_types"]:
         if quiet:
             print(
-                'Request for {!s} does not have "{!s}" in scan_types; to override, disable --quiet flag.'.format(
+                'Request for {} does not have "{}" in scan_types; to override, disable --quiet flag.'.format(
                     owner, SCAN_TYPE.CYHY,
                 ),
                 file=sys.stderr,
             )
             return -1
         if not util.warn_and_confirm(
-            'Request for %s does not have "%s" in scan_types!' % (owner, SCAN_TYPE.CYHY)
+            'Request for {} does not have "{}" in scan_types!'.format(
+                owner, SCAN_TYPE.CYHY
+            )
         ):
-            print("Init aborted for {!s}.".format(owner), file=sys.stderr)
+            print("Init aborted for {}.".format(owner), file=sys.stderr)
             return -2
 
     owner_id = request["_id"]
     # get the init_stage, if it doesn't have one assume NETSCAN1
     stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
     # create zeroed tally
-    tally = db.TallyDoc()
+    tally = mongo_db.TallyDoc()
     tally["_id"] = owner_id
     tally.save()
 
@@ -112,10 +115,10 @@ def init_scan(db, owner, quiet=False):
         pbar.widgets[0] = "Initializing %s: " % owner
 
     i = 0
-    for ip in nets:
-        location = geo_loc_db.lookup(ip)
-        host = db.HostDoc()
-        host.init(ip, owner_id, location, stage)
+    for ip_addr in nets:
+        location = geo_loc_db.lookup(ip_addr)
+        host = mongo_db.HostDoc()
+        host.init(ip_addr, owner_id, location, stage)
         host.save()
         i += 1
         pbar.update(i)
@@ -124,104 +127,110 @@ def init_scan(db, owner, quiet=False):
     return 0
 
 
-def sync_tallies(db, owner_id):
-    if SCAN_TYPE.CYHY not in db.RequestDoc.get_by_owner(owner_id)["scan_types"]:
+def sync_tallies(mongo_db, owner_id):
+    """Synchronize talles for the given owner."""
+    if SCAN_TYPE.CYHY not in mongo_db.RequestDoc.get_by_owner(owner_id)["scan_types"]:
         if not util.warn_and_confirm(
-            'Request for %s does not have "%s" in scan_types - continuing will create/update a tally document.'
-            % (owner_id, SCAN_TYPE.CYHY)
+            'Request for {} does not have "{}" '.format(owner_id, SCAN_TYPE.CYHY)
+            + "in scan_types - continuing will create/update a tally document."
         ):
-            print("Tally sync aborted for {!s}.".format(owner_id), file=sys.stderr)
+            print("Tally sync aborted for {}.".format(owner_id), file=sys.stderr)
             return -2
-    tallies = db.TallyDoc.get_by_owner(owner_id)
+    tallies = mongo_db.TallyDoc.get_by_owner(owner_id)
     if tallies is None:
         # couldn't find an existing doc, create new
-        tallies = db.TallyDoc()
+        tallies = mongo_db.TallyDoc()
         tallies["_id"] = owner_id
-    tallies.sync(db)
+    tallies.sync(mongo_db)
 
     return 0
 
 
-def purge_running(db):
-    db.HostDoc.purge_all_running()
+def purge_running(mongo_db):
+    """Change all host statuses from running to waiting."""
+    mongo_db.HostDoc.purge_all_running()
 
 
-def all_status(db, sync=False):
+def all_status(mongo_db, sync=False):
+    """Get the status of all requests with the CYHY scan type."""
     owners = []
-    for r in db.RequestDoc.find({"scan_types": SCAN_TYPE.CYHY}).sort("_id", 1):
-        owners.append(r["_id"])
-    status(db, owners, sync)
+    for request in mongo_db.RequestDoc.find({"scan_types": SCAN_TYPE.CYHY}).sort(
+        "_id", 1
+    ):
+        owners.append(request["_id"])
+    status(mongo_db, owners, sync)
 
 
-def status(db, owners, sync=False):
+def status(mongo_db, owners, sync=False):
+    """Print the status for all tally documents for the given owners."""
     for owner in owners:
         print(owner)
         if sync:
-            sync_tallies(db, owner)
-        tally = db.TallyDoc.get_by_owner(owner)
+            sync_tallies(mongo_db, owner)
+        tally = mongo_db.TallyDoc.get_by_owner(owner)
         if tally is None:
             print("Tally document not found for:", owner, file=sys.stderr)
             continue
         for stage in list(STAGE):
             for stat in list(STATUS):
                 print(
-                    "{!s:8}:{!s:8} = {}".format(
-                        stage, stat, tally["counts"][stage][stat]
-                    )
+                    "{:8}:{:8} = {}".format(stage, stat, tally["counts"][stage][stat])
                 )
         print()
 
 
-def retire(db, owner):
+def retire(mongo_db, owner):
+    """Retire the provided owner."""
     # MIGRATION : This entire approach was deprecated, please see:
     # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
     # for alternatives (we should use the Python 3.5+ approach).
     # crazy hack to import cyhy-sched and cyhy-ip
     import imp
 
-    me = os.path.realpath(__file__)
-    myDir = os.path.dirname(me)
-    ch_sched = imp.load_source("ch_sched", os.path.join(myDir, "cyhy-sched"))
-    ch_ip = imp.load_source("ch_ip", os.path.join(myDir, "cyhy-ip"))
+    this_file = os.path.realpath(__file__)
+    this_dir = os.path.dirname(this_file)
+    ch_sched = imp.load_source("ch_sched", os.path.join(this_dir, "cyhy-sched"))
+    ch_ip = imp.load_source("ch_ip", os.path.join(this_dir, "cyhy-ip"))
 
     # Grab the request doc and recursively retire the children
-    requestDoc = db.RequestDoc.get_by_owner(owner)
-    if "children" in requestDoc:
-        for childId in requestDoc["children"]:
-            retire(db, childId)
+    owner_doc = mongo_db.RequestDoc.get_by_owner(owner)
+    if "children" in owner_doc:
+        for child_id in owner_doc["children"]:
+            retire(mongo_db, child_id)
 
     # Pause indefinitely
     print("Indefinitely pausing", owner)
-    ch_sched.set_start_date(db, requestDoc, ch_sched.THE_DISTANT_FUTURE)
+    ch_sched.set_start_date(mongo_db, owner_doc, ch_sched.THE_DISTANT_FUTURE)
 
     # Update request document and remove children
     print("Setting stakeholder to false for", owner)
-    requestDoc["stakeholder"] = False
+    owner_doc["stakeholder"] = False
     print("Setting report types to empty list for", owner)
-    requestDoc["report_types"] = []
+    owner_doc["report_types"] = []
     print("Setting scan types to empty list for", owner)
-    requestDoc["scan_types"] = []
+    owner_doc["scan_types"] = []
     print("Setting retired field for", owner)
-    requestDoc["retired"] = True
+    owner_doc["retired"] = True
     print("Saving request document for", owner)
-    requestDoc.save()
+    owner_doc.save()
 
     # Remove networks, if they exist
-    networks = requestDoc.networks
+    networks = owner_doc.networks
     if networks:
         print("Removing the following networks from {}: {!s}".format(owner, networks))
-        ch_ip.remove(db, owner, networks)
+        ch_ip.remove(mongo_db, owner, networks)
     else:
         print("Organization {} contains no networks".format(owner))
     # Delete tally document, if it exists
-    tallyDoc = db.TallyDoc.get_by_owner(owner)
-    if tallyDoc:
-        tallyDoc.delete()
+    tally_doc = mongo_db.TallyDoc.get_by_owner(owner)
+    if tally_doc:
+        tally_doc.delete()
     else:
         print("No tally document for", owner)
 
 
 def main():
+    """Provide functionality to manage stakeholder scanning."""
     args = docopt(__doc__, version="v0.0.1")
 
     config = Config(args["--section"])
@@ -232,8 +241,8 @@ def main():
             file=sys.stderr,
         )
 
-    db = database.db_from_config(args["--section"])
-    ch_db = CHDatabase(db)
+    mongo_db = database.db_from_config(args["--section"])
+    cyhy_db = CHDatabase(mongo_db)
 
     if args["--debug"]:
         import logging
@@ -241,22 +250,23 @@ def main():
         util.setup_logging(logging.DEBUG, console=True)
 
     if args["ensure-indices"]:
-        database.ensure_indices(db, args["--foreground"])
+        database.ensure_indices(mongo_db, args["--foreground"])
     elif args["init"]:
         for i in args["OWNER"]:
-            init_scan(db, i, quiet=args["--quiet"])
+            init_scan(mongo_db, i, quiet=args["--quiet"])
     elif args["purge-running"]:
         if not util.warn_and_confirm(
-            "Make sure ALL running jobs on scanners were stopped and processed by commander before continuing! See CYHY-287 for details."
+            "Make sure ALL running jobs on scanners were stopped and processed "
+            + "by commander before continuing! See CYHY-287 for details."
         ):
             print("purge-running command aborted.", file=sys.stderr)
             return -2
-        purge_running(db)
+        purge_running(mongo_db)
         print("status sync required after purge", file=sys.stderr)
     elif args["status"]:
-        status(db, args["OWNER"], args["--sync"])
+        status(mongo_db, args["OWNER"], args["--sync"])
     elif args["status-all"]:
-        all_status(db, args["--sync"])
+        all_status(mongo_db, args["--sync"])
     elif args["done-scanning"]:
         if args["AFTER_DATE"]:
             after_date = dateutil.parser.parse(args["AFTER_DATE"])
@@ -265,30 +275,25 @@ def main():
             after_date_utc = time_to_utc(after_date_local)
         else:
             after_date_utc = None
-        print("\n".join(ch_db.done_scanning(after_date_utc)))
+        print("\n".join(cyhy_db.done_scanning(after_date_utc)))
     elif args["retire"]:
-        orgIds = args["OWNER"]
+        org_ids = args["OWNER"]
         # Compile a list of all the child org IDs
-        childIds = []
-        for orgId in orgIds:
-            childIds.extend(db.RequestDoc.get_all_descendants(orgId))
+        child_ids = []
+        for org_id in org_ids:
+            child_ids.extend(mongo_db.RequestDoc.get_all_descendants(org_id))
         if not util.warn_and_confirm(
-            "Are you sure you want to retire the "
-            + "specified organizations "
-            + str(orgIds)
-            + " as well as all their descendants "
-            + str(childIds)
-            + "?"
+            "Are you sure you want to retire the specified organizations "
+            + " {!s} as well as all their descendants {!s}?".format(org_ids, child_ids)
         ):
             print("Aborted.")
             return -2
 
-        for orgId in orgIds:
-            retire(db, orgId)
+        for org_id in org_ids:
+            retire(mongo_db, org_id)
         print(
-            'Do not forget to move {!s} to the "Retired CyHy Orgs" tab in the Google Spreadsheet!'.format(
-                orgIds
-            )
+            'Do not forget to move {!s} to the "Retired CyHy Orgs"'.format(org_ids),
+            "tab in the Google Spreadsheet!",
         )
 
     return 0
