@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Manage CyHy ticket data
+"""Manage CyHy ticket data.
 
 Usage:
   cyhy-ticket [--section SECTION] [--file FILENAME] (list-false-positive | set-false-positive) [ADDRESSES ...]
@@ -22,6 +22,7 @@ import datetime
 import sys
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from docopt import docopt
 from netaddr import IPNetwork, IPRange, IPSet
 
@@ -33,32 +34,36 @@ SEVERITY_LEVELS = ["Info", "Low", "Medium", "High", "Critical"]
 
 
 def parse_addresses(addresses):
+    """Parse the provided addresses to create an IPSet."""
     nets = IPSet()
-    for a in addresses:
-        a = a.split("#", 1)[0]  # remove comments
-        a = a.strip()
-        if not a:
+    for addr in addresses:
+        addr = addr.split("#", 1)[0]  # remove comments
+        addr = addr.strip()
+        if not addr:
             # skip blank lines
             continue
-        if a.find("-") != -1:
+        if addr.find("-") != -1:
             # handle a range
-            start, end = a.split("-")
-            rng = IPRange(start.strip(), end.strip())
-            for i in rng.cidrs():
-                nets.add(i)
+            start, end = addr.split("-")
+            ip_range = IPRange(start.strip(), end.strip())
+            for ip_addr in ip_range.cidrs():
+                nets.add(ip_addr)
         else:
             # handle single cidr
-            net = IPNetwork(a)
+            net = IPNetwork(addr)
             nets.add(net)
     return nets
 
 
 def read_file(filename):
-    f = open(filename, "r")
-    return parse_addresses(f.readlines())
+    """Read in the given file's lines."""
+    with open(filename) as f:
+        file_data = f.readlines()
+    return parse_addresses(file_data)
 
 
 def print_ticket_details(tickets):
+    """Print the details for the provided tickets."""
     print(
         "{:<26}{:<7}{:<7}{:<19}{:<10}{:<14}{:<15}{:<7}{:<10}{:}".format(
             "Ticket ID",
@@ -74,42 +79,54 @@ def print_ticket_details(tickets):
         )
     )
 
-    for t in tickets:
-        t["open_flag_str"] = str(t["open"])
-        t["fp_flag_str"] = str(t["false_positive"])
-        t["severity_str"] = SEVERITY_LEVELS[t["details"]["severity"]]
-        if t["false_positive"]:
-            t["fp_effective_date"], t["fp_expiration_date"] = t.false_positive_dates
+    for ticket in tickets:
+        ticket["open_flag_str"] = str(ticket["open"])
+        ticket["fp_flag_str"] = str(ticket["false_positive"])
+        ticket["severity_str"] = SEVERITY_LEVELS[ticket["details"]["severity"]]
+        if ticket["false_positive"]:
+            (
+                ticket["fp_effective_date"],
+                ticket["fp_expiration_date"],
+            ) = ticket.false_positive_dates
             print(
-                "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<10}{fp_effective_date:%Y-%m-%d}    {fp_expiration_date:%Y-%m-%d}     {port:<7}{protocol:<10}{details[name]}".format(
-                    **t
-                )
+                "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}".format(**ticket),
+                "{time_opened:%Y-%m-%d %H:%M}   ".format(**ticket),
+                "{severity_str:<10}{fp_effective_date:%Y-%m-%d}    ".format(**ticket),
+                "{fp_expiration_date:%Y-%m-%d}     ".format(**ticket),
+                "{port:<7}{protocol:<10}{details[name]}".format(**ticket),
+                sep="",
             )
         else:
-            t["fp_effective_date"], t["fp_expiration_date"] = None, None
+            ticket["fp_effective_date"], ticket["fp_expiration_date"] = None, None
             print(
-                "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<39}{port:<7}{protocol:<10}{details[name]}".format(
-                    **t
-                )
+                "{_id:<26}{open_flag_str:<7}".format(**ticket),
+                "{fp_flag_str:<7}".format(**ticket),
+                "{time_opened:%Y-%m-%d %H:%M}   ".format(**ticket),
+                "{severity_str:<39}{port:<7}".format(**ticket),
+                "{protocol:<10}{details[name]}".format(**ticket),
+                sep="",
             )
 
-        t.pop(
+        ticket.pop(
             "fp_effective_date"
         )  # Don't want these fields getting saved back to the DB
-        t.pop("fp_expiration_date")
-        t.pop("open_flag_str")
-        t.pop("fp_flag_str")
-        t.pop("severity_str")
+        ticket.pop("fp_expiration_date")
+        ticket.pop("open_flag_str")
+        ticket.pop("fp_flag_str")
+        ticket.pop("severity_str")
 
 
-def list_false_positive(db, cidrs):
+def list_false_positive(mongo_db, cidrs):
+    """Print the false positives for the given CIDRs if they exist."""
     for cidr in cidrs.iter_cidrs():
-        for ip in cidr:
+        for ip_addr in cidr:
             tickets = list(
-                db.TicketDoc.find({"ip_int": int(ip), "false_positive": True})
+                mongo_db.TicketDoc.find(
+                    {"ip_int": int(ip_addr), "false_positive": True}
+                )
             )
             if not tickets:
-                print("{!s} has no false-positive tickets\n".format(ip))
+                print("{} has no false-positive tickets\n".format(ip_addr))
             else:
                 tickets.sort(
                     key=lambda x: (
@@ -121,21 +138,24 @@ def list_false_positive(db, cidrs):
                 )
                 print(
                     "\nFalse-positive tickets for {!s} ({}):".format(
-                        ip, tickets[0]["owner"]
+                        ip_addr, tickets[0]["owner"]
                     )
                 )
                 print_ticket_details(tickets)
                 print()
 
 
-def set_false_positive(db, cidrs):
+def set_false_positive(mongo_db, cidrs):
+    """Find and set false positives for the given CIDRs."""
     for cidr in cidrs.iter_cidrs():
-        for ip in cidr:
-            tickets = list(db.TicketDoc.find({"ip_int": int(ip)}))
+        for ip_addr in cidr:
+            tickets = list(mongo_db.TicketDoc.find({"ip_int": int(ip_addr)}))
 
             if not tickets:
                 print(
-                    "No vulnerability tickets found for {!s} - SKIPPING!\n".format(ip)
+                    "No vulnerability tickets found for {!s} - SKIPPING!\n".format(
+                        ip_addr
+                    )
                 )
                 break  # Move on to next ip (if present)
 
@@ -148,48 +168,50 @@ def set_false_positive(db, cidrs):
                     ),
                     reverse=True,
                 )
-                print("\nTickets for {!s} ({}):".format(ip, tickets[0]["owner"]))
+                print("\nTickets for {!s} ({}):".format(ip_addr, tickets[0]["owner"]))
                 print_ticket_details(tickets)
 
                 # choose vuln ticket ID
                 # MIGRATION : raw_input() becomes input() in Python 3
-                r = raw_input(
+                ticket_id = raw_input(
                     "Enter ticket id or press return if done with this IP address: "
                 )
-                if not r:
-                    print("Done with {!s}\n".format(ip))
+                if not ticket_id:
+                    print("Done with {}\n".format(ip_addr))
                     break  # Move on to next ip (if present)
                 try:
-                    golden_ticketID = ObjectId(r)
-                except Exception:
-                    print("Invalid ticket id provided: ", r, file=sys.stderr)
+                    golden_ticket_id = ObjectId(ticket_id)
+                except (InvalidId, TypeError):
+                    print("Invalid ticket id provided: ", ticket_id, file=sys.stderr)
                 else:
-                    valid_ticketID = False
-                    for t in tickets:
-                        if golden_ticketID == t["_id"]:
-                            valid_ticketID = True
-                            golden_ticket = t
-                            break  # Found our ticket, now ask if the user wants to flip the false_positive flag
+                    valid_ticket_id = False
+                    for ticket in tickets:
+                        if golden_ticket_id == ticket["_id"]:
+                            valid_ticket_id = True
+                            golden_ticket = ticket
+                            # Found our ticket. Now ask if the user wants to flip
+                            # the false_positive flag
+                            break
 
-                    if not valid_ticketID:
+                    if not valid_ticket_id:
                         print(
-                            "ERROR: TicketID {!s} is not valid for {!s}".format(
-                                golden_ticketID, ip,
+                            "ERROR: TicketID {} is not valid for {}".format(
+                                golden_ticket_id, ip_addr,
                             )
                         )
                     else:
                         # retrieve current false_positive flag value & ask if user wants to flip it
                         print(
-                            "\nfalse_positive flag for {!s} is currently: {!s}".format(
-                                golden_ticketID, golden_ticket["false_positive"],
+                            "\nfalse_positive flag for {} is currently: {}".format(
+                                golden_ticket_id, golden_ticket["false_positive"],
                             )
                         )
 
                         # MIGRATION : raw_input() becomes input() in Python 3
                         yes = raw_input(
-                            'Type "yes" to flip the false_positive flag for %s from "%s" to "%s": '
-                            % (
-                                golden_ticketID,
+                            'Type "yes" to flip the false_positive flag for '
+                            + '{} from "{}" to "{}": '.format(
+                                golden_ticket_id,
                                 golden_ticket["false_positive"],
                                 not golden_ticket["false_positive"],
                             )
@@ -197,11 +219,16 @@ def set_false_positive(db, cidrs):
 
                         if yes != "yes":
                             print(
-                                '\nfalse_positive flag for {!s} was NOT modified from current value of "{!s}".'.format(
-                                    golden_ticketID, golden_ticket["false_positive"],
-                                )
+                                "\nfalse_positive flag for {} was NOT".format(
+                                    golden_ticket_id
+                                ),
+                                ' modified from current value of "{}".'.format(
+                                    golden_ticket["false_positive"],
+                                ),
                             )
-                            continue  # Go back to start of while loop (show open tickets for this ip)
+                            # Go back to start of while loop
+                            # (show open tickets for this ip)
+                            continue
 
                         # MIGRATION : raw_input() becomes input() in Python 3
                         reason = raw_input(
@@ -216,27 +243,34 @@ def set_false_positive(db, cidrs):
                                     days=fp_expiration_days
                                 )
                                 print(
-                                    "\nDefault is {!s} days until the false_positive expires [{!s}].".format(
-                                        FP_EXPIRATION_DAYS_DEFAULT,
+                                    "\nDefault is {} days until the".format(
+                                        FP_EXPIRATION_DAYS_DEFAULT
+                                    ),
+                                    "false_positive expires [{}].".format(
                                         fp_expiration_date.strftime("%Y-%m-%d"),
-                                    )
+                                    ),
                                 )
                                 # MIGRATION : raw_input() becomes input() in Python 3
                                 expiration_input = raw_input(
-                                    "Enter a new number of days or press return to accept the default: "
+                                    "Enter a new number of days or press "
+                                    + "return to accept the default: "
                                 )
                                 if expiration_input:
                                     try:
                                         fp_expiration_days = int(expiration_input)
                                         if fp_expiration_days < 1:
                                             raise ValueError(
-                                                "Days until the false_positive expires must be an integer greater than zero!"
+                                                "Days until the false_positive"
+                                                + " expires must be an integer"
+                                                + " greater than zero!"
                                             )
                                         valid_expiration_days = True
-                                    except Exception:
+                                    except ValueError:
                                         fp_expiration_days = FP_EXPIRATION_DAYS_DEFAULT
                                         print(
-                                            "ERROR: Number of days until the false_positive expires must be an integer greater than zero!",
+                                            "ERROR: Number of days until the",
+                                            "false_positive expires must be an",
+                                            "integer greater than zero!",
                                             file=sys.stderr,
                                         )
                                 else:  # Just use FP_EXPIRATION_DAYS_DEFAULT
@@ -245,10 +279,11 @@ def set_false_positive(db, cidrs):
                                 days=fp_expiration_days
                             )
                             print(
-                                "\nThe false_positive flag will automatically reset to false in {!s} days [{!s}].".format(
+                                "\nThe false_positive flag will automatically",
+                                "reset to false in {} days [{}].".format(
                                     fp_expiration_days,
                                     fp_expiration_date.strftime("%Y-%m-%d"),
-                                )
+                                ),
                             )
 
                         # update ticket in DB
@@ -260,17 +295,20 @@ def set_false_positive(db, cidrs):
                         golden_ticket.save()
 
                         print("\nfalse_positive flag successfully changed!")
-                        upd_ticket = db.TicketDoc.find({"_id": golden_ticket["_id"]})
+                        upd_ticket = mongo_db.TicketDoc.find(
+                            {"_id": golden_ticket["_id"]}
+                        )
                         print(
                             "false_positive flag for {!s} is now set to: {!s}".format(
-                                golden_ticketID, upd_ticket[0]["false_positive"],
+                                golden_ticket_id, upd_ticket[0]["false_positive"],
                             )
                         )
 
 
 def main():
+    """Provide tools to manage false positives for tickets in the database."""
     args = docopt(__doc__, version="v0.0.1")
-    db = database.db_from_config(args["--section"])
+    mongo_db = database.db_from_config(args["--section"])
 
     nets = parse_addresses(args["ADDRESSES"])
     if args["--file"] is not None:
@@ -280,9 +318,9 @@ def main():
         nets.update(parse_addresses(sys.stdin.readlines()))
 
     if args["list-false-positive"]:
-        list_false_positive(db, nets)
+        list_false_positive(mongo_db, nets)
     elif args["set-false-positive"]:
-        set_false_positive(db, nets)
+        set_false_positive(mongo_db, nets)
 
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
 
