@@ -131,10 +131,7 @@ def fill_in(mongo_db, filename, force=False):
     )
     request[KEY] = config.get(AGENCY, KEY, raw=True)
     request["_id"] = config.get(AGENCY, ACRONYM)
-    if config.get(AGENCY, STAKEHOLDER).lower() == "true":
-        request[STAKEHOLDER] = True
-    else:
-        request[STAKEHOLDER] = False
+    request[STAKEHOLDER] = bool(config.get(AGENCY, STAKEHOLDER).lower() == "true")
     if config.get(AGENCY, SCAN_TYPES):
         request[SCAN_TYPES] = config.get(AGENCY, SCAN_TYPES).replace(" ", "").split(",")
     if config.get(REPORTING, RPT_TYPES):

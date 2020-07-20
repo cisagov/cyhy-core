@@ -84,9 +84,8 @@ def init_scan(mongo_db, owner, quiet=False):
     if SCAN_TYPE.CYHY not in request["scan_types"]:
         if quiet:
             print(
-                'Request for {} does not have "{}" in scan_types; to override, disable --quiet flag.'.format(
-                    owner, SCAN_TYPE.CYHY,
-                ),
+                'Request for {} does not have "{}"'.format(owner, SCAN_TYPE.CYHY),
+                "in scan_types; to override, disable --quiet flag.",
                 file=sys.stderr,
             )
             return -1
