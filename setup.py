@@ -31,6 +31,7 @@ setup(
     install_requires=[
         "docopt >= 0.6.2",
         "geoip2 >= 2.3.0",
+        "maxminddb <2.0.0",
         "mongokit >= 0.9.0",
         "netaddr >= 0.7.10",
         "pandas >= 0.16.2",  # TODO: test with 0.19.1
