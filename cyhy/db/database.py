@@ -1264,18 +1264,16 @@ class RequestDoc(RootDoc):
     ):
         """returns a dict of types to owners.  The owners can be in a set or list depending on "as_lists" parameter.
            "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
-        types = dict()
-        for agency_type in AGENCY_TYPE:
-            types[agency_type] = set()
-            all_agency_type_descendants = self.get_all_descendants(
-                agency_type, include_retired=include_retired
-            )
-            if stakeholders_only:
-                for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
-                    if org["stakeholder"]:
-                        types[agency_type].add(org["_id"])
-            else:
-                types[agency_type] = set(all_agency_type_descendants)
+        types = defaultdict(lambda: set())
+
+        # No need to reinvent the wheel here- call get_owner_to_type_dict()
+        # and then rearrange the data a bit.
+        owner_to_type = get_owner_to_type_dict(
+            stakeholders_only=stakeholders_only, include_retired=include_retired
+        )
+        for org_id, org_type in owner_to_type.iteritems():
+            types[org_type].add(org_id)
+
         # convert to a dict of lists
         if not as_lists:
             return types
