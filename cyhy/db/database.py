@@ -1265,7 +1265,7 @@ class RequestDoc(RootDoc):
 
         # No need to reinvent the wheel here- call get_owner_to_type_dict()
         # and then rearrange the data a bit.
-        owner_to_type = get_owner_to_type_dict(
+        owner_to_type = self.get_owner_to_type_dict(
             stakeholders_only=stakeholders_only, include_retired=include_retired
         )
         for org_id, org_type in owner_to_type.iteritems():
