@@ -1219,10 +1219,7 @@ class RequestDoc(RootDoc):
                 agency_type, include_retired=include_retired
             )
             for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
-                if stakeholders_only:
-                    if org["stakeholder"]:
-                        types[org["_id"]].append(agency_type)
-                else:
+                if not stakeholders_only or org["stakeholder"]:
                     types[org["_id"]].append(agency_type)
 
         # Check for any orgs that fall into multiple types.  This can occur
