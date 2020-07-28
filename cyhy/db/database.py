@@ -1,6 +1,6 @@
 __all__ = ["db_from_connection", "db_from_config", "id_expand", "ensure_indices"]
 
-from collections import OrderedDict, Iterable
+from collections import defaultdict, Iterable, OrderedDict
 import copy
 import datetime
 import random
@@ -1213,7 +1213,7 @@ class RequestDoc(RootDoc):
 
     def get_owner_to_type_dict(self, stakeholders_only=False, include_retired=False):
         """returns a dict of owner_id:type. "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
-        types = dict()
+        types = defaultdict(lambda: list())
         for agency_type in AGENCY_TYPE:
             all_agency_type_descendants = self.get_all_descendants(
                 agency_type, include_retired=include_retired
@@ -1221,9 +1221,9 @@ class RequestDoc(RootDoc):
             for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
                 if stakeholders_only:
                     if org["stakeholder"]:
-                        types[org["_id"]] = agency_type
+                        types[org["_id"]].append(agency_type)
                 else:
-                    types[org["_id"]] = agency_type
+                    types[org["_id"]].append(agency_type)
         return types
 
     def get_owner_types(
