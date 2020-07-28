@@ -1,6 +1,6 @@
 __all__ = ["db_from_connection", "db_from_config", "id_expand", "ensure_indices"]
 
-from collections import OrderedDict, Iterable
+from collections import defaultdict, Iterable, OrderedDict
 import copy
 import datetime
 import random
@@ -1213,17 +1213,47 @@ class RequestDoc(RootDoc):
 
     def get_owner_to_type_dict(self, stakeholders_only=False, include_retired=False):
         """returns a dict of owner_id:type. "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
-        types = dict()
+        types = defaultdict(lambda: list())
         for agency_type in AGENCY_TYPE:
             all_agency_type_descendants = self.get_all_descendants(
                 agency_type, include_retired=include_retired
             )
             for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
-                if stakeholders_only:
-                    if org["stakeholder"]:
-                        types[org["_id"]] = agency_type
+                if not stakeholders_only or org["stakeholder"]:
+                    types[org["_id"]].append(agency_type)
+
+        # Check for any orgs that fall into multiple types.  This can occur
+        # under normal circumstances when using the CYHY_THIRD_PARTY report
+        # type (see CYHYDEV-789).  This can also occur if an organization
+        # has erroneously been added as a descendant of more than one
+        # AGENCY_TYPE (FEDERAL, STATE, etc.) node.
+        for org_id, types_list in types.iteritems():
+            if len(types_list) == 1:
+                # Everything's cool here- move along.
+                types[org_id] = types_list[0]
+            else:
+                # Attempt to deconflict the multiple types.  The easiest way
+                # is to check who the organization is a direct child of.
+                org_parents = {
+                    org["_id"]
+                    for org in self.collection.find({"children": org_id}, {"_id": True})
+                }
+                # Get intersection of types_list and org_parents
+                matching_types = set(types_list) & org_parents
+
+                if len(matching_types) == 1:
+                    # Exactly one AGENCY_TYPE is a parent of this org, so
+                    # declare that one to be the official type of this org.
+                    types[org_id] = matching_types.pop()
+                elif len(matching_types) > 1:
+                    # This org is a child of multiple AGENCY_TYPEs; this is
+                    # bad and should be corrected in the database. Assign this
+                    # org a type containing all of the matching types so that
+                    # a human can correct this situation.
+                    types[org_id] = "_".join(matching_types)
                 else:
-                    types[org["_id"]] = agency_type
+                    # No matching types - this should not happen.
+                    types[org_id] = "UNKNOWN"
         return types
 
     def get_owner_types(
@@ -1231,18 +1261,16 @@ class RequestDoc(RootDoc):
     ):
         """returns a dict of types to owners.  The owners can be in a set or list depending on "as_lists" parameter.
            "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
-        types = dict()
-        for agency_type in AGENCY_TYPE:
-            types[agency_type] = set()
-            all_agency_type_descendants = self.get_all_descendants(
-                agency_type, include_retired=include_retired
-            )
-            if stakeholders_only:
-                for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
-                    if org["stakeholder"]:
-                        types[agency_type].add(org["_id"])
-            else:
-                types[agency_type] = set(all_agency_type_descendants)
+        types = defaultdict(lambda: set())
+
+        # No need to reinvent the wheel here- call get_owner_to_type_dict()
+        # and then rearrange the data a bit.
+        owner_to_type = self.get_owner_to_type_dict(
+            stakeholders_only=stakeholders_only, include_retired=include_retired
+        )
+        for org_id, org_type in owner_to_type.iteritems():
+            types[org_type].add(org_id)
+
         # convert to a dict of lists
         if not as_lists:
             return types
