@@ -1224,6 +1224,39 @@ class RequestDoc(RootDoc):
                         types[org["_id"]].append(agency_type)
                 else:
                     types[org["_id"]].append(agency_type)
+
+        # Check for any orgs that fall into multiple types.  This can occur
+        # under normal circumstances when using the CYHY_THIRD_PARTY report
+        # type (see CYHYDEV-789).  This can also occur if an organization
+        # has erroneously been added as a descendant of more than one
+        # AGENCY_TYPE (FEDERAL, STATE, etc.) node.
+        for org_id, types_list in types.iteritems():
+            if len(types_list) == 1:
+                # Everything's cool here- move along.
+                types[org_id] = types_list[0]
+            else:
+                # Attempt to deconflict the multiple types.  The easiest way
+                # is to check who the organization is a direct child of.
+                org_parents = {
+                    org["_id"]
+                    for org in self.collection.find({"children": org_id}, {"_id": True})
+                }
+                # Get intersection of types_list and org_parents
+                matching_types = set(types_list) & org_parents
+
+                if len(matching_types) == 1:
+                    # Exactly one AGENCY_TYPE is a parent of this org, so
+                    # declare that one to be the official type of this org.
+                    types[org_id] = matching_types.pop()
+                elif len(matching_types) > 1:
+                    # This org is a child of multiple AGENCY_TYPEs; this is
+                    # bad and should be corrected in the database. Assign this
+                    # org a type containing all of the matching types so that
+                    # a human can correct this situation.
+                    types[org_id] = "_".join(matching_types)
+                else:
+                    # No matching types - this should not happen.
+                    types[org_id] = "UNKNOWN"
         return types
 
     def get_owner_types(
