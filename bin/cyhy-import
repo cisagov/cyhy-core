@@ -119,9 +119,14 @@ def import_request(db, request, source, force=False, init_stage=None):
 
 
 def import_file(db, filename, force, init_stage=None):
-    f = open(filename, "rb")
-    request = json.load(f)
-    f.close()
+    try:
+        with open(filename, "r") as f:
+            # For py3, encoding should move from json.load into open statement
+            request = json.load(f, encoding="ascii")
+    except UnicodeDecodeError as e:
+        print ("Document contains a non-ASCII character: {}".format(e))
+        return False
+
     return import_request(db, request, filename, force, init_stage)
 
 
