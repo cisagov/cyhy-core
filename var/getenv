@@ -3,11 +3,11 @@
 echo '################################################################################'
 echo '# The following output is used to setup aliases to containerized cyhy commands'
 echo '# To apply these changes under bash use a command similar to:'
-echo '# eval "$(docker run cisa/cyhy-core)"'
+echo '# eval "$(docker run cisagov/cyhy-core)"'
 echo '#'
 echo '# Environment variables:'
 echo '# CYHY_CONF_DIR, defaults to "/etc/cyhy" if not set'
-echo '# CYHY_CORE_IMAGE, defaults to "cisa/cyhy-core" if not set'
+echo '# CYHY_CORE_IMAGE, defaults to "cisagov/cyhy-core" if not set'
 echo '################################################################################'
 echo
 
@@ -16,8 +16,8 @@ cd /usr/local/bin
 # create output that can be evaled to create aliases for cyhy commands
 for f in cyhy-*
 do
-  echo alias $f=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisa/cyhy-core}\\\" $f\"
+  echo alias $f=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" $f\"
 done
 
 # create an alias to start bash in the container
-echo alias cyhy-bash=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisa/cyhy-core}\\\" /bin/bash\"
+echo alias cyhy-bash=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" /bin/bash\"

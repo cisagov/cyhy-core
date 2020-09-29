@@ -30,7 +30,7 @@ The CyHy commands implemented in the docker container can be aliased into the ho
 
 Alias the container commands to the local environment:
 ```bash
-eval "$(docker run cisa/cyhy-core)"
+eval "$(docker run cisagov/cyhy-core)"
 ```
 
 To run a CyHy command:
@@ -51,12 +51,12 @@ Whenever an aliased CyHy command is executed, it will use the current working di
 
 ### Advanced configuration
 
-By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `cisa/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
+By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `cisagov/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
 
 Example:
 ```
 export CYHY_CONF_DIR=/private/etc/cyhy
-export CYHY_CORE_IMAGE=dhub.ncats.dhs.gov:5001/cyhy-core
+export CYHY_CORE_IMAGE=cisagov/cyhy-core
 ```
 
 ### Building the cyhy-core container
@@ -69,21 +69,24 @@ The following commands show how to build the Docker container for cyhy-core.
 
 #### No MaxMind license
 ```console
-docker build --tag cisa/cyhy-core .
+docker build --tag cisagov/cyhy-core .
 ```
 
 #### MaxMind GeoLite2 license
 ```console
-docker build --tag cisa/cyhy-core \
+docker build --tag cisagov/cyhy-core \
              --build-arg maxmind_license_key=<license key> .
 ```
 
 #### MaxMind GeoIP2 license
 ```console
-docker build --tag cisa/cyhy-core \
+docker build --tag cisagov/cyhy-core \
              --build-arg maxmind_license_type="full" \
              --build-arg maxmind_license_key=<license key> .
 ```
+
+**WARNING: Be careful- you really don't want to push a Docker image to the
+public Docker Hub if it was built with your MaxMind license key!**
 
 ### Building a cyhy-core image for distribution
 The helper script `generate_cyhy_docker_image.sh` can be used to automate
@@ -91,7 +94,7 @@ building and saving a Docker image. It requires a file named
 `maxmind_license.txt` that contains the MaxMind GeoIP2 license. It can be run
 without arguments, with the default image name and a specified tag, or with a
 specified image name and tag. The default configuration is
-`cisa/cyhy-core:latest`.
+`cisagov/cyhy-core:latest`.
 
 #### Default name and tag
 ```console
@@ -105,7 +108,7 @@ specified image name and tag. The default configuration is
 
 #### Specified name and tag
 ```console
-./generate_cyhy_docker_image.sh cisa/cyhy-core testing
+./generate_cyhy_docker_image.sh cisagov/cyhy-core testing
 ```
 
 ## Manual Installation
