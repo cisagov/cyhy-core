@@ -54,7 +54,7 @@ Whenever an aliased CyHy command is executed, it will use the current working di
 By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `cisagov/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
 
 Example:
-```
+```bash
 export CYHY_CONF_DIR=/private/etc/cyhy
 export CYHY_CORE_IMAGE=cisagov/cyhy-core
 ```
