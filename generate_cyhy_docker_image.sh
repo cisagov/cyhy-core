@@ -4,7 +4,7 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-IMAGE_NAME="cisa/cyhy-core"
+IMAGE_NAME="cisagov/cyhy-core"
 IMAGE_TAG="latest"
 
 if [ $# -eq 1 ]
