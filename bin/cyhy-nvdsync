@@ -30,7 +30,7 @@ from docopt import docopt
 from cyhy.db import database
 from cyhy.util import util
 
-NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{year}.json.gz"
+NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
 
 
