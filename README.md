@@ -90,11 +90,9 @@ public Docker Hub if it was built with your MaxMind license key!**
 
 ### Building a cyhy-core image for distribution
 The helper script `generate_cyhy_docker_image.sh` can be used to automate
-building and saving a Docker image. It requires a file named
-`maxmind_license.txt` that contains the MaxMind GeoIP2 license. It can be run
-without arguments, with the default image name and a specified tag, or with a
-specified image name and tag. The default configuration is
-`cisagov/cyhy-core:latest`.
+building and saving a Docker image. It can be run without arguments, with the
+default image name and a specified tag, or with a specified image name and tag.
+The default configuration is `cisagov/cyhy-core:latest`.
 
 #### Default name and tag
 ```console
