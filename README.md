@@ -90,9 +90,20 @@ public Docker Hub if it was built with your MaxMind license key!**
 
 ### Building a cyhy-core image for distribution
 The helper script `generate_cyhy_docker_image.sh` can be used to automate
-building and saving a Docker image. It can be run without arguments, with the
-default image name and a specified tag, or with a specified image name and tag.
-The default configuration is `cisagov/cyhy-core:latest`.
+building and saving a Docker image.
+
+```console
+Usage:
+  generate_cyhy_docker_image.sh [options]
+
+Options:
+  -i, --image-name=NAME  Image name to use [default: cisagov/cyhy-core].
+  -t, --image-tag=TAG    Image tag to use [default: latest].
+  -h, --help             Display this message.
+
+Notes:
+- Requires Docker and the AWS CLI to run.
+```
 
 #### Default name and tag
 ```console
