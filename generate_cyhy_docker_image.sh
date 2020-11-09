@@ -74,7 +74,8 @@ done
 
 check_dependencies
 
-IMAGE_OUTPUT_FILE="cisa_cyhy_core_docker_image_$(date +'%Y%m%d').tgz"
+BASE_IMAGE_NAME="$(echo "$IMAGE_NAME" | tr "/" "_")_$IMAGE_TAG"
+IMAGE_OUTPUT_FILE="${BASE_IMAGE_NAME}_$(date +'%Y%m%d').tgz"
 MAXMIND_LICENSE_KEY=$(aws ssm get-parameter \
                     --output text \
                     --name "/cyhy/core/geoip/license_key" \
