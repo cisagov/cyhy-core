@@ -112,7 +112,7 @@ Notes:
 
 #### Specified name and default tag
 ```console
-./generate_cyhy_docker_image.sh --image-name cisagove/cyhy-env
+./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env
 ```
 
 #### Default name and specified tag
