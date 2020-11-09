@@ -15,8 +15,8 @@ function usage {
   echo "  ${0##*/} [options]"
   echo
   echo "Options:"
-  echo "  -i, --image-name=NAME  Image name to use [default: $IMAGE_NAME]."
-  echo "  -t, --image-tag=TAG    Image tag to use [default: $IMAGE_TAG]."
+  echo "  -i, --image-name NAME  Image name to use [default: $IMAGE_NAME]."
+  echo "  -t, --image-tag TAG    Image tag to use [default: $IMAGE_TAG]."
   echo "  -h, --help             Display this message."
   echo
   echo "Notes:"

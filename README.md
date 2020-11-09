@@ -97,8 +97,8 @@ Usage:
   generate_cyhy_docker_image.sh [options]
 
 Options:
-  -i, --image-name=NAME  Image name to use [default: cisagov/cyhy-core].
-  -t, --image-tag=TAG    Image tag to use [default: latest].
+  -i, --image-name NAME  Image name to use [default: cisagov/cyhy-core].
+  -t, --image-tag TAG    Image tag to use [default: latest].
   -h, --help             Display this message.
 
 Notes:
@@ -110,14 +110,19 @@ Notes:
 ./generate_cyhy_docker_image.sh
 ```
 
+#### Specified name and default tag
+```console
+./generate_cyhy_docker_image.sh --image-name cisagove/cyhy-env
+```
+
 #### Default name and specified tag
 ```console
-./generate_cyhy_docker_image.sh testing
+./generate_cyhy_docker_image.sh  --image-tag testing
 ```
 
 #### Specified name and tag
 ```console
-./generate_cyhy_docker_image.sh cisagov/cyhy-core testing
+./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env --image-tag testing
 ```
 
 ## Manual Installation
