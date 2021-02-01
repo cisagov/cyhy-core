@@ -90,13 +90,13 @@ IMAGE_OUTPUT_FILE="${BASE_IMAGE_NAME}_$(date +'%Y%m%d').tgz"
 if [ -z ${MAXMIND_LICENSE_KEY} ]
 then
   MAXMIND_LICENSE_KEY=$(aws ssm get-parameter \
-                      --output text \
-                      --name "/cyhy/core/geoip/license_key" \
-                      --with-decryption \
-                      | awk -F"\t" '{print $6}')
+      --output text \
+      --name "/cyhy/core/geoip/license_key" \
+      --with-decryption \
+    | awk -F"\t" '{print $6}')
 fi
 
 docker build --tag "$IMAGE_NAME:$IMAGE_TAG" \
-             --build-arg maxmind_license_type="full" \
-             --build-arg maxmind_license_key="$MAXMIND_LICENSE_KEY" .
+  --build-arg maxmind_license_type="full" \
+  --build-arg maxmind_license_key="$MAXMIND_LICENSE_KEY" .
 docker save "$IMAGE_NAME:$IMAGE_TAG" | gzip > "$IMAGE_OUTPUT_FILE"
