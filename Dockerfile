@@ -33,6 +33,7 @@ WORKDIR ${CYHY_CORE_SRC}
 
 COPY . ${CYHY_CORE_SRC}
 RUN pip install --no-cache-dir .[dev]
+RUN pip install --no-cache-dir --requirement requirements-cyhy_ops.txt
 RUN var/geoipupdate.sh $maxmind_license_type $maxmind_license_key
 RUN ln -snf ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
 RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
