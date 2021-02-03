@@ -19,10 +19,10 @@ RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 RUN apt-get update && apt-get install -y \
-   curl \
-   gnupg \
-   python-dev \
-   python-pip
+    curl \
+    gnupg \
+    python-dev \
+    python-pip
 
 # Install MongoDB shell from official repository
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
