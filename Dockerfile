@@ -30,6 +30,21 @@ RUN apt-get update \
       python-setuptools \
       python-wheel
 
+# Install system Python packages for cyhy-core requirements
+# Sourced from:
+# https://github.com/cisagov/ansible-role-cyhy-core/blob/develop/tasks/main.yml
+RUN apt-get install -y --no-install-recommends \
+    python-crypto \
+    python-dateutil \
+    python-docopt \
+    python-geoip2 \
+    python-maxminddb \
+    python-netaddr \
+    python-pandas \
+    python-progressbar \
+    python-six \
+    python-yaml
+
 # Install MongoDB shell from official repository
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
 RUN echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
