@@ -18,17 +18,22 @@ RUN mkdir ${CYHY_HOME}
 RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
-    python-dev \
-    python-pip
+# Install required packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      curl \
+      gnupg \
+      python-dev \
+      python-pip
 
 # Install MongoDB shell from official repository
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
 RUN echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
 RUN echo "deb http://ftp.debian.org/debian stretch-backports main" | tee /etc/apt/sources.list.d/stretch-backports.list
 RUN apt-get update && apt-get install -y mongodb-org-shell
+
+# Clean up the apt cache
+RUN apt-get clean
 
 WORKDIR ${CYHY_CORE_SRC}
 
