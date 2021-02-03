@@ -19,6 +19,7 @@ RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 RUN apt-get update && apt-get install -y \
+   curl \
    gnupg \
    python-dev \
    python-pip
