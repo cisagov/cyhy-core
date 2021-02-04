@@ -178,8 +178,8 @@ script to get the latest database.
 If you are developing the source the following installation will allow in place
 editing with live updates to the libraries, and command line utilities.
 
-`sudo pip install numpy`
-
-`sudo port install geos`
-
-`sudo pip install -r requirements.txt`
+```console
+sudo pip install numpy
+sudo pip install geos
+sudo pip install --requirement requirements.txt
+```
