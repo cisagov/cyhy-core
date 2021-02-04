@@ -97,30 +97,37 @@ Usage:
   generate_cyhy_docker_image.sh [options]
 
 Options:
-  -i, --image-name NAME  Image name to use [default: cisagov/cyhy-core].
+  -k, --maxmind-key KEY  The MaxMind GeoIP2 key to use (defaults to
+                         retrieval from AWS SSM)
+  -n, --image-name NAME  Image name to use [default: cisagov/cyhy-core].
   -t, --image-tag TAG    Image tag to use [default: latest].
   -h, --help             Display this message.
 
 Notes:
-- Requires Docker and the AWS CLI to run.
+- Requires Docker and optionally the AWS CLI to run.
 ```
 
-#### Default name and tag
+#### Use default name and tag with MaxMind license key from AWS
 ```console
 ./generate_cyhy_docker_image.sh
 ```
 
-#### Specified name and default tag
+#### Use default name and tag with a provided MaxMind license key
+```console
+./generate_cyhy_docker_image.sh --maxmind-key <license key>
+```
+
+#### Use specified name and default tag
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env
 ```
 
-#### Default name and specified tag
+#### Use default name and specified tag
 ```console
 ./generate_cyhy_docker_image.sh  --image-tag testing
 ```
 
-#### Specified name and tag
+#### Use specified name and tag
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env --image-tag testing
 ```
