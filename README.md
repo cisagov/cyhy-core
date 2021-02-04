@@ -7,6 +7,7 @@ This project contains the core libraries and executables for the CISA Cyber Hygi
 The `cyhy-core` library requires a configuration be created.  The default location for this file is `/etc/cyhy/cyhy.conf`.  An example configuration is below.
 
 ### `/etc/cyhy/cyhy.conf`
+
 ```
 [DEFAULT]
 default-section = cyhy-ops-ssh-tunnel-docker-mac
@@ -26,14 +27,17 @@ database-name = cyhy
 ```
 
 ## Using CyHy Commands with Docker
+
 The CyHy commands implemented in the docker container can be aliased into the host environment by using the procedure below.
 
 Alias the container commands to the local environment:
+
 ```bash
 eval "$(docker run cisagov/cyhy-core)"
 ```
 
 To run a CyHy command:
+
 ```console
 cyhy-tool status NASA
 ```
@@ -54,12 +58,14 @@ Whenever an aliased CyHy command is executed, it will use the current working di
 By default, the container will look for your CyHy configurations in `/etc/cyhy`.  This location can be changed by setting the `CYHY_CONF_DIR` environment variable to point to your CyHy configuration directory.  The commands will also attempt to run using the `cisagov/cyhy-core` image.  A different image can be used by setting the `CYHY_CORE_IMAGE` environment variable to the image name.
 
 Example:
+
 ```bash
 export CYHY_CONF_DIR=/private/etc/cyhy
 export CYHY_CORE_IMAGE=cisagov/cyhy-core
 ```
 
 ### Building the cyhy-core container
+
 If you want to include a MaxMind GeoIP2 database in the docker image you must
 provide a key and optionally the type of key to Docker. The default type is
 "lite", but if you have the subscription license you can instead use the
@@ -68,17 +74,20 @@ provide a key and optionally the type of key to Docker. The default type is
 The following commands show how to build the Docker container for cyhy-core.
 
 #### No MaxMind license
+
 ```console
 docker build --tag cisagov/cyhy-core .
 ```
 
 #### MaxMind GeoLite2 license
+
 ```console
 docker build --tag cisagov/cyhy-core \
              --build-arg maxmind_license_key=<license key> .
 ```
 
 #### MaxMind GeoIP2 license
+
 ```console
 docker build --tag cisagov/cyhy-core \
              --build-arg maxmind_license_type="full" \
@@ -89,6 +98,7 @@ docker build --tag cisagov/cyhy-core \
 public Docker Hub if it was built with your MaxMind license key!**
 
 ### Building a cyhy-core image for distribution
+
 The helper script `generate_cyhy_docker_image.sh` can be used to automate
 building and saving a Docker image.
 
@@ -108,31 +118,37 @@ Notes:
 ```
 
 #### Use default name and tag with MaxMind license key from AWS
+
 ```console
 ./generate_cyhy_docker_image.sh
 ```
 
 #### Use default name and tag with a provided MaxMind license key
+
 ```console
 ./generate_cyhy_docker_image.sh --maxmind-key <license key>
 ```
 
 #### Use specified name and default tag
+
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env
 ```
 
 #### Use default name and specified tag
+
 ```console
 ./generate_cyhy_docker_image.sh  --image-tag testing
 ```
 
 #### Use specified name and tag
+
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env --image-tag testing
 ```
 
 ## Manual Installation
+
 Required third party libraries can be installed using: `pip install -r requirements.txt`
 
 Required configurations:
@@ -144,6 +160,7 @@ IP Address Geolocation Database:
 The geolocation database is not included in the source tree due to size and licensing.  Please cd into the `var` directory and run the `get-geo-db.sh` script to get the latest database.
 
 ## Development Installation
+
 If you are developing the source the following installation will allow in place editing with live updates to the libraries, and command line utilities.
 
 `sudo pip install numpy`
