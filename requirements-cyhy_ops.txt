@@ -1,3 +1,4 @@
-# This file contains packages the CyHy operators need for their Docker image.
+# This file contains PyPi (pip) packages the CyHy operators need for
+# their Docker image.
 beautifulsoup4
 lxml
