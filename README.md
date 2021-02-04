@@ -8,7 +8,7 @@ The `cyhy-core` library requires a configuration be created.  The default locati
 
 ### `/etc/cyhy/cyhy.conf`
 
-```
+```ini
 [DEFAULT]
 default-section = cyhy-ops-ssh-tunnel-docker-mac
 report-key = master-report-password
@@ -154,7 +154,6 @@ Required third party libraries can be installed using: `pip install -r requireme
 Required configurations:
 The commander will read `/etc/cyhy/commander.conf`
 If you do not have this file, please create one (even if empty)
-
 
 IP Address Geolocation Database:
 The geolocation database is not included in the source tree due to size and licensing.  Please cd into the `var` directory and run the `get-geo-db.sh` script to get the latest database.
