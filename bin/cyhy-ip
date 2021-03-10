@@ -31,6 +31,7 @@ from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
 from cyhy.core.geoloc import GeoLocDB
+import geoip2.database
 from cyhy.core.common import *
 
 
@@ -110,7 +111,22 @@ def get_special_intersections(cidrs):
             results[description] = intersection
     return results
 
+def has_restricted_ips(nets):
+    reader = geoip2.database.Reader('/usr/local/share/GeoIP/GeoIP2-City.mmdb')
+    bad_countries = ['China','Russia','Iran','North Korea']
+    has_bad_address = False
 
+    for cidr in nets.iter_cidrs():
+        geo_data = reader.city(str(cidr[0]))
+        country_name = geo_data.country.name
+        if country_name in bad_countries:
+            print('{} contains addresses in country that is unavailable due to current scanning policy: {}'.format(cidr,country_name))
+            has_bad_address = True
+    if has_bad_address:
+        return True
+    else:
+        return False
+  
 def print_intersections(intersections):
     for request, intersecting_cidrs in intersections.iteritems():
         if type(request) == str:
@@ -163,6 +179,8 @@ def add(db, owner, cidrs):
     intersections = db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
+    if has_restricted_ips(cidrs):
+        print("Cannot continue!\nSome addresses are in invalid countries.") # Current countries that are not to be scanned.
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     if intersections:
         print "Cannot continue!\nSome addresses already allocated or reserved:"
