@@ -33,6 +33,7 @@ import netaddr
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
+import geoip2.database
 
 PB_INIT_WIDGETS = [
     "Importing: ",
@@ -79,6 +80,21 @@ def has_intersections(db, nets, filename, owner):
         print_intersections(intersections)
         return True
 
+def has_restricted_ips(nets):
+    reader = geoip2.database.Reader('/usr/local/share/GeoIP/GeoIP2-City.mmdb')
+    bad_countries = ['China','Russia','Iran','North Korea']
+    has_bad_address = False
+
+    for cidr in nets.iter_cidrs():
+        geo_data = reader.city(str(cidr[0]))
+        country_name = geo_data.country.name
+        if country_name in bad_countries:
+            print('{} contains addresses in country that is unavailable due to current scanning policy: {}'.format(cidr,country_name))
+            has_bad_address = True
+    if has_bad_address:
+        return True
+    else:
+        return False
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
@@ -93,6 +109,8 @@ def import_request(db, request, source, force=False, init_stage=None):
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
         return False
+    if has_restricted_ips(nets):
+        return False   
     request["networks"] = nets.iter_cidrs()
 
     for window in request["windows"]:
