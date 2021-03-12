@@ -90,11 +90,9 @@ def has_restricted_ips(nets):
         country_name = geo_data.country.name
         if country_name in bad_countries:
             print('{} contains addresses in country that is unavailable due to current scanning policy: {}'.format(cidr,country_name))
-            has_bad_address = True
-    if has_bad_address:
-        return True
-    else:
-        return False
+            has_restricted_address = True
+
+    return has_restricted_address
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
