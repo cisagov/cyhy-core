@@ -82,8 +82,8 @@ def has_intersections(db, nets, filename, owner):
 
 def has_restricted_ips(nets):
     reader = geoip2.database.Reader('/usr/local/share/GeoIP/GeoIP2-City.mmdb')
-    bad_countries = ['China','Russia','Iran','North Korea']
-    has_bad_address = False
+    restricted_countries = ['China','Russia','Iran','North Korea']
+    has_restricted_address = False
 
     for cidr in nets.iter_cidrs():
         geo_data = reader.city(str(cidr[0]))
