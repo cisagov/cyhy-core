@@ -189,7 +189,7 @@ def add(db, owner, cidrs):
         host.save()
         i += 1
         pbar.update(i)
-    update request with new networks
+    # update request with new networks
     request.add_networks(cidrs)
     request.save()
     print "IPs added to request, and initialized.  Tally sync required to start scan of new IPs."
