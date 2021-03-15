@@ -31,7 +31,6 @@ from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
 from cyhy.core.geoloc import GeoLocDB
-import geoip2.database
 from cyhy.core.common import *
 
 
