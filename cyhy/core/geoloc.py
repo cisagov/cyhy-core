@@ -39,3 +39,15 @@ class GeoLocDB(object):
             return (response.location.longitude, response.location.latitude)
         except AddressNotFoundError:
             return (None, None)
+
+    def check_restricted_cidr(self, cidr):
+        restricted_countries = ["China","Iran","North Korea","Russia"]
+        has_restricted = False
+        try:
+            response = self.__reader.city(str(cidr[0]))
+            if response.country.name in restricted_countries:
+                print("Warning! %s traced to restricted country: %s" % (cidr, response.country.name))
+                has_restricted = True
+        except AddressNotFoundError:
+            print('Address not found.')
+        return has_restricted

@@ -33,6 +33,7 @@ import netaddr
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database
 from cyhy.util import util
+from cyhy.core.geoloc import GeoLocDB
 
 PB_INIT_WIDGETS = [
     "Importing: ",
@@ -79,6 +80,16 @@ def has_intersections(db, nets, filename, owner):
         print_intersections(intersections)
         return True
 
+def has_restricted_ips(nets):
+    geo_loc_db = GeoLocDB()
+    has_restricted = False
+    for cidr in nets.iter_cidrs():
+        if geo_loc_db.check_restricted_cidr(cidr):
+            has_restricted = True
+    if has_restricted:
+        return True
+    else:
+        return False
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
@@ -92,6 +103,8 @@ def import_request(db, request, source, force=False, init_stage=None):
     if init_stage:
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
+        return False
+    if has_restricted_ips(nets):
         return False
     request["networks"] = nets.iter_cidrs()
 
@@ -146,6 +159,9 @@ def main():
 
     if not success:
         sys.exit(-1)
+    else:
+        print("Success.")
+
 
 
 if __name__ == "__main__":
