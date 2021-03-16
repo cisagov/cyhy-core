@@ -85,11 +85,12 @@ def has_restricted_ips(nets):
     has_restricted = False
     for cidr in nets.iter_cidrs():
         if geo_loc_db.check_restricted_cidr(cidr):
+            # We can't just exit here since check_restricted_cidr()
+            # prints output for each restricted CIDR block and we
+            # want the user to see all restricted CIDR blocks
+            # without having to run multiple times.
             has_restricted = True
-    if has_restricted:
-        return True
-    else:
-        return False
+    return has_restricted
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
