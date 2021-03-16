@@ -49,5 +49,5 @@ class GeoLocDB(object):
                 print("Warning! %s traced to restricted country: %s" % (cidr, response.country.name))
                 has_restricted = True
         except AddressNotFoundError:
-            print('Address not found.')
+            print("CIDR %s not found in geolocation database", cidr)
         return has_restricted
