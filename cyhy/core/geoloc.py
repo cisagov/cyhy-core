@@ -11,6 +11,7 @@ from geoip2.errors import AddressNotFoundError
 GEODB_FILES = ["GeoIP2-City.mmdb", "GeoLite2-City.mmdb"]
 GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
 GEODB_FILE_PATHS = []
+RESTRICTED_COUNTRIES = ["China","Iran","North Korea","Russia"]
 # Ensure that the order in GEODB_FILES is used for searching
 for file in GEODB_FILES:
     for path in GEODB_CITY_PATHS:
@@ -41,11 +42,10 @@ class GeoLocDB(object):
             return (None, None)
 
     def check_restricted_cidr(self, cidr):
-        restricted_countries = ["China","Iran","North Korea","Russia"]
         has_restricted = False
         try:
             response = self.__reader.city(str(cidr[0]))
-            if response.country.name in restricted_countries:
+            if response.country.name in RESTRICTED_COUNTRIES:
                 print("Warning! %s traced to restricted country: %s" % (cidr, response.country.name))
                 has_restricted = True
         except AddressNotFoundError:
