@@ -164,8 +164,7 @@ def add(db, owner, cidrs):
     )  # intersections from database
     geo_loc_db = GeoLocDB()
     for cidr in cidrs.iter_cidrs():
-        has_restricted = geo_loc_db.check_restricted_cidr(cidr)
-        if has_restricted:
+        if geo_loc_db.check_restricted_cidr(cidr):
             print("Cannot continue!\nSome addresses are in restricted countries.")
             sys.exit(-1)
 
