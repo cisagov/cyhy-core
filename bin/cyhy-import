@@ -106,6 +106,9 @@ def import_request(db, request, source, force=False, init_stage=None):
     if has_intersections(db, nets, source, owner):
         return False
     if has_restricted_ips(nets):
+        #This is not combined with the previous check so the output
+        #from each function can be seen so the user can get all messages
+        # without multiple runs
         return False
     request["networks"] = nets.iter_cidrs()
 
