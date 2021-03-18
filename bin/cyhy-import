@@ -163,9 +163,6 @@ def main():
 
     if not success:
         sys.exit(-1)
-    else:
-        print("Success.")
-
 
 
 if __name__ == "__main__":
