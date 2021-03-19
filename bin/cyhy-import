@@ -90,6 +90,8 @@ def has_restricted_ips(nets):
             # want the user to see all restricted CIDR blocks
             # without having to run multiple times.
             has_restricted = True
+    if has_restricted:
+        print >> sys.stderr,"Cannot import.\nSome addresses traced to restricted countries."
     return has_restricted
 
 def import_request(db, request, source, force=False, init_stage=None):

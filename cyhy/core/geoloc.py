@@ -46,8 +46,8 @@ class GeoLocDB(object):
         try:
             response = self.__reader.city(str(cidr[0]))
             if response.country.name in RESTRICTED_COUNTRIES:
-                print("Warning! %s traced to restricted country: %s" % (cidr, response.country.name))
+                print >> sys.stderr, "Warning! %s traced to restricted country: %s" % (cidr, response.country.name)
                 has_restricted = True
         except AddressNotFoundError:
-            sys.stderr.write("CIDR %s not found in geolocation database\n" % cidr)
+            print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
         return has_restricted
