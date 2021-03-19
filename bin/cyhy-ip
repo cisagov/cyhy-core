@@ -168,7 +168,7 @@ def add(db, owner, cidrs):
         if geo_loc_db.check_restricted_cidr(cidr):
             has_restricted_ips = True
     if has_restricted_ips:
-        print >> sys.stderr,"Cannot continue!\nSome addresses traced to restricted countries."
+        print "Cannot continue!\nSome addresses traced to restricted countries."
         sys.exit(-1)
 
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
