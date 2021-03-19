@@ -180,7 +180,6 @@ def add(db, owner, cidrs):
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
     stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
-
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
     pbar.widgets[0] = "Adding %s: " % owner
     i = 0
