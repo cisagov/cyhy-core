@@ -166,6 +166,10 @@ def add(db, owner, cidrs):
     has_restricted_ips = False
     for cidr in cidrs.iter_cidrs():
         if geo_loc_db.check_restricted_cidr(cidr):
+            # We can't just exit here since check_restricted_cidr()
+            # prints output for each restricted CIDR block and we
+            # want the user to see all restricted CIDR blocks
+            # without having to run multiple times.
             has_restricted_ips = True
     if has_restricted_ips:
         print "Cannot continue!\nSome addresses traced to restricted countries."
