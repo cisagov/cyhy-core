@@ -43,11 +43,16 @@ class GeoLocDB(object):
 
     def check_restricted_cidr(self, cidr):
         has_restricted = False
-        try:
-            response = self.__reader.city(str(cidr[0]))
-            if response.country.name in RESTRICTED_COUNTRIES:
-                print >> sys.stderr, "Warning! %s traced to restricted country: %s" % (cidr, response.country.name)
-                has_restricted = True
-        except AddressNotFoundError:
-            print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
+        for ip in cidr:
+            try:
+                response = self.__reader.city(str(ip))
+                if response.country.name in RESTRICTED_COUNTRIES:
+                    has_restricted = True
+            except AddressNotFoundError:
+                print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
+        # to avoid printing each and every ip in a cidr that is found
+        # this is only printing the cidr in which one or more addresses are found
+        # that correspond to a restricted country 
+        if has_restricted:
+            print >> sys.stderr, "Warning! %s traced to restricted country: %s" % (cidr, response.country.name)
         return has_restricted
