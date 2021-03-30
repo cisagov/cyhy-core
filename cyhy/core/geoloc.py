@@ -4,6 +4,7 @@ __all__ = ["GeoLocDB"]
 
 import os
 import sys
+from netaddr import IPSet
 
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
@@ -42,17 +43,20 @@ class GeoLocDB(object):
             return (None, None)
 
     def check_restricted_cidr(self, cidr):
-        has_restricted = False
+        restricted_ips = IPSet()
         for ip in cidr:
             try:
                 response = self.__reader.city(str(ip))
                 if response.country.name in RESTRICTED_COUNTRIES:
-                    has_restricted = True
+                    restricted_ips.add(ip)
             except AddressNotFoundError:
                 print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
         # to avoid printing each and every ip in a cidr that is found
         # this is only printing the cidr in which one or more addresses are found
-        # that correspond to a restricted country 
-        if has_restricted:
-            print >> sys.stderr, "Warning! %s traced to restricted country: %s" % (cidr, response.country.name)
-        return has_restricted
+        # that correspond to a restricted country
+        if len(restricted_ips) > 0:
+            print >> sys.stderr, "Warning! The follwing networks can be traced to restricted country: %s" % response.country.name
+            for network in restricted_ips.iter_cidrs():
+                print >> sys.stderr, network
+            return True
+        return False
