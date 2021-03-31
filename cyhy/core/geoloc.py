@@ -55,7 +55,7 @@ class GeoLocDB(object):
         # this is only printing the cidr in which one or more addresses are found
         # that correspond to a restricted country
         if len(restricted_ips) > 0:
-            print >> sys.stderr, "Warning! The follwing networks can be traced to restricted country: %s" % response.country.name
+            print >> sys.stderr, "Warning! The following networks can be traced to restricted country: %s" % response.country.name
             for network in restricted_ips.iter_cidrs():
                 print >> sys.stderr, network
             return True
