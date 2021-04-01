@@ -4,7 +4,6 @@ __all__ = ["GeoLocDB"]
 
 import os
 import sys
-from netaddr import IPSet
 
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
