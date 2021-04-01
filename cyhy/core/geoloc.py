@@ -51,9 +51,6 @@ class GeoLocDB(object):
                     restricted_ips.add(ip)
             except AddressNotFoundError:
                 print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
-        # to avoid printing each and every ip in a cidr that is found
-        # this is only printing the cidr in which one or more addresses are found
-        # that correspond to a restricted country
         if len(restricted_ips) > 0:
             print >> sys.stderr, "Warning! The following networks can be traced to restricted country: %s" % response.country.name
             for network in restricted_ips.iter_cidrs():
