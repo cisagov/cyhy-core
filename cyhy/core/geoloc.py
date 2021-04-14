@@ -45,7 +45,7 @@ class GeoLocDB(object):
         try:
             response = self.__reader.city(str(ip))
             if response.country.name in RESTRICTED_COUNTRIES:
-                return True
-            return False
+                return True,response.country.name
+            return False,None
         except AddressNotFoundError:
             print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
