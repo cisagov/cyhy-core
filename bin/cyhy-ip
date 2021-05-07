@@ -179,7 +179,7 @@ def add(db, owner, cidrs):
             print "%s:" % country
             for cidr in cidrs.iter_cidrs():
                 print "    %s" % cidr
-        print "Cannot continue!\nSome addresses traced to restricted countries."
+        print "Cannot continue!\nSome addresses associated with restricted countries."
         sys.exit(-1)
 
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
