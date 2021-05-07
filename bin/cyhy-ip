@@ -164,7 +164,7 @@ def add(db, owner, cidrs):
         cidrs
     )  # intersections from database
     geo_loc_db = GeoLocDB()
-    restricted_dict = defaultdict(lambda:IPSet())
+    restricted_dict = defaultdict(lambda: IPSet())
     for ip in cidrs:
         is_restricted, country = geo_loc_db.check_restricted_ip(ip)
         if is_restricted:
