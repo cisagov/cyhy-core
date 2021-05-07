@@ -26,6 +26,7 @@ import sys
 # Third-Party Libraries
 import dateutil
 from docopt import docopt
+from collections import defaultdict
 import progressbar as pb
 import netaddr
 
@@ -82,17 +83,25 @@ def has_intersections(db, nets, filename, owner):
 
 def has_restricted_ips(nets):
     geo_loc_db = GeoLocDB()
-    has_restricted = False
-    for cidr in nets.iter_cidrs():
-        if geo_loc_db.check_restricted_cidr(cidr):
+    restricted_dict = defaultdict(lambda: netaddr.IPSet())
+    for ip in nets:
+        is_restricted, country = geo_loc_db.check_restricted_ip(ip)
+        if is_restricted:
+            restricted_dict[country].add(ip)
             # We can't just exit here since check_restricted_cidr()
             # prints output for each restricted CIDR block and we
             # want the user to see all restricted CIDR blocks
             # without having to run multiple times.
-            has_restricted = True
-    if has_restricted:
-        print "Cannot import.\nSome addresses traced to restricted countries."
-    return has_restricted
+    if len(restricted_dict) > 0:
+        print "***Found IPs in restricted countries***"
+        for country, cidrs in restricted_dict.items():
+            print "%s:" % country
+            for cidr in cidrs.iter_cidrs():
+                print "    %s" % cidr
+        print "Cannot continue!\nSome addresses associated with restricted countries."
+        return True
+    return False
+
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
