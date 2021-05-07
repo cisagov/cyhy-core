@@ -174,7 +174,7 @@ def add(db, owner, cidrs):
             # want the user to see all restricted CIDR blocks
             # without having to run multiple times.
     if len(restricted_dict) > 0:
-        print("***Found IPs in restricted countries***")
+        print "***Found IPs in restricted countries***"
         for country, cidrs in restricted_dict.items():
             print "%s:" % country
             for cidr in cidrs.iter_cidrs():
