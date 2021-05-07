@@ -48,3 +48,5 @@ class GeoLocDB(object):
                 return True, response.country.name
         except AddressNotFoundError:
             print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
+
+        return False, ""
