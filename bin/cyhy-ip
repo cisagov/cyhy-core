@@ -166,7 +166,7 @@ def add(db, owner, cidrs):
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda:IPSet())
     for ip in cidrs:
-        is_restricted,country = geo_loc_db.check_restricted_ip(ip)
+        is_restricted, country = geo_loc_db.check_restricted_ip(ip)
         if is_restricted:
             restricted_dict[country].add(ip)
             # We can't just exit here since check_restricted_cidr()
