@@ -28,7 +28,7 @@ import dateutil
 from docopt import docopt
 from collections import defaultdict
 import progressbar as pb
-import netaddr
+from netaddr import IPSet
 
 # cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
