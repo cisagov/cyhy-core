@@ -92,7 +92,7 @@ def has_restricted_ips(nets):
             # prints output for each restricted CIDR block and we
             # want the user to see all restricted CIDR blocks
             # without having to run multiple times.
-    if len(restricted_dict) > 0:
+    if restricted_dict:
         print "***Found IPs in restricted countries***"
         for country, cidrs in restricted_dict.items():
             print "%s:" % country
