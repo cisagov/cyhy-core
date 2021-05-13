@@ -23,10 +23,10 @@ Notes:
   and the --file option is omitted.
 """
 
+from collections import defaultdict
 import sys
 import progressbar as pb
 from docopt import docopt
-from collections import defaultdict
 from netaddr import ip, IPNetwork, IPRange, IPSet
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database, CHDatabase
