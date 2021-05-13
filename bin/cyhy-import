@@ -32,9 +32,9 @@ import netaddr
 
 # cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
+from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util
-from cyhy.core.geoloc import GeoLocDB
 
 PB_INIT_WIDGETS = [
     "Importing: ",
