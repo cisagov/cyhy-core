@@ -22,11 +22,11 @@ Notes:
 import datetime
 import json
 import sys
+from collections import defaultdict
 
 # Third-Party Libraries
 import dateutil
 from docopt import docopt
-from collections import defaultdict
 import progressbar as pb
 from netaddr import IPSet
 
@@ -85,8 +85,8 @@ def has_restricted_ips(nets):
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda: netaddr.IPSet())
     for ip in nets:
-        is_restricted, country = geo_loc_db.check_restricted_ip(ip)
-        if is_restricted:
+        country = geo_loc_db.check_restricted_ip(ip)
+        if country:
             restricted_dict[country].add(ip)
             # We can't just exit here since check_restricted_cidr()
             # prints output for each restricted CIDR block and we
