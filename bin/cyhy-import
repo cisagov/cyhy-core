@@ -19,10 +19,10 @@ Notes:
 """
 
 # Standard Python Libraries
+from collections import defaultdict
 import datetime
 import json
 import sys
-from collections import defaultdict
 
 # Third-Party Libraries
 import dateutil
