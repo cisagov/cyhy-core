@@ -27,8 +27,8 @@ import sys
 # Third-Party Libraries
 import dateutil
 from docopt import docopt
-import progressbar as pb
 from netaddr import IPSet
+import progressbar as pb
 
 # cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
