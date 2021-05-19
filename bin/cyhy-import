@@ -81,6 +81,7 @@ def has_intersections(db, nets, filename, owner):
         print_intersections(intersections)
         return True
 
+
 def has_restricted_ips(nets):
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda: IPSet())
