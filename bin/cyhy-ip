@@ -25,8 +25,8 @@ Notes:
 
 from collections import defaultdict
 import sys
-import progressbar as pb
 from docopt import docopt
+import progressbar as pb
 from netaddr import ip, IPNetwork, IPRange, IPSet
 from cyhy.core import Config, STATUS, STAGE
 from cyhy.db import database, CHDatabase
