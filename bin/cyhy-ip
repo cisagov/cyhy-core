@@ -23,16 +23,22 @@ Notes:
   and the --file option is omitted.
 """
 
+# Standard Python Libraries
 from collections import defaultdict
 import sys
+
+# Third-Party Libraries
 from docopt import docopt
-import progressbar as pb
 from netaddr import ip, IPNetwork, IPRange, IPSet
+import progressbar as pb
+
+# cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
+from cyhy.core.common import *
+from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
-from cyhy.core.geoloc import GeoLocDB
-from cyhy.core.common import *
+
 
 
 def munge(x):
