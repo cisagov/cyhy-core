@@ -6,7 +6,7 @@ Usage:
   cyhy-ip [--section SECTION] [--file FILENAME] (check | normalize) [ADDRESSES ...]
   cyhy-ip [--section SECTION] [--file FILENAME] setstage STAGE [ADDRESSES ...]
   cyhy-ip [--section SECTION] list OWNER
-  cyhy-ip [--section SECTION] list-all 
+  cyhy-ip [--section SECTION] list-all
   cyhy-ip [--section SECTION] [--file FILENAME] move OWNER NEW_OWNER [ADDRESSES ...]
   cyhy-ip (-h | --help)
   cyhy-ip --version
@@ -14,33 +14,40 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -f FILENAME --file=FILENAME    Read addresses from a file.
   -s SECTION --section=SECTION   Configuration section to use.
-  
+
 Notes:
   Address can be read from standard input if no addresses are provided on the command line
   and the --file option is omitted.
 """
 
+# Standard Python Libraries
+from collections import defaultdict
 import sys
-import progressbar as pb
+
+# Third-Party Libraries
 from docopt import docopt
 from netaddr import ip, IPNetwork, IPRange, IPSet
+import progressbar as pb
+
+# cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
+from cyhy.core.common import *
+from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database, CHDatabase
 from cyhy.util import util
-from cyhy.core.geoloc import GeoLocDB
-from cyhy.core.common import *
+
 
 
 def munge(x):
     """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
-    
+
     Args:
         x: A Python tuple or list containing IPNetwork and IPRange objects
-        
-    Returns: 
+
+    Returns:
         An IPSet corresponding to the Python tuple or list that was passed
         in.
     """
@@ -110,7 +117,6 @@ def get_special_intersections(cidrs):
             results[description] = intersection
     return results
 
-
 def print_intersections(intersections):
     for request, intersecting_cidrs in intersections.iteritems():
         if type(request) == str:
@@ -163,6 +169,25 @@ def add(db, owner, cidrs):
     intersections = db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
+    geo_loc_db = GeoLocDB()
+    restricted_dict = defaultdict(lambda: IPSet())
+    for ip in cidrs:
+        country = geo_loc_db.check_restricted_ip(ip)
+        if country:
+            restricted_dict[country].add(ip)
+            # We can't just exit here since check_restricted_cidr()
+            # prints output for each restricted CIDR block and we
+            # want the user to see all restricted CIDR blocks
+            # without having to run multiple times.
+    if restricted_dict:
+        print "***Found IPs in restricted countries***"
+        for country, cidrs in restricted_dict.items():
+            print "%s:" % country
+            for cidr in cidrs.iter_cidrs():
+                print "    %s" % cidr
+        print "Cannot continue!\nSome addresses associated with restricted countries."
+        sys.exit(-1)
+
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     if intersections:
         print "Cannot continue!\nSome addresses already allocated or reserved:"
@@ -172,7 +197,6 @@ def add(db, owner, cidrs):
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
     stage = STAGE[request.get("init_stage", STAGE.NETSCAN1)]
-    geo_loc_db = GeoLocDB()
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
     pbar.widgets[0] = "Adding %s: " % owner
     i = 0

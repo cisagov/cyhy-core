@@ -19,6 +19,7 @@ Notes:
 """
 
 # Standard Python Libraries
+from collections import defaultdict
 import datetime
 import json
 import sys
@@ -26,11 +27,12 @@ import sys
 # Third-Party Libraries
 import dateutil
 from docopt import docopt
+from netaddr import IPSet
 import progressbar as pb
-import netaddr
 
 # cisagov Libraries
 from cyhy.core import Config, STATUS, STAGE
+from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util
 
@@ -80,6 +82,28 @@ def has_intersections(db, nets, filename, owner):
         return True
 
 
+def has_restricted_ips(nets):
+    geo_loc_db = GeoLocDB()
+    restricted_dict = defaultdict(lambda: IPSet())
+    for ip in nets:
+        country = geo_loc_db.check_restricted_ip(ip)
+        if country:
+            restricted_dict[country].add(ip)
+            # We can't just exit here since check_restricted_cidr()
+            # prints output for each restricted CIDR block and we
+            # want the user to see all restricted CIDR blocks
+            # without having to run multiple times.
+    if restricted_dict:
+        print "***Found IPs in restricted countries***"
+        for country, cidrs in restricted_dict.items():
+            print "%s:" % country
+            for cidr in cidrs.iter_cidrs():
+                print "    %s" % cidr
+        print "Cannot continue!\nSome addresses associated with restricted countries."
+        return True
+    return False
+
+
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
     if not force and already_exists(db, request):
@@ -92,6 +116,11 @@ def import_request(db, request, source, force=False, init_stage=None):
     if init_stage:
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
+        return False
+    if has_restricted_ips(nets):
+        # This is not combined with the previous check so the output
+        # from each function can be seen so the user can get all messages
+        # without multiple runs
         return False
     request["networks"] = nets.iter_cidrs()
 
