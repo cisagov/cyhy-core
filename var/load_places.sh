@@ -57,7 +57,7 @@ PLACE_FILES="GOVT_UNITS POP_PLACES"
 for PLACE_TYPE in ${PLACE_FILES}
 do
 	PLACE_URI="${DATA_BASE_URL}${PLACE_TYPE}.zip"
-	curl -O "${PLACE_URI}"
+	curl --location -O "${PLACE_URI}"
 	unzip "./${PLACE_TYPE}.zip" -d "${TMP_PLACES_DIR}"
 
 	PLACE_FILE=$(ls ${TMP_PLACES_DIR}/*"${PLACE_TYPE}"*.txt)
