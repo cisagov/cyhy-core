@@ -42,7 +42,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #
 # The USGS URL above is (temporarily?) unavailable, so let's (temporarily?)
 # use the Wayback Machine!
-DATA_BASE_URL="https://web.archive.org/web/20211019064705/https://geonames.usgs.gov/docs/stategaz/"
+DATA_BASE_URL="https://web.archive.org/web/20220217091017/https://geonames.usgs.gov/docs/stategaz/"
 
 TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
