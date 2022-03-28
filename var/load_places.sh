@@ -38,7 +38,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Base URL for the zip files is derived from the listings at
 # https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data
 # for GOVT_UNITS and POP_PLACES
-DATA_BASE_URL="https://geonames.usgs.gov/docs/stategaz/"
+# DATA_BASE_URL="https://geonames.usgs.gov/docs/stategaz/"
+#
+# The USGS URL above is (temporarily?) unavailable, so let's (temporarily?)
+# use the Wayback Machine!
+DATA_BASE_URL="https://web.archive.org/web/2021*/https://geonames.usgs.gov/docs/stategaz/"
 
 TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
