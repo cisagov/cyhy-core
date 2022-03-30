@@ -21,6 +21,7 @@ from cyhy.util import util
 CVE_COLLECTION = "cves"
 HOST_COLLECTION = "hosts"
 HOST_SCAN_COLLECTION = "host_scans"
+KEV_COLLECTION = "kevs"
 NEW_HIRE_COLLECTION = "new_hire"
 NOTIFICATION_COLLECTION = "notifications"
 PLACE_COLLECTION = "places"
@@ -41,21 +42,22 @@ def db_from_connection(uri, name):
     con = MongoClient(host=uri, tz_aware=True)
     con.register(
         [
-            RequestDoc,
-            SnapshotDoc,
-            HostDoc,
-            TallyDoc,
-            HostScanDoc,
-            PortScanDoc,
-            VulnScanDoc,
-            TicketDoc,
-            ScorecardDoc,
             CVEDoc,
-            ReportDoc,
-            SystemControlDoc,
-            PlaceDoc,
             HireDoc,
+            HostDoc,
+            HostScanDoc,
+            KEVDoc,
             NotificationDoc,
+            PlaceDoc,
+            PortScanDoc,
+            ReportDoc,
+            RequestDoc,
+            ScorecardDoc,
+            SnapshotDoc,
+            SystemControlDoc,
+            TallyDoc,
+            TicketDoc,
+            VulnScanDoc,
         ]
     )
     db = con[name]
@@ -1681,6 +1683,16 @@ class NotificationDoc(RootDoc):
     }
     required_fields = ["ticket_id", "ticket_owner"]
     default_values = {"generated_for": []}
+
+    def get_indices(self):
+        return tuple()
+
+
+class KEVDoc(RootDoc):
+    __collection__ = KEV_COLLECTION
+    structure = {"_id": basestring}
+    required_fields = ["_id"]
+    default_values = {}
 
     def get_indices(self):
         return tuple()
