@@ -18,21 +18,22 @@ from cyhy.core.config import Config
 from cyhy.core.yaml_config import YamlConfig
 from cyhy.util import util
 
-REQUEST_COLLECTION = "requests"
-HOST_COLLECTION = "hosts"
-TALLY_COLLECTION = "tallies"
-SNAPSHOT_COLLECTION = "snapshots"
-HOST_SCAN_COLLECTION = "host_scans"
-PORT_SCAN_COLLECTION = "port_scans"
-VULN_SCAN_COLLECTION = "vuln_scans"
-TICKET_COLLECTION = "tickets"
-SCORECARD_COLLECTION = "scorecards"
 CVE_COLLECTION = "cves"
-REPORT_COLLECTION = "reports"
-SYSTEM_CONTROL_COLLECTION = "control"
-PLACE_COLLECTION = "places"
+HOST_COLLECTION = "hosts"
+HOST_SCAN_COLLECTION = "host_scans"
 NEW_HIRE_COLLECTION = "new_hire"
 NOTIFICATION_COLLECTION = "notifications"
+PLACE_COLLECTION = "places"
+PORT_SCAN_COLLECTION = "port_scans"
+REPORT_COLLECTION = "reports"
+REQUEST_COLLECTION = "requests"
+SCORECARD_COLLECTION = "scorecards"
+SNAPSHOT_COLLECTION = "snapshots"
+SYSTEM_CONTROL_COLLECTION = "control"
+TALLY_COLLECTION = "tallies"
+TICKET_COLLECTION = "tickets"
+VULN_SCAN_COLLECTION = "vuln_scans"
+
 CONTROL_DOC_POLL_INTERVAL = 5  # seconds
 
 
