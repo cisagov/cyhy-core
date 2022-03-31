@@ -50,11 +50,11 @@ def parse_json(db, json_stream):
     # Gather all the cveIDs from the JSON file
     all_cve_ids = set()
     for i in data.get("vulnerabilities"):
-        cveID = i.get("cveID")
-        if not cveID:
+        cve_id = i.get("cveID")
+        if not cve_id:
             raise ValueError("JSON does not look like valid CISA KEV data.")
         else:
-            all_cve_ids.add(cveID)
+            all_cve_ids.add(cve_id)
 
     # Insert a KEV document for each CVE
     for cve in all_cve_ids:
