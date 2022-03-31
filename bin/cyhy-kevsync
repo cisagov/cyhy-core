@@ -3,8 +3,7 @@
 """Parse KEV (Known Exploited Vulnerabilities) JSON file and save to database.
 
 Usage:
-  cyhy-kevsync [--section SECTION]
-  cyhy-kevsync [--section SECTION] --local-file <json-file>
+  cyhy-kevsync [--section SECTION] [--local-file <json-file>]
   cyhy-kevsync (-h | --help)
   cyhy-kevsync --version
 
