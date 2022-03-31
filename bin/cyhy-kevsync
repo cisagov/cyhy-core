@@ -18,8 +18,8 @@ Options:
 
 # standard python libraries
 import json
-import urllib
 from StringIO import StringIO
+import urllib
 
 # third-party libraries (install with pip)
 from docopt import docopt
