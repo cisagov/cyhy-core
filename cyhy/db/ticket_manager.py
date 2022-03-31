@@ -250,8 +250,8 @@ class VulnTicketManager(object):
         new_ticket.save()
         self.__mark_seen(new_ticket)
 
-        # Create notifications for Highs (3) or Criticals (4)
-        if new_ticket["details"]["severity"] > 2:
+        # Create notifications for Highs (3) or Criticals (4) or if KEV is true
+        if new_ticket["details"]["severity"] > 2 or new_ticket["details"]["kev"]:
             self.__create_notification(new_ticket)
 
     def close_tickets(self):
