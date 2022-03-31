@@ -46,6 +46,7 @@ def remove_outdated(db, imported_cves):
 
 def parse_json(db, json_stream):
     data = json.load(json_stream)
+    json_stream.close()
 
     # Gather all the cveIDs from the JSON file
     all_cve_ids = set()
