@@ -49,7 +49,7 @@ def parse_json(db, json_stream):
 
     # Gather all the cveIDs from the JSON file
     all_cve_ids = set()
-    for i in data.get("vulnerabilities"):
+    for i in data["vulnerabilities"]:
         cve_id = i.get("cveID")
         if not cve_id:
             raise ValueError("JSON does not look like valid CISA KEV data.")
