@@ -88,23 +88,29 @@ class VulnTicketManager(object):
                 ticket["events"].append(event)
 
     def __generate_ticket_details(self, vuln, ticket, check_for_changes=True):
-        """generates the contents of the ticket's details field using NVD data.
+        """Generates the contents of the ticket's details field using NVD data.
         if check_for_changes is True, it will detect changes in the details,
         and generate a CHANGED event."""
         new_details = {
             "cve": vuln.get("cve"),
             "cvss_base_score": vuln["cvss_base_score"],
+            "kev": False,
             "name": vuln["plugin_name"],
             "score_source": vuln["source"],
             "severity": vuln["severity"],
         }
 
         if "cve" in vuln:
+            # if we have a CVE, we can try to get the details from the NVD
             cve_doc = self.__db.CVEDoc.find_one({"_id": vuln["cve"]})
             if cve_doc:
                 new_details["cvss_base_score"] = cve_doc["cvss_score"]
                 new_details["score_source"] = "nvd"
                 new_details["severity"] = cve_doc["severity"]
+            # if the CVE is listed in the KEV collection, we'll mark it as such
+            kev_doc = self.__db.KEVDoc.find_one({"_id": vuln["cve"]})
+            if kev_doc:
+                new_details["kev"] = True
 
         if check_for_changes:
             delta = self.__calculate_delta(ticket["details"], new_details)
