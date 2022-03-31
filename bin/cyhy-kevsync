@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+"""Parse KEV (Known Exploited Vulnerabilities) JSON file and save to database.
+
+Usage:
+  cyhy-kevsync [--section SECTION] [--local-file <json-file>]
+  cyhy-kevsync (-h | --help)
+  cyhy-kevsync --version
+
+Options:
+  -h --help                      Show this screen.
+  -f --local-file                Import KEV data from a local file.
+  --version                      Show version.
+  -s SECTION --section=SECTION   Configuration section to use.
+
+"""
+
+# standard python libraries
+import json
+from StringIO import StringIO
+import urllib
+
+# third-party libraries (install with pip)
+from docopt import docopt
+
+# intra-project modules
+from cyhy.db import database
+from cyhy.util import util
+
+KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+
+
+def remove_outdated(db, imported_cves):
+    # Find KEV CVEs in DB that were NOT imported just now
+    outdated_kevs = db.KEVDoc.find({"_id": {"$nin": imported_cves}})
+    outdated_cves = [i["_id"] for i in outdated_kevs]
+
+    if outdated_cves:
+        # Remove outdated CVEs from KEV collection
+        db.KEVDoc.collection.remove({"_id": {"$in": outdated_cves}})
+
+        print("The following CVEs were removed from the KEV collection:")
+        print("\n".join(outdated_cves))
+
+
+def parse_json(db, json_stream):
+    data = json.load(json_stream)
+    json_stream.close()
+
+    # Gather all the cveIDs from the JSON file
+    all_cve_ids = set()
+    for i in data["vulnerabilities"]:
+        cve_id = i.get("cveID")
+        if not cve_id:
+            raise ValueError("JSON does not look like valid CISA KEV data.")
+        else:
+            all_cve_ids.add(cve_id)
+
+    # Insert a KEV document for each CVE
+    for cve in all_cve_ids:
+        entry_doc = db.KEVDoc({"_id": cve})
+        entry_doc.save(safe=False)
+
+    print("Imported %d KEV entries." % len(all_cve_ids))
+    if data.get("count"):
+        if data["count"] != len(all_cve_ids):
+            print(
+                "WARNING: KEV JSON file 'count' (%d) differs from number of records in file (%d)."
+                % (data.get("count"), len(all_cve_ids))
+            )
+    else:
+        print("WARNING: KEV JSON file is missing 'count' field.")
+
+    return list(all_cve_ids)
+
+
+def process_file(db, filename):
+    stream = open(filename, "r")
+    return parse_json(db, stream)
+
+
+def process_url(db, url):
+    socket = urllib.urlopen(url)
+    buf = StringIO(socket.read())
+    return parse_json(db, buf)
+
+
+def main():
+    args = docopt(__doc__, version="v0.0.1")
+
+    db = database.db_from_config(args["--section"])
+
+    if args["--local-file"]:
+        imported_cves = process_file(db, args["<json-file>"])
+    else:
+        imported_cves = process_url(db, KEV_URL)
+
+    if imported_cves:
+        remove_outdated(db, imported_cves)
+
+
+if __name__ == "__main__":
+    main()

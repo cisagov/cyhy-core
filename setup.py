@@ -15,6 +15,7 @@ setup(
         "bin/cyhy-geoip",
         "bin/cyhy-import",
         "bin/cyhy-ip",
+        "bin/cyhy-kevsync",
         "bin/cyhy-mongo",
         "bin/cyhy-nvdsync",
         "bin/cyhy-sched",
