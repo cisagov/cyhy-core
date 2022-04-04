@@ -88,9 +88,10 @@ class VulnTicketManager(object):
                 ticket["events"].append(event)
 
     def __generate_ticket_details(self, vuln, ticket, check_for_changes=True):
-        """generates the contents of the ticket's details field using NVD data.
+        """Generates the contents of the ticket's details field using NVD data.
         if check_for_changes is True, it will detect changes in the details,
-        and generate a CHANGED event."""
+        and generate a CHANGED event.  If a delta is generated, it will be
+        returned.  If no delta is generated, an empty list is returned."""
         new_details = {
             "cve": vuln.get("cve"),
             "score_source": vuln["source"],
@@ -106,6 +107,7 @@ class VulnTicketManager(object):
                 new_details["cvss_base_score"] = cve_doc["cvss_score"]
                 new_details["severity"] = cve_doc["severity"]
 
+        delta = []
         if check_for_changes:
             delta = self.__calculate_delta(ticket["details"], new_details)
             if delta:
@@ -121,6 +123,7 @@ class VulnTicketManager(object):
                 ticket["events"].append(event)
 
         ticket["details"] = new_details
+        return delta
 
     def __create_notification(self, ticket):
         """Create a notification from a ticket and save it in the database."""
