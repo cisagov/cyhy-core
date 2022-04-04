@@ -154,7 +154,7 @@ class VulnTicketManager(object):
             }
         )
         if prev_open_ticket:
-            self.__generate_ticket_details(vuln, prev_open_ticket)
+            delta = self.__generate_ticket_details(vuln, prev_open_ticket)
             self.__check_false_positive_expiration(
                 prev_open_ticket, vuln["time"].replace(tzinfo=tz.tzutc())
             )  # explicitly set to UTC (see CYHY-286)
@@ -170,6 +170,20 @@ class VulnTicketManager(object):
             prev_open_ticket["events"].append(event)
             prev_open_ticket.save()
             self.__mark_seen(prev_open_ticket)
+
+            # Create a notification for non-false positive tickets if:
+            # - Severity delta goes from less than 3 (High) to 3 or greater
+            # - KEV delta goes from False to True
+            if not prev_open_ticket.get("false_positive"):
+                for d in delta:
+                    if d["key"] == "severity":
+                        if d["from"] < 3 and d["to"] >= 3:
+                            self.__create_notification(prev_open_ticket)
+                            break
+                    if d["key"] == "kev":
+                        if d["from"] is False and d["to"] is True:
+                            self.__create_notification(prev_open_ticket)
+                            break
             return
 
         # no matching tickets are currently open
@@ -188,7 +202,7 @@ class VulnTicketManager(object):
         )
 
         if reopen_ticket:
-            self.__generate_ticket_details(vuln, reopen_ticket)
+            delta = self.__generate_ticket_details(vuln, reopen_ticket)
             event = {
                 "time": vuln["time"],
                 "action": TICKET_EVENT.REOPENED,
@@ -202,6 +216,19 @@ class VulnTicketManager(object):
             reopen_ticket["open"] = True
             reopen_ticket.save()
             self.__mark_seen(reopen_ticket)
+
+            # Create a notification if:
+            # - Severity delta goes from less than 3 (High) to 3 or greater
+            # - KEV delta goes from False to True
+            for d in delta:
+                if d["key"] == "severity":
+                    if d["from"] < 3 and d["to"] >= 3:
+                        self.__create_notification(reopen_ticket)
+                        break
+                if d["key"] == "kev":
+                    if d["from"] is False and d["to"] is True:
+                        self.__create_notification(reopen_ticket)
+                        break
             return
 
         # time to open a new ticket
