@@ -88,8 +88,9 @@ class VulnTicketManager(object):
                 ticket["events"].append(event)
 
     def __generate_ticket_details(self, vuln, ticket, check_for_changes=True):
-        """Generates the contents of the ticket's details field using NVD data.
-        if check_for_changes is True, it will detect changes in the details,
+        """Generate the contents of the ticket's details field using NVD data.
+
+        If check_for_changes is True, it will detect changes in the details,
         and generate a CHANGED event."""
         new_details = {
             "cve": vuln.get("cve"),
@@ -250,7 +251,7 @@ class VulnTicketManager(object):
         new_ticket.save()
         self.__mark_seen(new_ticket)
 
-        # Create notifications for Highs (3) or Criticals (4) or if KEV is true
+        # Create notifications for Highs (3) or Criticals (4), or if KEV is true
         if new_ticket["details"]["severity"] > 2 or new_ticket["details"]["kev"]:
             self.__create_notification(new_ticket)
 
@@ -583,7 +584,7 @@ class IPPortTicketManager(object):
 
 
 class IPTicketManager(object):
-    """Handles the closing of tickets for a host scan (NETSCAN)"""
+    """Handle the closing of tickets for a host scan (NETSCAN)."""
 
     def __init__(self, db):
         self.__db = db
