@@ -270,7 +270,7 @@ def max_severity_for_host(ip_int):
 
 
 def kev_count_for_host(ip_int):
-    """Return the number of open tickets that have kev set to true in its details."""
+    """Return the number of open tickets that have kev set to true in their details."""
     return (
         [
             {"$match": {"ip_int": ip_int, "open": True, "source": "nessus"}},

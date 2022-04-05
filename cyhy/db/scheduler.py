@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from cyhy.core.common import *
-from cyhy.db.queries import max_severity_for_host, kev_count_for_host
+from cyhy.db.queries import kev_count_for_host, max_severity_for_host
 from cyhy.db import database
 from cyhy.util import util
 
