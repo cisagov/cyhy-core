@@ -162,7 +162,11 @@ Notes:
 
 ## Manual installation ##
 
-Required third party libraries can be installed using: `pip install -r requirements.txt`
+Required third party libraries can be installed using:
+
+```console
+pip install --requirement requirements.txt
+```
 
 Required configurations:
 The commander will read `/etc/cyhy/commander.conf`
