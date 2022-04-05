@@ -55,12 +55,12 @@ parameters to commands, or relative paths that reference parent directories,
 e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the
 current working directory, or a subdirectory.
 
-| Do this?        | Command                                   | Reason  |
-| ------------- |---------------------------------------------| --------|
-| Yes           | `cyhy-import NASA.json`                     | parameter file is in the current directory |
-| Yes           | `cyhy-import space_agencies/NASA.json`      | parameter file is in a sub-directory |
-| NO!           | `cyhy-import ../WH.json`                    | parameter file is in a parent directory |
-| NO!           | `cyhy-import /tmp/SPACE_FORCE.json`         | parameter file is an absolute path |
+| Do this? | Command | Reason |
+| -------- | ------- | ------ |
+| Yes | `cyhy-import NASA.json` | parameter file is in the current directory |
+| Yes | `cyhy-import space_agencies/NASA.json` | parameter file is in a sub-directory |
+| NO! | `cyhy-import ../WH.json` | parameter file is in a parent directory |
+| NO! | `cyhy-import /tmp/SPACE_FORCE.json` | parameter file is an absolute path |
 
 ### Advanced configuration ###
 
