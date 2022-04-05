@@ -4,7 +4,7 @@ This project contains the core libraries and executables for the CISA Cyber
 Hygiene program.  It coordinates the multiple scanners and allows the creation
 of pretty reports.
 
-## CyHy Configuration ##
+## CyHy configuration ##
 
 The `cyhy-core` library requires a configuration be created.  The default
 location for this file is `/etc/cyhy/cyhy.conf`.  An example configuration is
@@ -30,7 +30,7 @@ database-uri = mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@database1:27017/cyhy
 database-name = cyhy
 ```
 
-## Using CyHy Commands with Docker ##
+## Using CyHy commands with Docker ##
 
 The CyHy commands implemented in the docker container can be aliased into the
 host environment by using the procedure below.
@@ -47,7 +47,7 @@ To run a CyHy command:
 cyhy-tool status NASA
 ```
 
-### Caveats, and Gotchas ###
+### Caveats and gotchas ###
 
 Whenever an aliased CyHy command is executed, it will use the current working
 directory as its home volume.  This limits your ability to use absolute paths as
@@ -160,7 +160,7 @@ Notes:
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env --image-tag testing
 ```
 
-## Manual Installation ##
+## Manual installation ##
 
 Required third party libraries can be installed using: `pip install -r requirements.txt`
 
@@ -173,7 +173,7 @@ The geolocation database is not included in the source tree due to size and
 licensing.  Please cd into the `var` directory and run the `get-geo-db.sh`
 script to get the latest database.
 
-## Development Installation ##
+## Development installation ##
 
 If you are developing the source the following installation will allow in place
 editing with live updates to the libraries, and command line utilities.
