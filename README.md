@@ -1,16 +1,16 @@
-# CISA: Cyber Hygiene Core Libraries
+# CISA: Cyber Hygiene Core Libraries #
 
 This project contains the core libraries and executables for the CISA Cyber
 Hygiene program.  It coordinates the multiple scanners and allows the creation
 of pretty reports.
 
-## CyHy Configuration
+## CyHy configuration ##
 
 The `cyhy-core` library requires a configuration be created.  The default
 location for this file is `/etc/cyhy/cyhy.conf`.  An example configuration is
 below.
 
-### `/etc/cyhy/cyhy.conf`
+### `/etc/cyhy/cyhy.conf` ###
 
 ```ini
 [DEFAULT]
@@ -30,7 +30,7 @@ database-uri = mongodb://<MONGO_USERNAME>:<MONGO_PASSWORD>@database1:27017/cyhy
 database-name = cyhy
 ```
 
-## Using CyHy Commands with Docker
+## Using CyHy commands with Docker ##
 
 The CyHy commands implemented in the docker container can be aliased into the
 host environment by using the procedure below.
@@ -47,7 +47,7 @@ To run a CyHy command:
 cyhy-tool status NASA
 ```
 
-### Caveats, and Gotchas
+### Caveats and gotchas ###
 
 Whenever an aliased CyHy command is executed, it will use the current working
 directory as its home volume.  This limits your ability to use absolute paths as
@@ -55,14 +55,14 @@ parameters to commands, or relative paths that reference parent directories,
 e.g.; `../foo`.  That means all path parameters to a CyHy command must be in the
 current working directory, or a subdirectory.
 
-| Do this?        | Command                                   | Reason  |
-| ------------- |---------------------------------------------| --------|
-| Yes           | `cyhy-import NASA.json`                     | parameter file is in the current directory |
-| Yes           | `cyhy-import space_agencies/NASA.json`      | parameter file is in a sub-directory |
-| NO!           | `cyhy-import ../WH.json`                    | parameter file is in a parent directory |
-| NO!           | `cyhy-import /tmp/SPACE_FORCE.json`         | parameter file is an absolute path |
+| Do this? | Command | Reason |
+| -------- | ------- | ------ |
+| Yes | `cyhy-import NASA.json` | parameter file is in the current directory |
+| Yes | `cyhy-import space_agencies/NASA.json` | parameter file is in a sub-directory |
+| NO! | `cyhy-import ../WH.json` | parameter file is in a parent directory |
+| NO! | `cyhy-import /tmp/SPACE_FORCE.json` | parameter file is an absolute path |
 
-### Advanced configuration
+### Advanced configuration ###
 
 By default, the container will look for your CyHy configurations in `/etc/cyhy`.
 This location can be changed by setting the `CYHY_CONF_DIR` environment variable
@@ -77,7 +77,7 @@ export CYHY_CONF_DIR=/private/etc/cyhy
 export CYHY_CORE_IMAGE=cisagov/cyhy-core
 ```
 
-### Building the cyhy-core container
+### Building the cyhy-core container ###
 
 If you want to include a MaxMind GeoIP2 database in the docker image you must
 provide a key and optionally the type of key to Docker. The default type is
@@ -86,20 +86,20 @@ provide a key and optionally the type of key to Docker. The default type is
 
 The following commands show how to build the Docker container for cyhy-core.
 
-#### No MaxMind license
+#### No MaxMind license ####
 
 ```console
 docker build --tag cisagov/cyhy-core .
 ```
 
-#### MaxMind GeoLite2 license
+#### MaxMind GeoLite2 license ####
 
 ```console
 docker build --tag cisagov/cyhy-core \
              --build-arg maxmind_license_key=<license key> .
 ```
 
-#### MaxMind GeoIP2 license
+#### MaxMind GeoIP2 license ####
 
 ```console
 docker build --tag cisagov/cyhy-core \
@@ -110,7 +110,7 @@ docker build --tag cisagov/cyhy-core \
 **WARNING: Be careful- you really don't want to push a Docker image to the
 public Docker Hub if it was built with your MaxMind license key!**
 
-### Building a cyhy-core image for distribution
+### Building a cyhy-core image for distribution ###
 
 The helper script `generate_cyhy_docker_image.sh` can be used to automate
 building and saving a Docker image.
@@ -130,39 +130,43 @@ Notes:
 - Requires Docker and optionally the AWS CLI to run.
 ```
 
-#### Use default name and tag with MaxMind license key from AWS
+#### Use default name and tag with MaxMind license key from AWS ####
 
 ```console
 ./generate_cyhy_docker_image.sh
 ```
 
-#### Use default name and tag with a provided MaxMind license key
+#### Use default name and tag with a provided MaxMind license key ####
 
 ```console
 ./generate_cyhy_docker_image.sh --maxmind-key <license key>
 ```
 
-#### Use specified name and default tag
+#### Use specified name and default tag ####
 
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env
 ```
 
-#### Use default name and specified tag
+#### Use default name and specified tag ####
 
 ```console
 ./generate_cyhy_docker_image.sh  --image-tag testing
 ```
 
-#### Use specified name and tag
+#### Use specified name and tag ####
 
 ```console
 ./generate_cyhy_docker_image.sh --image-name cisagov/cyhy-env --image-tag testing
 ```
 
-## Manual Installation
+## Manual installation ##
 
-Required third party libraries can be installed using: `pip install -r requirements.txt`
+Required third party libraries can be installed using:
+
+```console
+pip install --requirement requirements.txt
+```
 
 Required configurations:
 The commander will read `/etc/cyhy/commander.conf`
@@ -173,7 +177,7 @@ The geolocation database is not included in the source tree due to size and
 licensing.  Please cd into the `var` directory and run the `get-geo-db.sh`
 script to get the latest database.
 
-## Development Installation
+## Development installation ##
 
 If you are developing the source the following installation will allow in place
 editing with live updates to the libraries, and command line utilities.
