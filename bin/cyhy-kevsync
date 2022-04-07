@@ -17,6 +17,7 @@ Options:
 
 # standard python libraries
 import json
+import logging
 from StringIO import StringIO
 import urllib
 
@@ -86,17 +87,20 @@ def process_url(db, url):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    try:
+        args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args["--section"])
+        db = database.db_from_config(args["--section"])
 
-    if args["--local-file"]:
-        imported_cves = process_file(db, args["<json-file>"])
-    else:
-        imported_cves = process_url(db, KEV_URL)
+        if args["--local-file"]:
+            imported_cves = process_file(db, args["<json-file>"])
+        else:
+            imported_cves = process_url(db, KEV_URL)
 
-    if imported_cves:
-        remove_outdated(db, imported_cves)
+        if imported_cves:
+            remove_outdated(db, imported_cves)
+    except:
+        logging.exception("Unexpected exception")
 
 
 if __name__ == "__main__":
