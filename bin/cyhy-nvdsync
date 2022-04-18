@@ -20,6 +20,7 @@ Options:
 # standard python libraries
 import gzip
 import json
+import logging
 import urllib
 from StringIO import StringIO
 
@@ -77,19 +78,22 @@ def generate_urls():
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    try:
+        args = docopt(__doc__, version="v0.0.1")
 
-    db = database.db_from_config(args["--section"])
+        db = database.db_from_config(args["--section"])
 
-    if args["--use-network"]:
-        urls = generate_urls()
-        for url in urls:
-            print "-" * 10, url, "-" * 10
-            process_url(db, url)
-    else:
-        for filename in args["<file>"]:
-            print "-" * 10, filename, "-" * 10
-            process_file(db, filename, gzipped=args["--gzipped"])
+        if args["--use-network"]:
+            urls = generate_urls()
+            for url in urls:
+                print "-" * 10, url, "-" * 10
+                process_url(db, url)
+        else:
+            for filename in args["<file>"]:
+                print "-" * 10, filename, "-" * 10
+                process_file(db, filename, gzipped=args["--gzipped"])
+    except:
+        logging.exception("Unexpected exception")
 
 
 if __name__ == "__main__":
