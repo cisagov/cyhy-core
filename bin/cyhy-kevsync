@@ -26,7 +26,6 @@ from docopt import docopt
 
 # intra-project modules
 from cyhy.db import database
-from cyhy.util import util
 
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
