@@ -26,7 +26,6 @@ from docopt import docopt
 
 # intra-project modules
 from cyhy.db import database
-from cyhy.util import util
 
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
@@ -87,9 +86,10 @@ def process_url(db, url):
 
 
 def main():
+    # Since docopt can generate SystemExit and DocoptExit exceptions
+    # in certain normal use cases, we exclude it from our try clause.
+    args = docopt(__doc__, version="v0.0.1")
     try:
-        args = docopt(__doc__, version="v0.0.1")
-
         db = database.db_from_config(args["--section"])
 
         if args["--local-file"]:

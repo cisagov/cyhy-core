@@ -269,6 +269,18 @@ def max_severity_for_host(ip_int):
     )
 
 
+def kev_count_for_host(ip_int):
+    """Return the number of open tickets that have kev set to true in their details."""
+    return (
+        [
+            {"$match": {"ip_int": ip_int, "open": True, "source": "nessus"}},
+            {"$match": {"details.kev": True}},
+            {"$group": {"_id": {}, "kev_count": {"$sum": 1}}},
+        ],
+        database.TICKET_COLLECTION,
+    )
+
+
 def false_positives_pl(snapshot_oid):
     return (
         [

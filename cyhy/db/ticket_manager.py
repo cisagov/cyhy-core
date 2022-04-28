@@ -17,15 +17,15 @@ class VulnTicketManager(object):
     """Handles the opening and closing of tickets for a vulnerability scan"""
 
     def __init__(self, db, source, reopen_days=90, manual_scan=False):
+        self.__closing_time = None
         self.__db = db
         self.__ips = IPSet()
-        self.__ports = set()
-        self.__source_ids = set()
-        self.__source = source
-        self.__seen_ticket_ids = set()
-        self.__closing_time = None
-        self.__reopen_delta = relativedelta.relativedelta(days=-reopen_days)
         self.__manual_scan = manual_scan
+        self.__ports = set()
+        self.__reopen_delta = relativedelta.relativedelta(days=-reopen_days)
+        self.__seen_ticket_ids = set()
+        self.__source = source
+        self.__source_ids = set()
 
     @property
     def ips(self):
@@ -77,50 +77,61 @@ class VulnTicketManager(object):
             if fp_expiration_date < time:
                 ticket["false_positive"] = False
                 event = {
-                    "time": time,
                     "action": TICKET_EVENT.CHANGED,
+                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
                     "reason": "False positive expired",
                     "reference": None,
-                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
+                    "time": time,
                 }
                 if self.__manual_scan:
                     event["manual"] = True
                 ticket["events"].append(event)
 
     def __generate_ticket_details(self, vuln, ticket, check_for_changes=True):
-        """generates the contents of the ticket's details field using NVD data.
-        if check_for_changes is True, it will detect changes in the details,
-        and generate a CHANGED event."""
+        """Generate the contents of the ticket's details field using NVD data.
+
+        If check_for_changes is True, it will detect changes in the details,
+        and generate a CHANGED event.  If a delta is generated, it will be
+        returned.  If no delta is generated, an empty list is returned."""
+
         new_details = {
             "cve": vuln.get("cve"),
-            "score_source": vuln["source"],
             "cvss_base_score": vuln["cvss_base_score"],
-            "severity": vuln["severity"],
+            "kev": False,
             "name": vuln["plugin_name"],
+            "score_source": vuln["source"],
+            "severity": vuln["severity"],
         }
 
         if "cve" in vuln:
+            # if we have a CVE, we can try to get the details from the NVD
             cve_doc = self.__db.CVEDoc.find_one({"_id": vuln["cve"]})
             if cve_doc:
-                new_details["score_source"] = "nvd"
                 new_details["cvss_base_score"] = cve_doc["cvss_score"]
+                new_details["score_source"] = "nvd"
                 new_details["severity"] = cve_doc["severity"]
+            # if the CVE is listed in the KEV collection, we'll mark it as such
+            kev_doc = self.__db.KEVDoc.find_one({"_id": vuln["cve"]})
+            if kev_doc:
+                new_details["kev"] = True
 
+        delta = []
         if check_for_changes:
             delta = self.__calculate_delta(ticket["details"], new_details)
             if delta:
                 event = {
-                    "time": vuln["time"],
                     "action": TICKET_EVENT.CHANGED,
+                    "delta": delta,
                     "reason": "details changed",
                     "reference": vuln["_id"],
-                    "delta": delta,
+                    "time": vuln["time"],
                 }
                 if self.__manual_scan:
                     event["manual"] = True
                 ticket["events"].append(event)
 
         ticket["details"] = new_details
+        return delta
 
     def __create_notification(self, ticket):
         """Create a notification from a ticket and save it in the database."""
@@ -143,30 +154,44 @@ class VulnTicketManager(object):
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "open": True,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
-                "source": vuln["source"],
                 "source_id": vuln["plugin_id"],
-                "open": True,
+                "source": vuln["source"],
             }
         )
         if prev_open_ticket:
-            self.__generate_ticket_details(vuln, prev_open_ticket)
+            delta = self.__generate_ticket_details(vuln, prev_open_ticket)
             self.__check_false_positive_expiration(
                 prev_open_ticket, vuln["time"].replace(tzinfo=tz.tzutc())
             )  # explicitly set to UTC (see CYHY-286)
             # add an entry to the existing open ticket
             event = {
-                "time": vuln["time"],
                 "action": TICKET_EVENT.VERIFIED,
                 "reason": reason,
                 "reference": vuln["_id"],
+                "time": vuln["time"],
             }
             if self.__manual_scan:
                 event["manual"] = True
             prev_open_ticket["events"].append(event)
             prev_open_ticket.save()
             self.__mark_seen(prev_open_ticket)
+
+            # Create a notification for non-false positive tickets if:
+            # - Severity delta goes from less than 3 (High) to 3 or greater
+            # - KEV delta goes from False to True
+            if not prev_open_ticket.get("false_positive"):
+                for d in delta:
+                    if d["key"] == "severity":
+                        if d["from"] < 3 and d["to"] >= 3:
+                            self.__create_notification(prev_open_ticket)
+                            break
+                    if d["key"] == "kev":
+                        if d["from"] is False and d["to"] is True:
+                            self.__create_notification(prev_open_ticket)
+                            break
             return
 
         # no matching tickets are currently open
@@ -175,40 +200,53 @@ class VulnTicketManager(object):
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "open": False,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
-                "source": vuln["source"],
                 "source_id": vuln["plugin_id"],
-                "open": False,
+                "source": vuln["source"],
                 "time_closed": {"$gt": cutoff_date},
             }
         )
 
         if reopen_ticket:
-            self.__generate_ticket_details(vuln, reopen_ticket)
+            delta = self.__generate_ticket_details(vuln, reopen_ticket)
             event = {
-                "time": vuln["time"],
                 "action": TICKET_EVENT.REOPENED,
                 "reason": reason,
                 "reference": vuln["_id"],
+                "time": vuln["time"],
             }
             if self.__manual_scan:
                 event["manual"] = True
             reopen_ticket["events"].append(event)
-            reopen_ticket["time_closed"] = None
             reopen_ticket["open"] = True
+            reopen_ticket["time_closed"] = None
             reopen_ticket.save()
             self.__mark_seen(reopen_ticket)
+
+            # Create a notification if:
+            # - Severity delta goes from less than 3 (High) to 3 or greater
+            # - KEV delta goes from False to True
+            for d in delta:
+                if d["key"] == "severity":
+                    if d["from"] < 3 and d["to"] >= 3:
+                        self.__create_notification(reopen_ticket)
+                        break
+                if d["key"] == "kev":
+                    if d["from"] is False and d["to"] is True:
+                        self.__create_notification(reopen_ticket)
+                        break
             return
 
         # time to open a new ticket
         new_ticket = self.__db.TicketDoc()
         new_ticket.ip = vuln["ip"]
+        new_ticket["owner"] = vuln["owner"]
         new_ticket["port"] = vuln["port"]
         new_ticket["protocol"] = vuln["protocol"]
-        new_ticket["source"] = vuln["source"]
         new_ticket["source_id"] = vuln["plugin_id"]
-        new_ticket["owner"] = vuln["owner"]
+        new_ticket["source"] = vuln["source"]
         new_ticket["time_opened"] = vuln["time"]
         self.__generate_ticket_details(vuln, new_ticket, check_for_changes=False)
 
@@ -217,10 +255,10 @@ class VulnTicketManager(object):
             new_ticket["loc"] = host["loc"]
 
         event = {
-            "time": vuln["time"],
             "action": TICKET_EVENT.OPENED,
             "reason": reason,
             "reference": vuln["_id"],
+            "time": vuln["time"],
         }
         if self.__manual_scan:
             event["manual"] = True
@@ -230,10 +268,10 @@ class VulnTicketManager(object):
             new_ticket["owner"] == UNKNOWN_OWNER
         ):  # close tickets with no owner immediately
             event = {
-                "time": vuln["time"],
                 "action": TICKET_EVENT.CLOSED,
                 "reason": "No associated owner",
                 "reference": None,
+                "time": vuln["time"],
             }
             if self.__manual_scan:
                 event["manual"] = True
@@ -244,8 +282,8 @@ class VulnTicketManager(object):
         new_ticket.save()
         self.__mark_seen(new_ticket)
 
-        # Create notifications for Highs (3) or Criticals (4)
-        if new_ticket["details"]["severity"] > 2:
+        # Create notifications for Highs (3) or Criticals (4), or if KEV is true
+        if new_ticket["details"]["severity"] > 2 or new_ticket["details"]["kev"]:
             self.__create_notification(new_ticket)
 
     def close_tickets(self):
@@ -284,19 +322,19 @@ class VulnTicketManager(object):
             )  # explicitly set to UTC (see CYHY-286)
             if ticket["false_positive"] is True:
                 event = {
-                    "time": self.__closing_time,
                     "action": TICKET_EVENT.UNVERIFIED,
                     "reason": reason,
                     "reference": None,
+                    "time": self.__closing_time,
                 }
             else:
                 ticket["open"] = False
                 ticket["time_closed"] = self.__closing_time
                 event = {
-                    "time": self.__closing_time,
                     "action": TICKET_EVENT.CLOSED,
                     "reason": reason,
                     "reference": None,
+                    "time": self.__closing_time,
                 }
             if self.__manual_scan:
                 event["manual"] = True
@@ -360,11 +398,11 @@ class IPPortTicketManager(object):
             if fp_expiration_date < closing_time:
                 ticket["false_positive"] = False
                 event = {
-                    "time": closing_time,
                     "action": TICKET_EVENT.CHANGED,
+                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
                     "reason": "False positive expired",
                     "reference": None,
-                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
+                    "time": closing_time,
                 }
                 ticket["events"].append(event)
 
@@ -376,19 +414,19 @@ class IPPortTicketManager(object):
         )  # explicitly set to UTC (see CYHY-286)
         if ticket["false_positive"] is True:
             event = {
-                "time": closing_time,
                 "action": TICKET_EVENT.UNVERIFIED,
                 "reason": reason,
                 "reference": None,
+                "time": closing_time,
             }
         else:
             ticket["open"] = False
             ticket["time_closed"] = closing_time
             event = {
-                "time": closing_time,
                 "action": TICKET_EVENT.CLOSED,
                 "reason": reason,
                 "reference": None,
+                "time": closing_time,
             }
         ticket["events"].append(event)
         ticket.save()
@@ -414,11 +452,11 @@ class IPPortTicketManager(object):
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": portscan["ip_int"],
+                "open": True,
                 "port": portscan["port"],
                 "protocol": portscan["protocol"],
-                "source": portscan["source"],
                 "source_id": portscan["source_id"],
-                "open": True,
+                "source": portscan["source"],
             }
         )
         if prev_open_ticket:
@@ -427,10 +465,10 @@ class IPPortTicketManager(object):
             )  # explicitly set to UTC (see CYHY-286)
             # add an entry to the existing open ticket
             event = {
-                "time": portscan["time"],
                 "action": TICKET_EVENT.VERIFIED,
                 "reason": reason,
                 "reference": portscan["_id"],
+                "time": portscan["time"],
             }
             prev_open_ticket["events"].append(event)
             prev_open_ticket.save()
@@ -442,21 +480,21 @@ class IPPortTicketManager(object):
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": portscan["ip_int"],
+                "open": False,
                 "port": portscan["port"],
                 "protocol": portscan["protocol"],
-                "source": portscan["source"],
                 "source_id": portscan["source_id"],
-                "open": False,
+                "source": portscan["source"],
                 "time_closed": {"$gt": cutoff_date},
             }
         )
 
         if reopen_ticket:
             event = {
-                "time": portscan["time"],
                 "action": TICKET_EVENT.REOPENED,
                 "reason": reason,
                 "reference": portscan["_id"],
+                "time": portscan["time"],
             }
             reopen_ticket["events"].append(event)
             reopen_ticket["time_closed"] = None
@@ -467,30 +505,30 @@ class IPPortTicketManager(object):
         # time to open a new ticket
         new_ticket = self.__db.TicketDoc()
         new_ticket.ip = portscan["ip"]
-        new_ticket["port"] = portscan["port"]
-        new_ticket["protocol"] = portscan["protocol"]
-        new_ticket["source"] = portscan["source"]
-        new_ticket["source_id"] = portscan["source_id"]
-        new_ticket["owner"] = portscan["owner"]
-        new_ticket["time_opened"] = portscan["time"]
         new_ticket["details"] = {
             "cve": None,
-            "score_source": None,
             "cvss_base_score": None,
-            "severity": 0,
             "name": portscan["name"],
+            "score_source": None,
             "service": portscan["service"],
+            "severity": 0,
         }
+        new_ticket["owner"] = portscan["owner"]
+        new_ticket["port"] = portscan["port"]
+        new_ticket["protocol"] = portscan["protocol"]
+        new_ticket["source_id"] = portscan["source_id"]
+        new_ticket["source"] = portscan["source"]
+        new_ticket["time_opened"] = portscan["time"]
 
         host = self.__db.HostDoc.get_by_ip(portscan["ip"])
         if host is not None:
             new_ticket["loc"] = host["loc"]
 
         event = {
-            "time": portscan["time"],
             "action": TICKET_EVENT.OPENED,
             "reason": reason,
             "reference": portscan["_id"],
+            "time": portscan["time"],
         }
         new_ticket["events"].append(event)
 
@@ -498,10 +536,10 @@ class IPPortTicketManager(object):
             new_ticket["owner"] == UNKNOWN_OWNER
         ):  # close tickets with no owner immediately
             event = {
-                "time": portscan["time"],
                 "action": TICKET_EVENT.CLOSED,
                 "reason": "No associated owner",
                 "reference": None,
+                "time": portscan["time"],
             }
             new_ticket["events"].append(event)
             new_ticket["open"] = False
@@ -539,9 +577,9 @@ class IPPortTicketManager(object):
             tickets = self.__db.TicketDoc.find(
                 {
                     "ip_int": {"$in": ip_ints},
+                    "open": True,
                     "port": {"$ne": 0},
                     "protocol": {"$in": list(self.__protocols)},
-                    "open": True,
                 }
             )
         else:
@@ -549,9 +587,9 @@ class IPPortTicketManager(object):
             tickets = self.__db.TicketDoc.find(
                 {
                     "ip_int": {"$in": ip_ints},
+                    "open": True,
                     "port": {"$in": list(self.__ports)},
                     "protocol": {"$in": list(self.__protocols)},
-                    "open": True,
                 }
             )
 
@@ -577,7 +615,7 @@ class IPPortTicketManager(object):
 
 
 class IPTicketManager(object):
-    """Handles the closing of tickets for a host scan (NETSCAN) """
+    """Handle the closing of tickets for a host scan (NETSCAN)."""
 
     def __init__(self, db):
         self.__db = db
@@ -603,11 +641,11 @@ class IPTicketManager(object):
             if fp_expiration_date < closing_time:
                 ticket["false_positive"] = False
                 event = {
-                    "time": closing_time,
                     "action": TICKET_EVENT.CHANGED,
+                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
                     "reason": "False positive expired",
                     "reference": None,
-                    "delta": [{"from": True, "to": False, "key": "false_positive"}],
+                    "time": closing_time,
                 }
                 ticket["events"].append(event)
 
@@ -630,19 +668,19 @@ class IPTicketManager(object):
             )  # explicitly set to UTC (see CYHY-286)
             if ticket["false_positive"] is True:
                 event = {
-                    "time": closing_time,
                     "action": TICKET_EVENT.UNVERIFIED,
                     "reason": reason,
                     "reference": None,
+                    "time": closing_time,
                 }
             else:
                 ticket["open"] = False
                 ticket["time_closed"] = closing_time
                 event = {
-                    "time": closing_time,
                     "action": TICKET_EVENT.CLOSED,
                     "reason": reason,
                     "reference": None,
+                    "time": closing_time,
                 }
             ticket["events"].append(event)
             ticket.save()

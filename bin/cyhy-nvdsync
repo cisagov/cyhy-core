@@ -78,9 +78,10 @@ def generate_urls():
 
 
 def main():
+    # Since docopt can generate SystemExit and DocoptExit exceptions
+    # in certain normal use cases, we exclude it from our try clause.
+    args = docopt(__doc__, version="v0.0.1")
     try:
-        args = docopt(__doc__, version="v0.0.1")
-
         db = database.db_from_config(args["--section"])
 
         if args["--use-network"]:

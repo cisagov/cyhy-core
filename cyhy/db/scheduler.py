@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from cyhy.core.common import *
-from cyhy.db.queries import max_severity_for_host
+from cyhy.db.queries import kev_count_for_host, max_severity_for_host
 from cyhy.db import database
 from cyhy.util import util
 
@@ -37,7 +37,10 @@ class DefaultScheduler(BaseScheduler):
     # mapping of vuln severities to priorities
     SEVERITY_PRIORITY = {1: -2, 2: -4, 3: -8, 4: -16}
 
-    # create a series with all our priorites as the index
+    # KEVs are assigned the same priority as critical vulns
+    KEV_PRIORITY = SEVERITY_PRIORITY[4]
+
+    # create a series with all our priorities as the index
     PRIORITY_TIMES = pd.Series(np.nan, index=range(1, -17, -1))
 
     # set the time in hours for specific priorities
@@ -72,7 +75,13 @@ class DefaultScheduler(BaseScheduler):
         if host["priority"] < self.RESTING_DOWN_PRIORITY:
             host["priority"] += 1
 
-    def __process_vuln_host(self, host, max_severity):
+    def __process_vuln_host(self, host, max_severity, kev_count):
+        """Determine the priority of a host that has vulnerabilities."""
+        # If the host has any KEVs, then it is set to the KEV priority
+        if kev_count > 0:
+            host["priority"] = self.KEV_PRIORITY
+            return
+
         priority_from_severity = self.__priority_for_severity(max_severity)
 
         if priority_from_severity == host["priority"]:
@@ -88,6 +97,7 @@ class DefaultScheduler(BaseScheduler):
         host["priority"] += 1
 
     def __process_vuln_free_host(self, host):
+        """Determine the priority of a host that does not have vulnerabilities."""
         if host["priority"] < self.RESTING_UP_PRIORITY:
             # decay host back to "resting up"
             host["priority"] += 1
@@ -107,6 +117,19 @@ class DefaultScheduler(BaseScheduler):
             # no tickets
             return 0
 
+    def __host_kev_count(self, host):
+        """Get the number of KEVs for a host."""
+        ip_int = host["_id"]
+        q = kev_count_for_host(ip_int)
+        r = database.run_pipeline_cursor(q, self._db)
+        database.id_expand(r)
+        if len(r) > 0:
+            # found tickets
+            return r[0]["kev_count"]
+        else:
+            # no tickets
+            return 0
+
     def schedule(self, host):
         super(DefaultScheduler, self).schedule(host)
 
@@ -116,8 +139,9 @@ class DefaultScheduler(BaseScheduler):
         else:
             # host was up
             max_severity = self.__host_max_severity(host)
+            kev_count = self.__host_kev_count(host)
             if max_severity > 0:
-                self.__process_vuln_host(host, max_severity)
+                self.__process_vuln_host(host, max_severity, kev_count)
             else:
                 self.__process_vuln_free_host(host)
 
