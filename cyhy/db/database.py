@@ -1582,15 +1582,26 @@ class CVEDoc(RootDoc):
 
     def save(self, *args, **kwargs):
         # Calculate severity from cvss on save
+        # Source: https://nvd.nist.gov/vuln-metrics/cvss
         cvss = self["cvss_score"]
-        if cvss == 10:
-            self["severity"] = 4
-        elif cvss >= 7.0:
-            self["severity"] = 3
-        elif cvss >= 4.0:
-            self["severity"] = 2
-        else:
-            self["severity"] = 1
+        if self["cvss_version"] == "2.0":
+            if cvss == 10:
+                self["severity"] = 4
+            elif cvss >= 7.0:
+                self["severity"] = 3
+            elif cvss >= 4.0:
+                self["severity"] = 2
+            else:
+                self["severity"] = 1
+        elif self["cvss_version"] in ["3.0", "3.1"]:
+            if cvss >= 9.0:
+                self["severity"] = 4
+            elif cvss >= 7.0:
+                self["severity"] = 3
+            elif cvss >= 4.0:
+                self["severity"] = 2
+            else:
+                self["severity"] = 1
         super(CVEDoc, self).save(*args, **kwargs)
 
 
