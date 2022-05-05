@@ -43,15 +43,24 @@ def parse_json(db, json_stream):
 
     for entry in data.get("CVE_Items", []):
         cve_id = entry["cve"]["CVE_data_meta"]["ID"]
-        if "baseMetricV2" not in entry["impact"]:
-            # NVD 'reject' CVEs do not have 'baseMetricV2' CVSS data
+        if ("baseMetricV2" or "baseMetricV3") not in entry["impact"]:
+            # Reject CVEs that don't have baseMetricV2 or baseMetricV3 CVSS data
             # Make sure they are removed from our db.
             db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
             print "x",
         else:
             print ".",
-            cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
-            entry_doc = db.CVEDoc({"_id": cve_id, "cvss_score": float(cvss_base_score)})
+            if "baseMetricV3" in entry["impact"]:
+                cvss_base_score = entry["impact"]["baseMetricV3"]["cvssV3"]["baseScore"]
+                cvss_version = entry["impact"]["baseMetricV3"]["cvssV3"]["version"]
+            else:
+                cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
+                cvss_version = entry["impact"]["baseMetricV2"]["cvssV2"]["version"]
+            entry_doc = db.CVEDoc({
+                "_id": cve_id,
+                "cvss_score": float(cvss_base_score),
+                "cvss_version": cvss_version
+            })
             entry_doc.save(safe=False)
     print "\n\n"
 
