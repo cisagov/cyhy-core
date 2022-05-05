@@ -1568,8 +1568,13 @@ class SnapshotDoc(RootDoc):
 
 class CVEDoc(RootDoc):
     __collection__ = CVE_COLLECTION
-    structure = {"_id": basestring, "cvss_score": float, "severity": int}  # CVE String
-    required_fields = ["_id", "cvss_score", "severity"]
+    structure = {
+        "_id": basestring,  # CVE string
+        "cvss_score": float,
+        "cvss_version": basestring,
+        "severity": int
+    }
+    required_fields = ["_id", "cvss_score", "cvss_version", "severity"]
     default_values = {}
 
     def get_indices(self):
