@@ -50,12 +50,9 @@ def parse_json(db, json_stream):
             print "x",
         else:
             print ".",
-            if "baseMetricV3" in entry["impact"]:
-                cvss_base_score = entry["impact"]["baseMetricV3"]["cvssV3"]["baseScore"]
-                cvss_version = entry["impact"]["baseMetricV3"]["cvssV3"]["version"]
-            else:
-                cvss_base_score = entry["impact"]["baseMetricV2"]["cvssV2"]["baseScore"]
-                cvss_version = entry["impact"]["baseMetricV2"]["cvssV2"]["version"]
+            version = "V3" if "baseMetricV3" in entry["impact"] else "V2"
+            cvss_base_score = entry["impact"]["baseMetric" + version]["cvss" + version]["baseScore"]
+            cvss_version = entry["impact"]["baseMetric" + version]["cvss" + version]["version"]
             entry_doc = db.CVEDoc({
                 "_id": cve_id,
                 "cvss_score": float(cvss_base_score),
