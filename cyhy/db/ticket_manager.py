@@ -96,7 +96,8 @@ class VulnTicketManager(object):
 
         new_details = {
             "cve": vuln.get("cve"),
-            "cvss_base_score": vuln["cvss_base_score"],
+            "cvss_base_score": vuln.get("cvss3_base_score", vuln["cvss_base_score"]),
+            "cvss_version": "3" if "cvss3_base_score" in vuln else "2",
             "kev": False,
             "name": vuln["plugin_name"],
             "score_source": vuln["source"],
@@ -108,6 +109,7 @@ class VulnTicketManager(object):
             cve_doc = self.__db.CVEDoc.find_one({"_id": vuln["cve"]})
             if cve_doc:
                 new_details["cvss_base_score"] = cve_doc["cvss_score"]
+                new_details["cvss_version"] = cve_doc["cvss_version"]
                 new_details["score_source"] = "nvd"
                 new_details["severity"] = cve_doc["severity"]
             # if the CVE is listed in the KEV collection, we'll mark it as such
