@@ -117,6 +117,33 @@ class VulnTicketManager(object):
             if kev_doc:
                 new_details["kev"] = True
 
+        # As of May 2022, some Nessus plugins report a severity that is
+        # inconsistent with their (non-NVD, non-CVE-based) CVSS v3 score.
+        # To reduce confusion, we ensure that the severity is correct here.
+        # For examples, see the following plugins:
+        # 34460, 104572, 107056, 140770, 156560, 156941, 156441
+        if new_details["score_source"] != "nvd":
+            cvss = new_details["cvss_base_score"]
+            # Source: https://nvd.nist.gov/vuln-metrics/cvss
+            if new_details["cvss_version"] == "2":
+                if cvss == 10:
+                    new_details["severity"] = 4
+                elif cvss >= 7.0:
+                    new_details["severity"] = 3
+                elif cvss >= 4.0:
+                    new_details["severity"] = 2
+                else:
+                    new_details["severity"] = 1
+            elif new_details["cvss_version"] == "3":
+                if cvss >= 9.0:
+                    new_details["severity"] = 4
+                elif cvss >= 7.0:
+                    new_details["severity"] = 3
+                elif cvss >= 4.0:
+                    new_details["severity"] = 2
+                else:
+                    new_details["severity"] = 1
+
         delta = []
         if check_for_changes:
             delta = self.__calculate_delta(ticket["details"], new_details)
