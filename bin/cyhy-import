@@ -112,7 +112,7 @@ def import_request(db, request, source, force=False, init_stage=None):
         print "and replace it with the imported version."
         return False
     request["period_start"] = dateutil.parser.parse(request["period_start"])
-    nets = netaddr.IPSet(request["networks"])
+    nets = IPSet(request["networks"])
     if init_stage:
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
