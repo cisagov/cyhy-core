@@ -125,6 +125,19 @@ class VulnTicketManager(object):
         if new_details["score_source"] != "nvd":
             cvss = new_details["cvss_base_score"]
             # Source: https://nvd.nist.gov/vuln-metrics/cvss
+            #
+            # Notes:
+            # - The CVSS score to severity mapping is not continuous (e.g. a
+            #   score of 8.95 is undefined according to their table).
+            #   However, the CVSS equation documentation
+            #   (https://www.first.org/cvss/specification-document#CVSS-v3-1-Equations)
+            #   specifies that all CVSS scores are rounded up to the nearest
+            #   tenth of a point, so our severity mapping below is valid.
+            # - CVSSv3 specifies that a score of 0.0 has a severity of "None",
+            #   but we have chosen to map 0.0 to severity 1 ("Low") because
+            #   CyHy code has historically assumed severities between 1 and 4
+            #   (inclusive).  Since we have not seen CVSSv3 scores lower than
+            #   3.1, this will hopefully never be an issue.
             if new_details["cvss_version"] == "2":
                 if cvss == 10:
                     new_details["severity"] = 4
