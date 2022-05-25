@@ -101,6 +101,7 @@ class VulnTicketManager(object):
             "name": vuln["plugin_name"],
             "score_source": vuln["source"],
             "severity": vuln["severity"],
+            "vpr_score": vuln.get("vpr_score"),
         }
 
         if "cve" in vuln:
