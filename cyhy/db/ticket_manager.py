@@ -96,7 +96,8 @@ class VulnTicketManager(object):
 
         new_details = {
             "cve": vuln.get("cve"),
-            "cvss_base_score": vuln["cvss_base_score"],
+            "cvss_base_score": vuln.get("cvss3_base_score", vuln["cvss_base_score"]),
+            "cvss_version": "3" if "cvss3_base_score" in vuln else "2",
             "kev": False,
             "name": vuln["plugin_name"],
             "score_source": vuln["source"],
@@ -109,12 +110,53 @@ class VulnTicketManager(object):
             cve_doc = self.__db.CVEDoc.find_one({"_id": vuln["cve"]})
             if cve_doc:
                 new_details["cvss_base_score"] = cve_doc["cvss_score"]
+                new_details["cvss_version"] = cve_doc["cvss_version"]
                 new_details["score_source"] = "nvd"
                 new_details["severity"] = cve_doc["severity"]
             # if the CVE is listed in the KEV collection, we'll mark it as such
             kev_doc = self.__db.KEVDoc.find_one({"_id": vuln["cve"]})
             if kev_doc:
                 new_details["kev"] = True
+
+        # As of May 2022, some Nessus plugins report a severity that is
+        # inconsistent with their (non-NVD, non-CVE-based) CVSS v3 score.
+        # To reduce confusion, we ensure that the severity is correct here.
+        # For examples, see the following plugins:
+        # 34460, 104572, 107056, 140770, 156560, 156941, 156441
+        if new_details["score_source"] != "nvd":
+            cvss = new_details["cvss_base_score"]
+            # Source: https://nvd.nist.gov/vuln-metrics/cvss
+            #
+            # Notes:
+            # - The CVSS score to severity mapping is not continuous (e.g. a
+            #   score of 8.95 is undefined according to their table).
+            #   However, the CVSS equation documentation
+            #   (https://www.first.org/cvss/specification-document#CVSS-v3-1-Equations)
+            #   specifies that all CVSS scores are rounded up to the nearest
+            #   tenth of a point, so our severity mapping below is valid.
+            # - CVSSv3 specifies that a score of 0.0 has a severity of "None",
+            #   but we have chosen to map 0.0 to severity 1 ("Low") because
+            #   CyHy code has historically assumed severities between 1 and 4
+            #   (inclusive).  Since we have not seen CVSSv3 scores lower than
+            #   3.1, this will hopefully never be an issue.
+            if new_details["cvss_version"] == "2":
+                if cvss == 10:
+                    new_details["severity"] = 4
+                elif cvss >= 7.0:
+                    new_details["severity"] = 3
+                elif cvss >= 4.0:
+                    new_details["severity"] = 2
+                else:
+                    new_details["severity"] = 1
+            elif new_details["cvss_version"] == "3":
+                if cvss >= 9.0:
+                    new_details["severity"] = 4
+                elif cvss >= 7.0:
+                    new_details["severity"] = 3
+                elif cvss >= 4.0:
+                    new_details["severity"] = 2
+                else:
+                    new_details["severity"] = 1
 
         delta = []
         if check_for_changes:

@@ -1568,8 +1568,13 @@ class SnapshotDoc(RootDoc):
 
 class CVEDoc(RootDoc):
     __collection__ = CVE_COLLECTION
-    structure = {"_id": basestring, "cvss_score": float, "severity": int}  # CVE String
-    required_fields = ["_id", "cvss_score", "severity"]
+    structure = {
+        "_id": basestring,  # CVE string
+        "cvss_score": float,
+        "cvss_version": basestring,
+        "severity": int
+    }
+    required_fields = ["_id", "cvss_score", "cvss_version", "severity"]
     default_values = {}
 
     def get_indices(self):
@@ -1577,15 +1582,39 @@ class CVEDoc(RootDoc):
 
     def save(self, *args, **kwargs):
         # Calculate severity from cvss on save
+        # Source: https://nvd.nist.gov/vuln-metrics/cvss
+        #
+        # Notes:
+        # - The CVSS score to severity mapping is not continuous (e.g. a
+        #   score of 8.95 is undefined according to their table).  However,
+        #   the CVSS equation documentation
+        #   (https://www.first.org/cvss/specification-document#CVSS-v3-1-Equations)
+        #   specifies that all CVSS scores are rounded up to the nearest tenth
+        #   of a point, so our severity mapping below is valid.
+        # - CVSSv3 specifies that a score of 0.0 has a severity of "None", but
+        #   we have chosen to map 0.0 to severity 1 ("Low") because CyHy code
+        #   has historically assumed severities between 1 and 4 (inclusive).
+        #   Since we have not seen CVSSv3 scores lower than 3.1, this will
+        #   hopefully never be an issue.
         cvss = self["cvss_score"]
-        if cvss == 10:
-            self["severity"] = 4
-        elif cvss >= 7.0:
-            self["severity"] = 3
-        elif cvss >= 4.0:
-            self["severity"] = 2
-        else:
-            self["severity"] = 1
+        if self["cvss_version"] == "2.0":
+            if cvss == 10:
+                self["severity"] = 4
+            elif cvss >= 7.0:
+                self["severity"] = 3
+            elif cvss >= 4.0:
+                self["severity"] = 2
+            else:
+                self["severity"] = 1
+        elif self["cvss_version"] in ["3.0", "3.1"]:
+            if cvss >= 9.0:
+                self["severity"] = 4
+            elif cvss >= 7.0:
+                self["severity"] = 3
+            elif cvss >= 4.0:
+                self["severity"] = 2
+            else:
+                self["severity"] = 1
         super(CVEDoc, self).save(*args, **kwargs)
 
 
