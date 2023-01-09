@@ -1033,57 +1033,57 @@ class RequestDoc(RootDoc):
     __collection__ = REQUEST_COLLECTION
     structure = {
         "agency": {
-            "name": basestring,
             "acronym": basestring,
-            "type": basestring,  # TODO: Remove this field now that hierarchy is implemented
             "contacts": [
                 {
-                    "phone": basestring,
-                    "name": basestring,
                     "email": basestring,
+                    "name": basestring,
+                    "phone": basestring,
                     "type": basestring,  # addition for POC types
                 }
             ],
             "location": {
+                "country_name": basestring,
+                "country": basestring,
+                "county_fips": basestring,
+                "county": basestring,
                 "gnis_id": long,  # See info about this ID in PlaceDoc below
                 "name": basestring,
-                "state": basestring,
                 "state_fips": basestring,
                 "state_name": basestring,
-                "county": basestring,
-                "county_fips": basestring,
-                "country": basestring,
-                "country_name": basestring,
+                "state": basestring,
             },
+            "name": basestring,
+            "type": basestring,  # TODO: Remove this field now that hierarchy is implemented
         },
-        "period_start": datetime.datetime,
-        "windows": [{"duration": int, "start": basestring, "day": basestring}],
-        "networks": [CustomIPNetwork()],
+        "children": list,
         "init_stage": basestring,
-        "scan_limits": list,  # TODO elaborate
         "key": basestring,  # TODO encrypt?
-        "scheduler": basestring,
-        "scan_types": list,
+        "networks": [CustomIPNetwork()],
+        "period_start": datetime.datetime,
         "report_period": basestring,
         "report_types": list,
-        "stakeholder": bool,
-        "children": list,
         "retired": bool,
+        "scan_limits": list,  # TODO elaborate
+        "scan_types": list,
+        "scheduler": basestring,
+        "stakeholder": bool,
+        "windows": [{"day": basestring, "duration": int, "start": basestring}],
     }
     required_fields = [
-        "agency.name",
         "agency.acronym",
-        "period_start",
-        "windows",
+        "agency.name",
         "init_stage",
+        "period_start",
         "stakeholder",
+        "windows",
     ]
     default_values = {
-        "period_start": util.utcnow,
-        "windows": [{"duration": 168, "start": "00:00:00", "day": "Sunday"}],
         "init_stage": "NETSCAN1",
-        "stakeholder": False,
+        "period_start": util.utcnow,
         "retired": False,
+        "stakeholder": False,
+        "windows": [{"day": "Sunday", "duration": 168, "start": "00:00:00"}],
     }
 
     @property
