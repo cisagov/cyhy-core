@@ -358,6 +358,7 @@ class TicketDoc(RootDoc):
             }
         ],
         "false_positive": bool,
+        "hostname": basestring,
         "ip_int": long,
         "ip": CustomIPAddress(),
         "last_change": datetime.datetime,
@@ -727,6 +728,7 @@ class VulnScanDoc(ScanDoc):
         "cvss_vector": basestring,
         "description": basestring,
         "fname": basestring,
+        "hostname": basestring,
         "plugin_family": basestring,
         "plugin_id": int,
         "plugin_modification_date": datetime.datetime,
@@ -770,6 +772,8 @@ class HostDoc(RootDoc):
     __collection__ = HOST_COLLECTION
     structure = {
         "_id": long,  # IP as integer
+        # Map hostnames to owners, e.g. {"foo.gov": "FOO", "bar.gov": "BAR"}
+        "hostnames": dict,
         "ip": CustomIPAddress(),
         "last_change": datetime.datetime,
         "latest_scan": {
@@ -1062,6 +1066,7 @@ class RequestDoc(RootDoc):
             "type": basestring,  # TODO: Remove this field now that hierarchy is implemented
         },
         "children": list,
+        "hostnames": list,
         "init_stage": basestring,
         "key": basestring,  # TODO encrypt?
         "networks": [CustomIPNetwork()],
