@@ -766,15 +766,7 @@ class HostDoc(RootDoc):
     structure = {
         "_id": long,  # IP as integer
         "ip": CustomIPAddress(),
-        "owner": basestring,
         "last_change": datetime.datetime,
-        "next_scan": datetime.datetime,
-        "state": dict,  # {'reason':basestring, 'up':bool}, #TODO bug in mongokit api
-        "stage": basestring,
-        "status": basestring,
-        "loc": (float, float),
-        "priority": int,
-        "r": float,
         "latest_scan": {
             STAGE.NETSCAN1: datetime.datetime,
             STAGE.NETSCAN2: datetime.datetime,
@@ -782,25 +774,28 @@ class HostDoc(RootDoc):
             STAGE.VULNSCAN: datetime.datetime,
             STATUS.DONE: datetime.datetime,
         },
+        "loc": (float, float),
+        "next_scan": datetime.datetime,
+        "owner": basestring,
+        "priority": int,
+        "r": float,
+        "stage": basestring,
+        "state": dict,  # {'reason':basestring, 'up':bool}, #TODO bug in mongokit api
+        "status": basestring,
     }
     required_fields = [
         "_id",
         "ip",
-        "owner",
         "last_change",
-        "state",
-        "stage",
-        "status",
+        "owner",
         "priority",
         "r",
+        "stage",
+        "state",
+        "status",
     ]
     default_values = {
         "last_change": util.utcnow,
-        "priority": 0,
-        "r": random.random,
-        "stage": STAGE.NETSCAN1,
-        "status": STATUS.WAITING,
-        "state": {"reason": "new", "up": False},
         "latest_scan": {
             STAGE.NETSCAN1: None,
             STAGE.NETSCAN2: None,
@@ -808,6 +803,11 @@ class HostDoc(RootDoc):
             STAGE.VULNSCAN: None,
             STATUS.DONE: None,
         },
+        "priority": 0,
+        "r": random.random,
+        "stage": STAGE.NETSCAN1,
+        "state": {"reason": "new", "up": False},
+        "status": STATUS.WAITING,
     }
 
     def save(self, *args, **kwargs):
