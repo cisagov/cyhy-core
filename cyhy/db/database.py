@@ -723,9 +723,6 @@ class PortScanDoc(ScanDoc):
 class VulnScanDoc(ScanDoc):
     __collection__ = VULN_SCAN_COLLECTION
     structure = {
-        "protocol": basestring,
-        "port": int,
-        "service": dict,
         "cvss_base_score": float,
         "cvss_vector": basestring,
         "description": basestring,
@@ -736,13 +733,21 @@ class VulnScanDoc(ScanDoc):
         "plugin_name": basestring,
         "plugin_publication_date": datetime.datetime,
         "plugin_type": basestring,
+        "port": int,
+        "protocol": basestring,
         "risk_factor": basestring,
+        "service": basestring,
         "severity": int,
         "solution": basestring,
         "synopsis": basestring,
-        "service": basestring,  # overrides
     }
-    required_fields = ["cvss_base_score", "severity", "protocol", "port", "service"]
+    required_fields = [
+        "cvss_base_score",
+        "port",
+        "protocol",
+        "service"
+        "severity",
+    ]
     default_values = {"cvss_base_score": 0.0, "source": "nessus"}
 
     def get_indices(self):
