@@ -273,16 +273,15 @@ class CHDatabase(object):
         self.__logger.debug('Updated %d "down" hosts.' % hosts_processed)
 
     def fetch_ready_hosts(self, count, stage, owner=None, waiting_too=False):
-        hosts = self.__db.HostDoc.get_some_for_stage(stage, count, owner, waiting_too)
+        hosts = list(
+            self.__db.HostDoc.get_some_for_stage(stage, count, owner, waiting_too)
+        )
         # NOTE: there is a race condition here, but it won't occur with one commander.
         # And the worst case scenario is that a host is scanned twice
         # Used to be slow multiple find_and_update
-        ips = []
         for host in hosts:
-            int_ip = host["_id"]
-            self.transition_host(int_ip)
-            ips.append(host["ip"])
-        return ips
+            self.transition_host(host["_id"])
+        return hosts
 
     def get_open_ports(self, ip_list):
         """takes a list of IPs and returns a sorted list of open ports"""
