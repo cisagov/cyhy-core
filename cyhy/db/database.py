@@ -757,7 +757,7 @@ class VulnScanDoc(ScanDoc):
         "cvss_base_score",
         "port",
         "protocol",
-        "service"
+        "service",
         "severity",
     ]
     default_values = {"cvss_base_score": 0.0, "source": "nessus"}
