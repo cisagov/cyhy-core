@@ -927,14 +927,14 @@ class HostDoc(RootDoc):
         if owner != None:
             rs = self.find(
                 spec={"status": status, "stage": stage, "owner": owner},
-                fields={"ip": True},
+                fields={"ip": True, "hostnames": True},
                 sort=[("priority", 1), ("r", 1)],
                 limit=count,
             )
         else:
             rs = self.find(
                 spec={"status": status, "stage": stage},
-                fields={"ip": True},
+                fields={"ip": True, "hostnames": True},
                 sort=[("priority", 1), ("r", 1)],
                 limit=count,
             )
