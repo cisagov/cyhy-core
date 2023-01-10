@@ -457,9 +457,10 @@ class TicketDoc(RootDoc):
     def get_indices(self):
         return (
             (
-                "ip_port_protocol_source_open_false_positive",
+                "ip_hostname_port_protocol_source_open_false_positive",
                 [
                     ("ip_int", 1),
+                    ("hostname", 1),
                     ("port", 1),
                     ("protocol", 1),
                     ("source", 1),
@@ -468,9 +469,18 @@ class TicketDoc(RootDoc):
                     ("false_positive", 1),
                 ],
                 False,
-                False,
+                True,
             ),
-            ("ip_open", [("ip_int", 1), ("open", 1)], False, False),
+            (
+                "ip_hostname_open",
+                [
+                    ("ip_int", 1),
+                    ("hostname", 1),
+                    ("open", 1)
+                ],
+                False,
+                True,
+            ),
             ("open_owner", [("open", 1), ("owner", 1)], False, False),
             ("time_opened", [("time_opened", 1), ("open", 1)], False, False),
             ("last_change", [("last_change", 1)], False, False),
