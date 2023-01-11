@@ -200,6 +200,7 @@ class VulnTicketManager(object):
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "hostname": vuln["hostname"],
                 "open": True,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
@@ -246,6 +247,7 @@ class VulnTicketManager(object):
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "hostname": vuln["hostname"],
                 "open": False,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
@@ -288,6 +290,7 @@ class VulnTicketManager(object):
         # time to open a new ticket
         new_ticket = self.__db.TicketDoc()
         new_ticket.ip = vuln["ip"]
+        new_ticket["hostname"] = vuln["hostname"]
         new_ticket["owner"] = vuln["owner"]
         new_ticket["port"] = vuln["port"]
         new_ticket["protocol"] = vuln["protocol"]
