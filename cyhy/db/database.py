@@ -907,12 +907,16 @@ class HostDoc(RootDoc):
         host = self.find_one({"_id": int_ip})
         return host
 
-    def get_owner_of_ip(self, ip):
-        result = self.find_one({"_id": int(ip)}, {"owner": True})
+    def get_owner_of_ip(self, ip, hostname=None):
+        result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
         if result:
-            return result["owner"]
-        else:
-            return None
+            if hostname:
+                if result.get("hostnames"):
+                    return result["hostnames"].get(hostname)
+            else:
+                return result["owner"]
+        # we tried our best, time to give up
+        return None
 
     def exists(self, stage, status):
         one = self.find_one({"stage": stage, "status": status})
