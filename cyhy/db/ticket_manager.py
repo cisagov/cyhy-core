@@ -348,6 +348,12 @@ class VulnTicketManager(object):
         #                                     'open':True})
 
         # work-around using a pipeline
+        #
+        # Note: There is no need to include hostnames in this pipeline because
+        # when we scan an IP address, that scan includes all hostnames
+        # associated with that IP.  This means we can close all matching tickets
+        # (IP/port/source_id/source) that weren't seen during the scan (i.e. not
+        # in self.__seen_ticket_ids).
         tickets = database.run_pipeline_cursor(
             close_tickets_pl(
                 ip_ints,
