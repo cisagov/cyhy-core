@@ -243,7 +243,7 @@ def database_w_udp_vulns(database):
     return database
 
 
-# @pytest.mark.parametrize(('sources'), [SOURCE_NESSUSS_1, SOURCE_NESSUSS_2, SOURCE_NESSUSS_3, SOURCE_NESSUSS_4], scope='class')
+@pytest.fixture
 class TestVulnTickets:
     def test_clear_tickets(self, database):
         print("number of tickets to remove:", database.tickets.count())
