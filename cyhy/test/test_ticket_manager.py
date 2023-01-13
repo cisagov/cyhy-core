@@ -78,6 +78,7 @@ PS_3 = {
 VULN_1 = {
     "ip": IPS[0],
     "ip_int": long(IPS[0]),
+    "hostname": None,
     "port": PORTS[0],
     "protocol": "tcp",
     "service": "ntp",
@@ -94,6 +95,7 @@ VULN_1 = {
 VULN_2 = {
     "ip": IPS[1],
     "ip_int": long(IPS[1]),
+    "hostname": None,
     "port": PORTS[1],
     "protocol": "tcp",
     "service": "ntp",
@@ -110,6 +112,7 @@ VULN_2 = {
 VULN_3 = {
     "ip": IPS[3],
     "ip_int": long(IPS[3]),
+    "hostname": None,
     "port": PORTS[2],
     "protocol": "tcp",
     "service": "ntp",
@@ -126,6 +129,7 @@ VULN_3 = {
 VULN_4 = {
     "ip": IPS[1],
     "ip_int": long(IPS[1]),
+    "hostname": None,
     "port": PORTS[2],
     "protocol": "udp",
     "service": "ntp",
