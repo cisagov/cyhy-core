@@ -42,6 +42,7 @@ setup(
         "python-dateutil >= 2.2",
         "PyYAML >= 3.12",
         "six >= 1.9",
+        "validators >= 0.14.6",
     ],
     extras_require={"dev": ["ipython >= 5.8.0", "mock >= 2.0.0"]},
 )
