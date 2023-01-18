@@ -1,0 +1,284 @@
+#!/usr/bin/env python
+"""Manage domain assignments to owners.
+
+Usage:
+  cyhy-domain [--section SECTION] [--file FILENAME] (add | remove) OWNER [DOMAINS ...]
+  cyhy-domain [--section SECTION] [--file FILENAME] check [DOMAINS ...]
+  cyhy-domain [--section SECTION] list OWNER
+  cyhy-domain [--section SECTION] list-all
+  cyhy-domain [--section SECTION] [--file FILENAME] move OWNER NEW_OWNER [DOMAINS ...]
+  cyhy-domain (-h | --help)
+  cyhy-domain --version
+
+Options:
+  -h --help                      Show this screen.
+  --version                      Show version.
+
+  -f FILENAME --file=FILENAME    Read domains from a file.
+  -s SECTION --section=SECTION   Configuration section to use.
+
+Notes:
+  Domains can be read from standard input if no domains are provided on the
+  command line and the --file option is omitted.
+"""
+
+# Standard Python Libraries
+import sys
+
+# Third-Party Libraries
+from docopt import docopt
+from validators import domain as valid_domain
+
+# cisagov Libraries
+from cyhy.core.common import *
+from cyhy.db import database
+from cyhy.util import util
+
+def parse_domains(domains):
+    parsed_domains = set()
+    invalid_domains = set()
+    for d in domains:
+        d = d.split("#", 1)[0]  # remove comments
+        d = d.strip()
+        if not d:
+            # skip blank lines
+            continue
+        if not valid_domain(d):
+            invalid_domains.add(d)
+        else:
+            parsed_domains.add(d)
+    
+    if invalid_domains:
+        print "ERROR - invalid domain(s):"
+        for d in invalid_domains:
+            print(d)
+        sys.exit(-1)
+    return parsed_domains
+
+
+def read_file(filename):
+    f = open(filename, "r")
+    return parse_domains(f.readlines())
+
+
+def do_list(db, owner):
+    request = db.RequestDoc.find_one({"_id": owner})
+    for h in request.get("hostnames", []):
+        print(h)
+
+
+def do_list_all(db):
+    requests = db.RequestDoc.find({"hostnames": {"$exists": True}}).sort("_id")
+    for r in requests:
+        print "# %s (%s): %d" % (
+            r["agency"]["name"],
+            r["_id"],
+            len(r["hostnames"])
+        )
+        for h in sorted(r["hostnames"]):
+            print("\t%s" % h)
+        print
+
+
+def get_existing_domains_and_owners(db):
+    domain_owners = {}
+    for r in db.RequestDoc.find({"hostnames": {"$exists": True}}):
+        for h in r["hostnames"]:
+            domain_owners[h] = "%s (%s)" % (r["agency"]["name"], r["_id"])
+    return domain_owners
+
+
+def add(db, owner, domains):
+    domain_owners = get_existing_domains_and_owners(db)
+    
+    domain_conflict = False
+    for d in domains:
+        if d in domain_owners:
+            domain_conflict = True
+            print "ERROR- %s is already owned by: %s" % (d, domain_owners[d])
+    
+    if domain_conflict:
+        sys.exit(-1)
+
+    request = db.RequestDoc.find_one({"_id": owner})
+    if request.get("hostnames"):
+        request["hostnames"] = sorted(request["hostnames"] + domains)
+    else:
+        request["hostnames"] = sorted(domains)
+    request.save()
+
+    print "Domains added to %s (%s):" % (request["agency"]["name"], owner)
+    for d in domains:
+        print("\t%s" % d)
+
+
+def remove(db, owner, domains):
+    request = db.RequestDoc.find_one({"_id": owner})
+
+    unowned_domains = []
+    for d in domains:
+        if d not in request.get("hostnames"):
+            unowned_domains.append(d)
+
+    if unowned_domains:
+        print "ERROR - %s (%s) does not own the following domains:" % (
+            request["agency"]["name"], owner
+        )
+        for d in sorted(unowned_domains):
+            print("\t%s" % d)
+        sys.exit(-1)
+
+    for d in domains:
+        request["hostnames"].remove(d)
+    request.save()
+
+    print "Domains removed from %s (%s):" % (request["agency"]["name"], owner)
+    for d in domains:
+        print("\t%s" % d)
+
+
+def check(db, domains):
+    domain_owners = get_existing_domains_and_owners(db)
+    matched_domains = {}
+    unmatched_domains = []
+
+    for d in domains:
+        if d in domain_owners:
+            matched_domains[domain_owners[d]] = matched_domains.get(domain_owners[d], []) + [d]
+        else:
+            unmatched_domains.append(d)
+    
+    if matched_domains:
+        for owner in sorted(matched_domains):
+            domains = matched_domains[owner]
+            print "# %s: %s" % (owner, len(domains))
+            for d in sorted(domains):
+                print("\t%s" % d)
+            print
+
+    if unmatched_domains:
+        print "# Unmatched: %s" % len(unmatched_domains)
+        for d in sorted(unmatched_domains):
+            print("\t%s" % d)
+
+
+def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
+    change_event = {
+        "time": util.utcnow(),
+        "action": TICKET_EVENT.CHANGED,
+        "reason": reason,
+        "reference": None,
+        "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
+    }
+
+    result = db.tickets.update(
+        {"owner": orig_owner, "hostname": {"$in": domains}},
+        {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
+        multi=True,
+        safe=True,
+        upsert=False,
+    )
+    print "%d tickets documents modified (%s -> %s)" % (
+        result["nModified"],
+        orig_owner,
+        new_owner
+    )
+
+
+def move(db, orig_owner, new_owner, domains_to_move):
+    if orig_owner == new_owner:
+        print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
+        sys.exit(-1)
+    orig_owner_request = db.RequestDoc.get_by_owner(orig_owner)
+    new_owner_request = db.RequestDoc.get_by_owner(new_owner)
+    for (org, req) in [
+        (orig_owner, orig_owner_request),
+        (new_owner, new_owner_request),
+    ]:
+        if not req:
+            print "ERROR: Organization %s not found in DB" % org
+            sys.exit(-1)
+
+    orig_owner_domains = set(orig_owner_request.get("hostnames"))
+    domains_not_in_orig_owner = set(domains_to_move) - orig_owner_domains
+    if domains_not_in_orig_owner:
+        print "\nERROR - The following domains are NOT owned by %s (%s):" % (
+            orig_owner,
+            orig_owner_request["agency"]["name"]
+        )
+        for d in domains_not_in_orig_owner:
+            print("\t%s" % d)
+        print "\nEXITING without making any changes."
+        sys.exit(-1)
+
+    # Change owner on all matching tickets
+    change_ticket_owner(
+        db, orig_owner, new_owner, "hostname owner changed", domains_to_move
+    )
+
+    # Remove the domains_to_move from orig_owner's request doc
+    orig_owner_request["hostnames"] = sorted(
+        orig_owner_domains - set(domains_to_move)
+    )
+    # Add the domains_to_move to new_owner's request doc
+    new_owner_request["hostnames"] = sorted(
+        set(new_owner_request.get("hostnames")) | set(domains_to_move)
+    )
+
+    # Save both request docs
+    orig_owner_request.save()
+    print "%s request document updated" % orig_owner
+    new_owner_request.save()
+    print "%s request document updated\n" % new_owner
+
+    print "Domains moved from %s (%s) to %s (%s):" % (
+        orig_owner_request["agency"]["name"], orig_owner,
+        new_owner_request["agency"]["name"], new_owner
+        )
+    for d in sorted(domains_to_move):
+        print("\t%s" % d)
+
+
+def main():
+    args = docopt(__doc__, version="v1.0.0")
+
+    db = database.db_from_config(args["--section"])
+
+    if args["list-all"]:
+        do_list_all(db)
+        sys.exit(0)
+
+    if args.get("OWNER"):
+        if not db.RequestDoc.find_one({"_id": args["OWNER"]}):
+            print "ERROR: Organization %s not found in DB" % args["OWNER"]
+            sys.exit(-1)
+    
+    if args.get("NEW_OWNER"):
+        if not db.RequestDoc.find_one({"_id": args["NEW_OWNER"]}):
+            print "ERROR: Organization %s not found in DB" % args["NEW_OWNER"]
+            sys.exit(-1)
+
+    if args["list"]:
+        do_list(db, args["OWNER"])
+        sys.exit(0)
+
+    domains = parse_domains(args["DOMAINS"])
+    if args["--file"] != None:
+        f_domains = read_file(args["--file"])
+        domains.update(f_domains)
+    elif len(domains) == 0:
+        domains.update(parse_domains(sys.stdin.readlines()))
+    domains = list(domains)
+
+    if args["add"]:
+        add(db, args["OWNER"], domains)
+    elif args["check"]:
+        check(db, domains)
+    elif args["move"]:
+        move(db, args["OWNER"], args["NEW_OWNER"], domains)
+    elif args["remove"]:
+        remove(db, args["OWNER"], domains)
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

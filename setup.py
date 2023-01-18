@@ -11,6 +11,7 @@ setup(
     scripts=[
         "bin/cyhy-archive",
         "bin/cyhy-control",
+        "bin/cyhy-domain",
         "bin/cyhy-export",
         "bin/cyhy-geoip",
         "bin/cyhy-import",
