@@ -904,6 +904,10 @@ class HostDoc(RootDoc):
         count = self.find({"stage": stage, "status": status, "owner": owner}).count()
         return count
 
+    def get_by_hostname(self, hostname):
+        # Return HostDocs with the given hostname in their list of hostnames
+        return self.find({"hostnames": {"$elemMatch": {"hostname": hostname}}})
+
     def get_by_ip(self, ip):
         int_ip = int(ip)
         host = self.find_one({"_id": int_ip})
