@@ -30,7 +30,7 @@ from netaddr import IPAddress, AddrFormatError
 
 # intra-project modules
 from cyhy.db import database
-from cyhy.util import util
+from cyhy.core.common import STAGE
 
 DEFAULT_OWNER = "CYHY"
 
@@ -67,13 +67,7 @@ def main():
             for hostname in r.get("hostnames", []):
                 print("\t" + hostname),
                 # Find all the HostDocs that have this domain name as a value in their hostnames dictionary
-                hostdocs = db.HostDoc.find({
-                                "hostnames": {
-                                    "$elemMatch": {
-                                        "hostname": hostname
-                                    }
-                                }
-                            })
+                hostdocs = db.HostDoc.get_by_hostname(hostname)
 
                 print("\t" + str(hostdocs.count()) + " HostDocs currently reference this hostname")
 
@@ -82,13 +76,15 @@ def main():
                 for ip in ip_set:
                     print("\t\t" + str(ip))
                     # Lookup the HostDoc for this IP address
-                    host_doc = db.HostDoc.find_one({"_id": int(ip)})
+                    host_doc = db.HostDoc.get_by_ip(ip)
 
                     # If it doesn't exist, create it, with our default owner and add the request ID and domain to the list of owners
                     if not host_doc:
                         host_doc = db.HostDoc()
-                        host_doc.ip = ip
-                        host_doc["owner"] = DEFAULT_OWNER
+                        # TODO lookup location for new HostDoc
+                        location = (0,0)
+                        # TODO lookup starting stage for DEFAULT_OWNER
+                        host_doc.init(ip, DEFAULT_OWNER, location, STAGE.NETSCAN1)
                         host_doc["hostnames"] = [{"hostname": hostname, "owner": r["_id"]}]
                         host_doc.save()
                         print("Created new " + DEFAULT_OWNER + " HostDoc for " + str(ip))
