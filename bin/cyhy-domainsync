@@ -118,8 +118,9 @@ def main():
         
         # Find all the Default Owner HostDocs that don't have any hostnames, and 
         # print out how many were deleted
+        print("Deleting " + DEFAULT_OWNER + " HostDocs that have no hostnames...")
         result = db.HostDoc.collection.delete_many({"owner": DEFAULT_OWNER, "hostnames": {"$size": 0}})
-        
+
         # Print out how many documents were deleted
         print("Deleted " + str(result.deleted_count) + " HostDocs")
             
