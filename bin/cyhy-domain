@@ -2,15 +2,16 @@
 """Manage domain assignments to owners.
 
 Usage:
-  cyhy-domain [--section SECTION] [--file FILENAME] (add | remove) OWNER [DOMAINS ...]
-  cyhy-domain [--section SECTION] [--file FILENAME] check [DOMAINS ...]
-  cyhy-domain [--section SECTION] list OWNER
-  cyhy-domain [--section SECTION] list-all
-  cyhy-domain [--section SECTION] [--file FILENAME] move OWNER NEW_OWNER [DOMAINS ...]
+  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] (add | remove) OWNER [DOMAINS ...]
+  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] check [DOMAINS ...]
+  cyhy-domain [--section SECTION] [--config-file FILE] list OWNER
+  cyhy-domain [--section SECTION] [--config-file FILE] list-all
+  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] move OWNER NEW_OWNER [DOMAINS ...]
   cyhy-domain (-h | --help)
   cyhy-domain --version
 
 Options:
+  -c FILE --config-file=FILE     Configuration file to use.
   -h --help                      Show this screen.
   --version                      Show version.
 
@@ -242,7 +243,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 def main():
     args = docopt(__doc__, version="v1.0.0")
 
-    db = database.db_from_config(args["--section"])
+    db = database.db_from_config(args["--section"], args["--config-file"])
 
     if args["list-all"]:
         do_list_all(db)
