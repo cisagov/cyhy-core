@@ -101,7 +101,7 @@ def main():
                 ip_set = get_ipv4_addresses(hostname)
                 print("\t" + str(len(ip_set)) + " IPv4 addresses found for this hostname")
                 for ip in ip_set:
-                    print("\t\t" + str(ip))
+                    print("\t\t" + str(ip)),
                     # Lookup the HostDoc for this IP address
                     host_doc = db.HostDoc.get_by_ip(ip)
 
@@ -113,8 +113,10 @@ def main():
                         host_doc.init(ip, default_owner, location, starting_stage)
                         host_doc["hostnames"] = [{"hostname": hostname, "owner": r["_id"]}]
                         host_doc.save()
-                        print("Created new " + default_owner + " HostDoc for " + str(ip))
+                        print("Created HostDoc owned by: " + default_owner)
                         continue
+                    else:
+                        print("Found HostDoc owned by: " + host_doc["owner"])
 
                     # The HostDoc did exist, so add the request ID and domain to the list of owners
                     
@@ -140,7 +142,7 @@ def main():
                 for host in hostdocs:
                     # If the hostdoc ip is not in the ip_set, remove the domain from the list of owners
                     if host.ip not in ip_set:
-                        print("\t\tRemoving " + hostname + " from " + str(host.ip))
+                        print("\tRemoving " + hostname + " from " + str(host.ip))
                         host["hostnames"] = [i for i in host["hostnames"] if i["hostname"] != hostname]
                         host.save()
  
