@@ -3,16 +3,17 @@
 """Perform hostname housekeeping tasks.
 
 Usage:
-  cyhy-domainsync [--section SECTION] [--config-file FILE] [--resolver IP]
+  cyhy-domainsync [options]
   cyhy-domainsync (-h | --help)
   cyhy-domainsync --version
 
 Options:
-  -f FILE --config-file=FILE     Configuration file to use.
-  -h --help                      Show this screen.
-  --version                      Show version.
-  -r IP --resolver=IP            IP address of DNS resolver to use.
-  -s SECTION --section=SECTION   Configuration section to use.
+  -f FILE --config-file=FILE      Configuration file to use.
+  -h --help                       Show this screen.
+  -o OWNER --default-owner=OWNER  Default owner to use for new HostDocs [default: CYHY].
+  -r IP --resolver=IP             IP address of DNS resolver to use.
+  -s SECTION --section=SECTION    Configuration section to use.
+  --version                       Show version.
 """
 
 # standard python libraries
@@ -27,7 +28,6 @@ from netaddr import IPAddress, AddrFormatError
 from cyhy.db import database
 from cyhy.core.common import STAGE
 
-DEFAULT_OWNER = "CYHY"
 
 def get_requests(db):
     """Yield each of the non-retired owners in the database."""
@@ -57,6 +57,12 @@ def main():
             resolver.default_resolver = resolver.Resolver(configure=False)
             resolver.default_resolver.nameservers = [args["--resolver"]]
 
+        default_owner = args["--default-owner"]
+        print("Using default owner: " + default_owner)
+
+        # TODO lookup starting stage for default_owner
+        starting_stage = STAGE.NETSCAN1
+
         for r in get_requests(db):
             print(r["_id"])
             for hostname in r.get("hostnames", []):
@@ -78,11 +84,10 @@ def main():
                         host_doc = db.HostDoc()
                         # TODO lookup location for new HostDoc
                         location = (0,0)
-                        # TODO lookup starting stage for DEFAULT_OWNER
-                        host_doc.init(ip, DEFAULT_OWNER, location, STAGE.NETSCAN1)
+                        host_doc.init(ip, default_owner, location, starting_stage)
                         host_doc["hostnames"] = [{"hostname": hostname, "owner": r["_id"]}]
                         host_doc.save()
-                        print("Created new " + DEFAULT_OWNER + " HostDoc for " + str(ip))
+                        print("Created new " + default_owner + " HostDoc for " + str(ip))
                         continue
 
                     # The HostDoc did exist, so add the request ID and domain to the list of owners
@@ -118,20 +123,20 @@ def main():
         
         # Find all the Default Owner HostDocs that don't have any hostnames, and 
         # print out how many were deleted
-        print("Deleting " + DEFAULT_OWNER + " HostDocs that have no hostnames...")
-        result = db.HostDoc.collection.delete_many({"owner": DEFAULT_OWNER, "hostnames": {"$size": 0}})
+        print("Deleting " + default_owner + " HostDocs that have no hostnames...")
+        result = db.HostDoc.collection.delete_many({"owner": default_owner, "hostnames": {"$size": 0}})
 
         # Print out how many documents were deleted
         print("Deleted " + str(result.deleted_count) + " HostDocs")
             
         # Synchronize the default owner's TallyDoc
-        tally_doc = db.TallyDoc.get_by_owner(DEFAULT_OWNER)
+        tally_doc = db.TallyDoc.get_by_owner(default_owner)
         if not tally_doc:
             tally_doc = db.TallyDoc()
-            tally_doc["_id"]= DEFAULT_OWNER
+            tally_doc["_id"]= default_owner
             tally_doc.save()
         tally_doc.sync(db)
-        print("Synchronized " + DEFAULT_OWNER + " TallyDoc")
+        print("Synchronized " + default_owner + " TallyDoc")
 
 
     except:
