@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+
+"""Perform hostname housekeeping tasks.
+
+Usage:
+  cyhy-domainsync [--section SECTION] [--config-file FILE] [--resolver IP]
+  cyhy-domainsync (-h | --help)
+  cyhy-domainsync --version
+
+Options:
+  -f FILE --config-file=FILE     Configuration file to use.
+  -h --help                      Show this screen.
+  --version                      Show version.
+  -r IP --resolver=IP            IP address of DNS resolver to use.
+  -s SECTION --section=SECTION   Configuration section to use.
+"""
+
+# standard python libraries
+import gzip
+import json
+import logging
+import urllib
+from StringIO import StringIO
+import socket
+
+# third-party libraries (install with pip)
+from dns import resolver, exception
+from docopt import docopt
+from netaddr import IPAddress, AddrFormatError
+
+# intra-project modules
+from cyhy.db import database
+from cyhy.util import util
+
+DEFAULT_OWNER = "CYHY"
+
+def get_requests(db):
+    """Yield each of the non-retired owners in the database."""
+    requests = db.RequestDoc.find(spec={"retired":False}, sort=[("_id", 1)])
+    for r in requests:
+        yield r
+
+def get_ipv4_addresses(hostname):
+    """Return a set of IPv4 addresses for the given hostname."""
+    try:
+        answers = resolver.query(hostname, 'A')
+        ip_list = [IPAddress(answer.address) for answer in answers]
+        return set(ip_list)
+    except exception.DNSException as e:
+        # Could not resolve domain name
+        return set()
+    except AddrFormatError:
+        return set()
+    
+def main():
+    args = docopt(__doc__, version="v0.0.1")
+    try:
+        db = database.db_from_config(args["--section"], args["--config-file"])
+
+        if args["--resolver"]:
+            # If a resolver was specified, configure the default resolver to use it
+            resolver.default_resolver = resolver.Resolver(configure=False)
+            resolver.default_resolver.nameservers = [args["--resolver"]]
+
+        for r in get_requests(db):
+            print(r["_id"])
+            for hostname in r.get("hostnames", []):
+                print("\t" + hostname),
+                # Find all the HostDocs that have this domain name as a value in their hostnames dictionary
+                hostdocs = db.HostDoc.find({
+                                "hostnames": {
+                                    "$elemMatch": {
+                                        "hostname": hostname
+                                    }
+                                }
+                            })
+
+                print("\t" + str(hostdocs.count()) + " HostDocs currently reference this hostname")
+
+                ip_set = get_ipv4_addresses(hostname)
+                print("\t" + str(len(ip_set)) + " IPv4 addresses found for this hostname")
+                for ip in ip_set:
+                    print("\t\t" + str(ip))
+                    # Lookup the HostDoc for this IP address
+                    host_doc = db.HostDoc.find_one({"_id": int(ip)})
+
+                    # If it doesn't exist, create it, with our default owner and add the request ID and domain to the list of owners
+                    if not host_doc:
+                        host_doc = db.HostDoc()
+                        host_doc.ip = ip
+                        host_doc["owner"] = DEFAULT_OWNER
+                        host_doc["hostnames"] = [{"hostname": hostname, "owner": r["_id"]}]
+                        host_doc.save()
+                        print("Created new " + DEFAULT_OWNER + " HostDoc for " + str(ip))
+                        continue
+
+                    # The HostDoc did exist, so add the request ID and domain to the list of owners
+                    
+                    # HostDoc.hostnames is a list of dictionaries with the following keys: hostname, owner
+                    # An example looks like this:
+                    # "hostnames": [
+                    #     { "hostname": "foo.gov", "owner": "FOO" },
+                    #     { "hostname": "dev.foo.gov", "owner": "FOO" }
+                    # ]
+
+                    # If the hostnames list doesn't exist, create it
+                    if not host_doc.get("hostnames"):
+                        host_doc["hostnames"] = []
+
+                    # If the hostname isn't already in the list, add it
+                    if not any(h["hostname"] == hostname for h in host_doc["hostnames"]):
+                        host_doc["hostnames"].append({"hostname": hostname, "owner": r["_id"]})
+                    
+                    # Save the HostDoc
+                    host_doc.save()
+
+                # Remove outdated hostnames from Hostdocs
+                for host in hostdocs:
+                    # If the hostdoc ip is not in the ip_set, remove the domain from the list of owners
+                    if host.ip not in ip_set:
+                        print("\t\tRemoving " + hostname + " from " + str(host.ip))
+                        host["hostnames"] = [i for i in host["hostnames"] if i["hostname"] != hostname]
+                        host.save()
+ 
+                        # Close all open tickets with this ip and hostname
+                        # TODO: db.TicketDoc.close_tickets(host.ip, hostname)
+        
+        # Find all the Default Owner HostDocs that don't have any hostnames, and 
+        # print out how many were deleted
+        result = db.HostDoc.collection.delete_many({"owner": DEFAULT_OWNER, "hostnames": {"$size": 0}})
+        
+        # Print out how many documents were deleted
+        print("Deleted " + str(result.deleted_count) + " HostDocs")
+            
+        # Synchronize the default owner's TallyDoc
+        tally_doc = db.TallyDoc.get_by_owner(DEFAULT_OWNER)
+        if not tally_doc:
+            tally_doc = db.TallyDoc()
+            tally_doc["_id"]= DEFAULT_OWNER
+            tally_doc.save()
+        tally_doc.sync(db)
+        print("Synchronized " + DEFAULT_OWNER + " TallyDoc")
+
+
+    except:
+        logging.exception("Unexpected exception")
+
+
+if __name__ == "__main__":
+    main()
