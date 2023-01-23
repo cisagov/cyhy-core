@@ -182,7 +182,7 @@ def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
         "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
     }
 
-    result = db.tickets.update(
+    result = db.TicketDoc.collection.update(
         {"owner": orig_owner, "hostname": {"$in": domains}},
         {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
         multi=True,
