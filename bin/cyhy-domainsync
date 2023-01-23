@@ -26,7 +26,8 @@ from netaddr import IPAddress, AddrFormatError
 
 # intra-project modules
 from cyhy.db import database
-from cyhy.core.common import STAGE
+from cyhy.core.common import STAGE, TICKET_EVENT
+from cyhy.util import util
 
 
 def get_requests(db):
@@ -46,7 +47,32 @@ def get_ipv4_addresses(hostname):
         return set()
     except AddrFormatError:
         return set()
+
+def close_tickets(db, ip, hostname, reason):
+    """Close all open tickets for the given IP address and hostname.
     
+    Returns the number of tickets closed."""
+    now = util.utcnow()
+    close_event = {
+        "action": TICKET_EVENT.CLOSED,
+        "reason": reason,
+        "reference": None,
+        "time": now,
+    }
+    result = db.TicketDoc.collection.update(
+        {"ip_int": int(ip), "hostname": hostname, "closed": False},
+        # Force false_positive to False since the ticket is being closed
+        {"$set": {"false_positive": False, 
+                  "open": False, 
+                  "time_closed": now}, 
+        "$push": {"events": close_event}
+        },
+        multi=True,
+        safe=True,
+        upsert=False,
+    )
+    return result["nModified"]
+
 def main():
     args = docopt(__doc__, version="v0.0.1")
     try:
@@ -119,8 +145,13 @@ def main():
                         host.save()
  
                         # Close all open tickets with this ip and hostname
-                        # TODO: db.TicketDoc.close_tickets(host.ip, hostname)
-        
+                        closed_count = close_tickets(db, host.ip, hostname, "Hostname no longer resolves to this IP address")
+                        print("\t%d tickets documents closed for %s[%s]" % (
+                            closed_count,
+                            host.ip,
+                            hostname
+                        ))
+
         # Find all the Default Owner HostDocs that don't have any hostnames, and 
         # print out how many were deleted
         print("Deleting " + default_owner + " HostDocs that have no hostnames...")
