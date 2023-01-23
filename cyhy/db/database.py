@@ -782,8 +782,10 @@ class HostDoc(RootDoc):
     __collection__ = HOST_COLLECTION
     structure = {
         "_id": long,  # IP as integer
-        # Map hostnames to owners, e.g. {"foo.gov": "FOO", "bar.gov": "BAR"}
-        "hostnames": dict,
+        # Map hostnames to owners, e.g.
+        # [ {"hostname: "foo.gov", "owner: "FOO"}
+        #   {"hostname: "bar.gov", "owner: "BAR"} ]
+        "hostnames": list,
         "ip": CustomIPAddress(),
         "last_change": datetime.datetime,
         "latest_scan": {
@@ -902,6 +904,10 @@ class HostDoc(RootDoc):
         count = self.find({"stage": stage, "status": status, "owner": owner}).count()
         return count
 
+    def get_by_hostname(self, hostname):
+        # Return HostDocs with the given hostname in their list of hostnames
+        return self.find({"hostnames": {"$elemMatch": {"hostname": hostname}}})
+
     def get_by_ip(self, ip):
         int_ip = int(ip)
         host = self.find_one({"_id": int_ip})
@@ -911,8 +917,9 @@ class HostDoc(RootDoc):
         result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
         if result:
             if hostname:
-                if result.get("hostnames"):
-                    return result["hostnames"].get(hostname)
+                for h in result.get("hostnames", []):
+                    if h["hostname"] == hostname:
+                        return h["owner"]
             else:
                 return result["owner"]
         # we tried our best, time to give up
