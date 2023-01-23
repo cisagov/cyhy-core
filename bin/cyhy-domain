@@ -136,6 +136,16 @@ def remove(db, owner, domains):
     for d in domains:
         print("\t%s" % d)
 
+    # Remove domains from any HostDocs that have them
+    for d in domains:
+        count = 0
+        for h in db.HostDoc.get_by_hostname(d):
+            h["hostnames"].remove({"hostname": d, "owner": owner})
+            h.save()
+            count += 1
+        if count:
+            print "Removed %s from %d hosts documents" % (d, count)
+
 
 def check(db, domains):
     domain_owners = get_existing_domains_and_owners(db)
