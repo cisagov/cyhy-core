@@ -16,12 +16,7 @@ Options:
 """
 
 # standard python libraries
-import gzip
-import json
 import logging
-import urllib
-from StringIO import StringIO
-import socket
 
 # third-party libraries (install with pip)
 from dns import resolver, exception
