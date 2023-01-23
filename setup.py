@@ -12,6 +12,7 @@ setup(
         "bin/cyhy-archive",
         "bin/cyhy-control",
         "bin/cyhy-domain",
+        "bin/cyhy-domainsync",
         "bin/cyhy-export",
         "bin/cyhy-geoip",
         "bin/cyhy-import",
@@ -31,6 +32,7 @@ setup(
     description="Core scanning libraries for Cyber Hygiene",
     long_description=open("README.md").read(),
     install_requires=[
+        "dnspython >= 1.16.0",
         "docopt >= 0.6.2",
         "geoip2 >= 2.3.0",
         "maxminddb <2.0.0",
