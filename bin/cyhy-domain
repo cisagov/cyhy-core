@@ -96,7 +96,7 @@ def add(db, owner, domains):
     for d in domains:
         if d in domain_owners:
             domain_conflict = True
-            print "ERROR- %s is already owned by: %s" % (d, domain_owners[d])
+            print "ERROR - %s is already owned by: %s" % (d, domain_owners[d])
     
     if domain_conflict:
         sys.exit(-1)
