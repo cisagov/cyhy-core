@@ -86,8 +86,9 @@ def main():
         default_owner = args["--default-owner"]
         print("Using default owner: " + default_owner)
 
-        # TODO lookup starting stage for default_owner
-        starting_stage = STAGE.NETSCAN1
+        # Look up starting stage for default owner
+        default_owner_req = db.RequestDoc.find_one({"_id": default_owner})
+        starting_stage = default_owner_req["init_stage"]
 
         for r in get_requests(db):
             print(r["_id"])
