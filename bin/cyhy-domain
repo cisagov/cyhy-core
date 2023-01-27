@@ -2,21 +2,20 @@
 """Manage domain assignments to owners.
 
 Usage:
-  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] (add | remove) OWNER [DOMAINS ...]
-  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] check [DOMAINS ...]
-  cyhy-domain [--section SECTION] [--config-file FILE] list OWNER
-  cyhy-domain [--section SECTION] [--config-file FILE] list-all
-  cyhy-domain [--section SECTION] [--config-file FILE] [--file FILENAME] move OWNER NEW_OWNER [DOMAINS ...]
+  cyhy-domain [options] (add | remove) OWNER [DOMAINS ...]
+  cyhy-domain [options] check [DOMAINS ...]
+  cyhy-domain [options] list OWNER
+  cyhy-domain [options] list-all
+  cyhy-domain [options] move OWNER NEW_OWNER [DOMAINS ...]
   cyhy-domain (-h | --help)
   cyhy-domain --version
 
 Options:
   -c FILE --config-file=FILE     Configuration file to use.
-  -h --help                      Show this screen.
-  --version                      Show version.
-
   -f FILENAME --file=FILENAME    Read domains from a file.
+  -h --help                      Show this screen.
   -s SECTION --section=SECTION   Configuration section to use.
+  --version                      Show version.
 
 Notes:
   Domains can be read from standard input if no domains are provided on the
