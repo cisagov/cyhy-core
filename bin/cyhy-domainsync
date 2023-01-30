@@ -27,6 +27,7 @@ from netaddr import IPAddress, AddrFormatError
 # intra-project modules
 from cyhy.db import database
 from cyhy.core.common import STAGE, TICKET_EVENT
+from cyhy.core.geoloc import GeoLocDB
 from cyhy.util import util
 
 
@@ -86,6 +87,9 @@ def main():
         default_owner = args["--default-owner"]
         print("Using default owner: " + default_owner)
 
+        # Initialize the geo-location database
+        geo_loc_db = GeoLocDB()
+
         # Look up starting stage for default owner
         default_owner_req = db.RequestDoc.find_one({"_id": default_owner})
         starting_stage = default_owner_req["init_stage"]
@@ -109,8 +113,7 @@ def main():
                     # If it doesn't exist, create it, with our default owner and add the request ID and domain to the list of owners
                     if not host_doc:
                         host_doc = db.HostDoc()
-                        # TODO lookup location for new HostDoc
-                        location = (0,0)
+                        location = geo_loc_db.lookup(ip)
                         host_doc.init(ip, default_owner, location, starting_stage)
                         host_doc["hostnames"] = [{"hostname": hostname, "owner": r["_id"]}]
                         host_doc.save()
