@@ -135,8 +135,19 @@ def main():
                     if not host_doc.get("hostnames"):
                         host_doc["hostnames"] = []
 
+                    # If the hostname is already in the list and if the
+                    # owner has changed, update to the new owner
+                    found_hostname = False
+                    for h in host_doc["hostnames"]:
+                        if h["hostname"] == hostname:
+                            found_hostname = True
+                            if h["owner"] != r["_id"]:
+                                print("\t\tHostname owner updated in HostDoc (%s -> %s)" % (h["owner"], r["_id"]))
+                                h["owner"] = r["_id"]
+                            break
+
                     # If the hostname isn't already in the list, add it
-                    if not any(h["hostname"] == hostname for h in host_doc["hostnames"]):
+                    if not found_hostname:
                         host_doc["hostnames"].append({"hostname": hostname, "owner": r["_id"]})
                     
                     # Save the HostDoc
