@@ -46,9 +46,9 @@ RUN apt-get install -y --no-install-recommends \
     python-yaml
 
 # Install MongoDB shell from official repository
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
-RUN echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/4.0 main" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
-RUN echo "deb http://deb.debian.org/debian stretch-backports main" | tee /etc/apt/sources.list.d/stretch-backports.list
+RUN curl --fail --silent --show-error --location https://pgp.mongodb.com/server-4.2.asc | \
+    gpg --output /usr/share/keyrings/mongodb-server-4.2.gpg --dearmor
+RUN echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-4.2.gpg ] http://repo.mongodb.org/apt/debian buster/mongodb-org/4.2 main" | tee /etc/apt/sources.list.d/mongodb-org-4.2.list
 RUN apt-get update && apt-get install -y mongodb-org-shell
 
 # Clean up the apt cache
