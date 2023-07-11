@@ -22,8 +22,7 @@ ENV CYHY_HOME="/home/cyhy" \
 # is correctly seen as an error.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN groupadd --system cyhy && useradd --system --gid cyhy cyhy
-RUN mkdir ${CYHY_HOME} && chown cyhy:cyhy ${CYHY_HOME}
+RUN groupadd --system cyhy && useradd --system --gid cyhy cyhy --create-home --home-dir ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 # Add MongoDB official repository and backports
