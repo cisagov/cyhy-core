@@ -13,10 +13,10 @@ LABEL org.opencontainers.image.description="Docker image to provide tools for in
 ARG maxmind_license_type="lite"
 ARG maxmind_license_key
 
-ENV CYHY_HOME="/home/cyhy" \
-    CYHY_ETC="/etc/cyhy" \
-    CYHY_CORE_SRC="/usr/src/cyhy-core" \
-    PYTHONIOENCODING="utf8"
+ENV CYHY_HOME="/home/cyhy"
+ENV CYHY_ETC="/etc/cyhy"
+ENV CYHY_CORE_SRC="/usr/src/cyhy-core"
+ENV PYTHONIOENCODING="utf8"
 
 # Since we use pipes in some RUN commands we should ensure that if they fail it
 # is correctly seen as an error.
