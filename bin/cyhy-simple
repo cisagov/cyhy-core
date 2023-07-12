@@ -18,6 +18,7 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
+import codecs
 import sys
 import os
 from docopt import docopt
@@ -96,10 +97,10 @@ def get_location_details(db, gnis_id):
         sys.exit(-1)
 
 
-def fill_in(db, filename, force=False):
+def fill_in(db, file_pointer, force=False):
     request = db.RequestDoc()
     config = SafeConfigParser(allow_no_value=True)
-    config.read([filename])
+    config.readfp(file_pointer)
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
 
     request["period_start"] = THE_VERY_DISTANT_FUTURE
@@ -226,7 +227,12 @@ def main():
         print >> sys.stderr, "File not found:", args["FILENAME"]
         sys.exit(-1)
 
-    request = fill_in(db, args["FILENAME"], force)
+    try:
+        with codecs.open(args["FILENAME"], "r", encoding="ascii") as in_file:
+            request = fill_in(db, in_file, force)
+    except UnicodeDecodeError as e:
+        print >> sys.stderr, "Document contains a non-ASCII character: {}".format(e)
+        sys.exit(-1)
 
     if args["--networks"]:
         for n in request["networks"]:
