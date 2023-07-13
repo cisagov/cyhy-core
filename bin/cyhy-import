@@ -160,12 +160,18 @@ def import_file(db, filename, force, init_stage=None):
 
 
 def import_stdin(db, force, init_stage=None):
-    request = json.load(sys.stdin)
+    try:
+        # This would need to be changed for py3
+        request = json.load(sys.stdin, encoding="ascii")
+    except UnicodeDecodeError as e:
+        print ("Document contains a non-ASCII character: {}".format(e))
+        return False
+
     return import_request(db, request, "from stdin", force, init_stage)
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v0.0.2")
     db = database.db_from_config(args["--section"])
 
     if args["FILE"] != None:
