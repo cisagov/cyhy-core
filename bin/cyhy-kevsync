@@ -49,19 +49,26 @@ def parse_json(db, json_stream):
 
     # Gather all the cveIDs from the JSON file
     all_cve_ids = set()
+    known_ransomware_use_ids = set()
     for i in data["vulnerabilities"]:
         cve_id = i.get("cveID")
         if not cve_id:
             raise ValueError("JSON does not look like valid CISA KEV data.")
         else:
             all_cve_ids.add(cve_id)
+            if i.get("knownRansomwareCampaignUse").lower() == "known":
+                known_ransomware_use_ids.add(cve_id)
 
     # Insert a KEV document for each CVE
     for cve in all_cve_ids:
-        entry_doc = db.KEVDoc({"_id": cve})
+        if cve in known_ransomware_use_ids:
+            entry_doc = db.KEVDoc({"_id": cve, "known_ransomware": True})
+        else:
+            entry_doc = db.KEVDoc({"_id": cve, "known_ransomware": False})
         entry_doc.save(safe=False)
 
-    print("Imported %d KEV entries." % len(all_cve_ids))
+    print("Imported %d KEV entries, %d are known ransomware." % (
+        len(all_cve_ids), len(known_ransomware_use_ids)))
     if data.get("count"):
         if data["count"] != len(all_cve_ids):
             print(
