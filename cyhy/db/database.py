@@ -1719,7 +1719,7 @@ class NotificationDoc(RootDoc):
 
 class KEVDoc(RootDoc):
     __collection__ = KEV_COLLECTION
-    structure = {"_id": basestring}
+    structure = {"_id": basestring, "known_ransomware": bool}
     required_fields = ["_id"]
     default_values = {}
 
