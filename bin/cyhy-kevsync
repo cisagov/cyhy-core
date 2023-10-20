@@ -55,7 +55,7 @@ def parse_json(db, json_stream):
         if not cve_id:
             raise ValueError("JSON does not look like valid CISA KEV data.")
         else:
-            if i.get("knownRansomwareCampaignUse").lower() == "known":
+            if i.get("knownRansomwareCampaignUse", "").lower() == "known":
                 kevs.append({"cve_id": cve_id, "known_ransomware": True})
                 known_ransomware_count += 1
             else:
