@@ -66,7 +66,7 @@ def parse_json(db, json_stream):
         entry_doc = db.KEVDoc(kev)
         entry_doc.save(safe=False)
 
-    all_cve_ids = set([i["cve_id"] for i in kevs])
+    all_cve_ids = set(i["_id"] for i in kevs)
     print("Imported %d KEV entries, %d are known ransomware." % (
         len(all_cve_ids), known_ransomware_count))
     if data.get("count"):
