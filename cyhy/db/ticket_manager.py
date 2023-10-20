@@ -99,6 +99,7 @@ class VulnTicketManager(object):
             "cvss_base_score": vuln.get("cvss3_base_score", vuln["cvss_base_score"]),
             "cvss_version": "3" if "cvss3_base_score" in vuln else "2",
             "kev": False,
+            "kev_ransomware": False,
             "name": vuln["plugin_name"],
             "score_source": vuln["source"],
             "severity": vuln["severity"],
@@ -117,6 +118,8 @@ class VulnTicketManager(object):
             kev_doc = self.__db.KEVDoc.find_one({"_id": vuln["cve"]})
             if kev_doc:
                 new_details["kev"] = True
+                if kev_doc.get("known_ransomware"):
+                    new_details["kev_ransomware"] = True
 
         # As of May 2022, some Nessus plugins report a severity that is
         # inconsistent with their (non-NVD, non-CVE-based) CVSS v3 score.
