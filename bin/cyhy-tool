@@ -262,9 +262,9 @@ def main():
 
         for orgId in orgIds:
             retire(db, orgId)
-        print "Do not forget to move " + str(
+        print str(
             orgIds
-        ) + ' to the "Retired CyHy Orgs" tab in the Google Spreadsheet!'
+        ) + ' has been successfully retired.'
 
 
 if __name__ == "__main__":
