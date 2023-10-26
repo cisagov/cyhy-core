@@ -264,7 +264,7 @@ def main():
             retire(db, orgId)
         print str(
             orgIds
-        ) + ' has been successfully retired.'
+        ) + " has been successfully retired."
 
 
 if __name__ == "__main__":
