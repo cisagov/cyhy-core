@@ -14,6 +14,7 @@ Options:
   --force                        Force loading of the provided file.
 
 """
+from __future__ import print_function
 
 import csv
 import re
@@ -30,8 +31,8 @@ POP_PLACES_HEADER = "FEATURE_ID|FEATURE_NAME|FEATURE_CLASS|STATE_ALPHA|STATE_NUM
 
 def exit_if_imported(fname):
     """Exit if the file appears to already have been loaded."""
-    print "EXITING without importing any documents."
-    print "The places collection already has {} loaded.".format(fname)
+    print("EXITING without importing any documents.")
+    print("The places collection already has {} loaded.".format(fname))
     sys.exit(0)
 
 
@@ -193,7 +194,7 @@ def main():
                 db, csv_reader
             )  # IMPORTANT: This import must be done AFTER import_govt_units()
         else:
-            print "ERROR: Unknown header line found in: {}".format(args["PLACES_FILE"])
+            print("ERROR: Unknown header line found in: {}".format(args["PLACES_FILE"]))
             sys.exit(-1)
 
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
