@@ -182,7 +182,7 @@ def main():
     db = database.db_from_config(args["--section"])
 
     # Files downloaded from geonames.usgs.gov are UTF8-BOM
-    with io.open(args["PLACES_FILE"], encoding="utf=8=sig") as place_file:
+    with io.open(args["PLACES_FILE"], encoding="utf-8-sig") as place_file:
         csv_reader = csv.DictReader(
             skip_comments(unidecode_lines(place_file)), delimiter="|"
         )
