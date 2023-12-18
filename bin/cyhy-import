@@ -106,11 +106,17 @@ def has_restricted_ips(nets):
 
 def import_request(db, request, source, force=False, init_stage=None):
     owner = request["_id"]
-    if not force and already_exists(db, request):
-        print "Cannot import, owner already exists:", owner
-        print "Use --force to destroy the currently stored document"
-        print "and replace it with the imported version."
-        return False
+    # Check if owner already exists
+    db_request = db.RequestDoc.get_by_owner(owner)
+    if db_request:
+        if not force:
+            print "Cannot import, owner already exists:", owner
+            print "Use --force to destroy the currently stored document"
+            print "and replace it with the imported version."
+            return False
+        # Preserve existing enrollment date if it exists
+        if db_request.get("enrolled"):
+            request["enrolled"] = db_request["enrolled"]
     request["period_start"] = dateutil.parser.parse(request["period_start"])
     nets = IPSet(request["networks"])
     if init_stage:
