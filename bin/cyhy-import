@@ -56,13 +56,6 @@ DAYS_OF_WEEK = [
 ]
 
 
-def already_exists(db, request):
-    owner = request["_id"]
-    db_request = db.RequestDoc.get_by_owner(owner)
-    if db_request:
-        return True
-
-
 def print_intersections(intersections):
     for request, cidrs in intersections.iteritems():
         print "%s (%s): %d" % (request["agency"]["name"], request["_id"], len(cidrs))
