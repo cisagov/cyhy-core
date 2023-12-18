@@ -1056,6 +1056,7 @@ class RequestDoc(RootDoc):
                 "country_name": basestring,
             },
         },
+        "enrolled": datetime.datetime,
         "period_start": datetime.datetime,
         "windows": [{"duration": int, "start": basestring, "day": basestring}],
         "networks": [CustomIPNetwork()],
@@ -1287,6 +1288,9 @@ class RequestDoc(RootDoc):
             self["agency"]["location"]["gnis_id"] = long(
                 self["agency"]["location"]["gnis_id"]
             )
+        # Set enrollment date if it was not previously set
+        if not self.get("enrolled"):
+            self["enrolled"] = util.utcnow()
         super(RequestDoc, self).save(*args, **kwargs)
 
 
