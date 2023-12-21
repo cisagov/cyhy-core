@@ -14,12 +14,15 @@ Options:
   --force                        Force loading of the provided file.
 
 """
+from __future__ import print_function
 
 import csv
+import io
 import re
 import sys
 
 from docopt import docopt
+from unidecode import unidecode
 
 from cyhy.db import database
 
@@ -30,8 +33,8 @@ POP_PLACES_HEADER = "FEATURE_ID|FEATURE_NAME|FEATURE_CLASS|STATE_ALPHA|STATE_NUM
 
 def exit_if_imported(fname):
     """Exit if the file appears to already have been loaded."""
-    print "EXITING without importing any documents."
-    print "The places collection already has {} loaded.".format(fname)
+    print("EXITING without importing any documents.")
+    print("The places collection already has {} loaded.".format(fname))
     sys.exit(0)
 
 
@@ -94,6 +97,12 @@ def is_imported(db, f, type):
 
     f.seek(marker)
     return False
+
+
+def unidecode_lines(lines):
+    """Flatten Unicode characters to ASCII equivalents."""
+    for line in lines:
+        yield unidecode(line)
 
 
 def skip_comments(lines):
@@ -172,13 +181,12 @@ def main():
     args = docopt(__doc__, version="v0.0.1")
     db = database.db_from_config(args["--section"])
 
-    with open(args["PLACES_FILE"], "r") as place_file:
-        header_line = (
-            place_file.readline().strip().decode("utf-8-sig")
-        )  # Files downloaded from geonames.usgs.gov are UTF8-BOM
+    # Files downloaded from geonames.usgs.gov are UTF8-BOM
+    with io.open(args["PLACES_FILE"], encoding="utf-8-sig") as place_file:
         csv_reader = csv.DictReader(
-            skip_comments(place_file), delimiter="|", fieldnames=header_line.split("|")
+            skip_comments(unidecode_lines(place_file)), delimiter="|"
         )
+        header_line = "|".join(csv_reader.fieldnames)
 
         if header_line == GOVT_UNITS_HEADER:
             if args["--force"] is not True:
@@ -193,7 +201,7 @@ def main():
                 db, csv_reader
             )  # IMPORTANT: This import must be done AFTER import_govt_units()
         else:
-            print "ERROR: Unknown header line found in: {}".format(args["PLACES_FILE"])
+            print("ERROR: Unknown header line found in: {}".format(args["PLACES_FILE"]))
             sys.exit(-1)
 
     # import IPython; IPython.embed() #<<< BREAKPOINT >>>
