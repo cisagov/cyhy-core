@@ -19,7 +19,7 @@ S3_BUCKET_REGION=$3
 
 # Run cyhy-archive script
 echo "Starting cyhy-archive script, creating archives in ${ARCHIVE_DIR}..."
-/usr/local/bin/cyhy-archive ${ARCHIVE_DIR}
+/usr/local/bin/cyhy-archive "${ARCHIVE_DIR}"
 
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
@@ -29,7 +29,7 @@ fi
 echo "Successfully executed cyhy-archive script"
 
 # Check if any archive files were created- if not, log message and exit
-if [ -n "$(find ${ARCHIVE_DIR} -prune -empty 2> /dev/null)" ]; then
+if [ -n "$(find "${ARCHIVE_DIR}" -prune -empty 2> /dev/null)" ]; then
   echo "No archives created by cyhy-archive; exiting."
   exit 0
 fi
@@ -40,7 +40,7 @@ aws configure set default.s3.signature_version s3v4
 
 # Copy archives from ARCHIVE_DIR to S3_BUCKET_NAME
 echo "Starting copy of archives to s3://${S3_BUCKET_NAME} (${S3_BUCKET_REGION})..."
-aws s3 cp ${ARCHIVE_DIR}/ s3://${S3_BUCKET_NAME}/ --region ${S3_BUCKET_REGION} --recursive --exclude "*" --include "cyhy_archive*.gz"
+aws s3 cp "${ARCHIVE_DIR}"/ s3://"${S3_BUCKET_NAME}"/ --region "${S3_BUCKET_REGION}" --recursive --exclude "*" --include "cyhy_archive*.gz"
 
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
@@ -51,7 +51,7 @@ echo "Successfully copied archives to S3"
 
 # Delete archives from ARCHIVE_DIR
 echo "Starting delete of archives from ${ARCHIVE_DIR}..."
-rm ${ARCHIVE_DIR}/cyhy_archive*.gz
+rm "${ARCHIVE_DIR}"/cyhy_archive*.gz
 
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
