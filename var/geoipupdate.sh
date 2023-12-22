@@ -17,19 +17,16 @@ function usage {
   exit 0
 }
 
-if [ $# -ne 2 ]
-then
+if [ $# -ne 2 ]; then
   usage
 fi
 
 license_type=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 license_key=$2
 
-if [ "$license_type" == "lite" ]
-then
+if [ "$license_type" == "lite" ]; then
   edition="GeoLite2-City"
-elif [ "$license_type" == "full" ]
-then
+elif [ "$license_type" == "full" ]; then
   edition="GeoIP2-City"
 else
   usage
