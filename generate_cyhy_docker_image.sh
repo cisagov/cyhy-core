@@ -30,13 +30,10 @@ function usage {
 # requirements and then exit.
 function check_dependencies {
   required_tools="docker"
-  for tool in $required_tools
-  do
-    if [ -z "$(command -v "$tool")" ]
-    then
+  for tool in $required_tools; do
+    if [ -z "$(command -v "$tool")" ]; then
       echo "This script requires the following tools to run:"
-      for item in $required_tools
-      do
+      for item in $required_tools; do
         echo "- $item"
       done
       exit 1
@@ -44,33 +41,29 @@ function check_dependencies {
   done
 }
 
-while (( "$#" ))
-do
+while (("$#")); do
   case "$1" in
-    -h|--help)
+    -h | --help)
       usage 0
       ;;
-    -k|--maxmind-key)
-      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]
-      then
+    -k | --maxmind-key)
+      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
         MAXMIND_LICENSE_KEY=$2
         shift 2
       else
         usage 1
       fi
       ;;
-    -n|--image-name)
-      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]
-      then
+    -n | --image-name)
+      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
         IMAGE_NAME=$2
         shift 2
       else
         usage 1
       fi
       ;;
-    -t|--image-tag)
-      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]
-      then
+    -t | --image-tag)
+      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
         IMAGE_TAG=$2
         shift 2
       else
@@ -87,12 +80,11 @@ check_dependencies
 
 BASE_IMAGE_NAME="$(echo "$IMAGE_NAME" | tr "/" "_")_$IMAGE_TAG"
 IMAGE_OUTPUT_FILE="${BASE_IMAGE_NAME}_$(date +'%Y%m%d').tgz"
-if [ -z ${MAXMIND_LICENSE_KEY} ]
-then
+if [ -z ${MAXMIND_LICENSE_KEY} ]; then
   MAXMIND_LICENSE_KEY=$(aws ssm get-parameter \
-      --output text \
-      --name "/cyhy/core/geoip/license_key" \
-      --with-decryption \
+    --output text \
+    --name "/cyhy/core/geoip/license_key" \
+    --with-decryption \
     | awk -F"\t" '{print $6}')
 fi
 
