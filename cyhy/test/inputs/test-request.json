@@ -1,27 +1,27 @@
 {
     "_id": "TEST",
     "agency": {
-        "acronym": "TEST", 
+        "acronym": "TEST",
         "contacts": [
             {
-                "email": "mark.feldhousen@hq.dhs.gov", 
-                "name": "Mark Feldhousen", 
+                "email": "mark.feldhousen@hq.dhs.gov",
+                "name": "Mark Feldhousen",
                 "phone": "786.353.4335"
             }
-        ], 
+        ],
         "name": "Test Scan"
-    }, 
-    "init_stage": "NETSCAN1", 
+    },
+    "init_stage": "NETSCAN1",
     "networks": [
-        "66.207.132.2/32", 
+        "66.207.132.2/32",
         "173.66.73.61/32"
-    ], 
-    "period_start": "2013-05-05T00:00:00", 
-    "scan_limits": [], 
+    ],
+    "period_start": "2013-05-05T00:00:00",
+    "scan_limits": [],
     "windows": [
         {
-            "day": "Sunday", 
-            "duration": 168, 
+            "day": "Sunday",
+            "duration": 168,
             "start": "00:00:00"
         }
     ]

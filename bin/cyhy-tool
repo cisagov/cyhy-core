@@ -15,7 +15,7 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -f --foreground                Build indices in the foreground
   -q --quiet                     Do not display progress bars
   -S --sync                      Update tally counts by scanning database
