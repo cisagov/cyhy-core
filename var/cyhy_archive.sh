@@ -5,13 +5,12 @@
 
 # set -o verbose
 
-if [ $# -ne 3 ]
-	then
-		echo "Usage: $0 archive-dir s3-bucket-name s3-bucket-region"
-		echo "  archive-dir        Directory to create archive files in"
-		echo "  s3-bucket-name     AWS S3 bucket to copy archive files to"
-		echo "  s3-bucket-region   Region of AWS S3 bucket to copy archive files to"
-		exit
+if [ $# -ne 3 ]; then
+  echo "Usage: $0 archive-dir s3-bucket-name s3-bucket-region"
+  echo "  archive-dir        Directory to create archive files in"
+  echo "  s3-bucket-name     AWS S3 bucket to copy archive files to"
+  echo "  s3-bucket-region   Region of AWS S3 bucket to copy archive files to"
+  exit
 fi
 
 ARCHIVE_DIR=$1
@@ -25,14 +24,14 @@ echo "Starting cyhy-archive script, creating archives in ${ARCHIVE_DIR}..."
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
   echo "ERROR: cyhy-archive failed - exiting!"
-	exit $RESULT
+  exit $RESULT
 fi
 echo "Successfully executed cyhy-archive script"
 
 # Check if any archive files were created- if not, log message and exit
-if [ -n "$(find ${ARCHIVE_DIR} -prune -empty 2>/dev/null)" ]; then
+if [ -n "$(find ${ARCHIVE_DIR} -prune -empty 2> /dev/null)" ]; then
   echo "No archives created by cyhy-archive; exiting."
-	exit 0
+  exit 0
 fi
 
 # Set default AWS signature version; required in order to successfully copy
@@ -46,7 +45,7 @@ aws s3 cp ${ARCHIVE_DIR}/ s3://${S3_BUCKET_NAME}/ --region ${S3_BUCKET_REGION} -
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
   echo "ERROR: Copy of archives to s3://${S3_BUCKET_NAME} failed - exiting!"
-	exit $RESULT
+  exit $RESULT
 fi
 echo "Successfully copied archives to S3"
 
@@ -57,7 +56,7 @@ rm ${ARCHIVE_DIR}/cyhy_archive*.gz
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
   echo "ERROR: Delete of archives from ${ARCHIVE_DIR} failed - exiting!"
-	exit $RESULT
+  exit $RESULT
 fi
 echo "Successfully deleted archives in ${ARCHIVE_DIR}"
 echo "Done!"

@@ -14,8 +14,7 @@ echo
 cd /usr/local/bin
 
 # create output that can be evaled to create aliases for cyhy commands
-for f in cyhy-*
-do
+for f in cyhy-*; do
   echo alias $f=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" $f\"
 done
 
