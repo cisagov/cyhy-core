@@ -11,8 +11,6 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
-  --force                        Force loading of the provided file.
-
 """
 from __future__ import print_function
 
@@ -29,74 +27,6 @@ from cyhy.db import database
 # Data file source: https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data
 GOVT_UNITS_HEADER = "FEATURE_ID|UNIT_TYPE|COUNTY_NUMERIC|COUNTY_NAME|STATE_NUMERIC|STATE_ALPHA|STATE_NAME|COUNTRY_ALPHA|COUNTRY_NAME|FEATURE_NAME"
 POP_PLACES_HEADER = "FEATURE_ID|FEATURE_NAME|FEATURE_CLASS|STATE_ALPHA|STATE_NUMERIC|COUNTY_NAME|COUNTY_NUMERIC|PRIMARY_LAT_DMS|PRIM_LONG_DMS|PRIM_LAT_DEC|PRIM_LONG_DEC|SOURCE_LAT_DMS|SOURCE_LONG_DMS|SOURCE_LAT_DEC|SOURCE_LONG_DEC|ELEV_IN_M|ELEV_IN_FT|MAP_NAME|DATE_CREATED|DATE_EDITED"
-
-
-def exit_if_imported(fname):
-    """Exit if the file appears to already have been loaded."""
-    print("EXITING without importing any documents.")
-    print("The places collection already has {} loaded.".format(fname))
-    sys.exit(0)
-
-
-def is_imported(db, f, type):
-    """Check if the provided file has already been loaded into the database.
-
-    This check is done by seeing if the first and last records are already in
-    the database.
-    NOTE: This method is entirely reliant on Python 2 file reading behavior.
-    """
-    # GOVT_UNITS
-    if type == 0:
-        header = GOVT_UNITS_HEADER
-    # POP_PLACES
-    elif type == 1:
-        header = POP_PLACES_HEADER
-    else:
-        return False
-
-    name_idx = header.split("|").index("FEATURE_NAME")
-
-    marker = f.tell()
-    # Get the first record.
-    while True:
-        first_data_line = f.readline()
-        if first_data_line.lstrip()[0] == "#":  # Skip commented out lines.
-            pass
-        else:
-            break
-
-    # Seek to the second to last byte in the file (to avoid any trailing newline).
-    f.seek(-2, 2)
-    # Get the last record
-    while True:
-        while f.read(1) != "\n" and marker < f.tell():
-            f.seek(-2, 1)  # Seek to the byte before the one we just read.
-        pos = f.tell()
-        last_data_line = f.readline()
-        if last_data_line.lstrip()[0] == "#":  # Skip commented out lines.
-            # Reset location to one byte before the line just read.
-            f.seek(pos)
-            f.seek(-1, 1)
-            pass
-        else:
-            break
-
-    first_record = first_data_line.strip().split("|")
-    last_record = last_data_line.strip().split("|")
-    if (
-        db.PlaceDoc.find_one(
-            {"_id": long(first_record[0]), "name": first_record[name_idx]}
-        )
-        is not None
-        and db.PlaceDoc.find_one(
-            {"_id": long(last_record[0]), "name": last_record[name_idx]}
-        )
-        is not None
-    ):
-        return True
-
-    f.seek(marker)
-    return False
 
 
 def unidecode_lines(lines):
@@ -189,14 +119,8 @@ def main():
         header_line = "|".join(csv_reader.fieldnames)
 
         if header_line == GOVT_UNITS_HEADER:
-            if args["--force"] is not True:
-                if is_imported(db, place_file, 0):
-                    exit_if_imported(args["PLACES_FILE"])
             import_govt_units(db, csv_reader)
         elif header_line == POP_PLACES_HEADER:
-            if args["--force"] is not True:
-                if is_imported(db, place_file, 1):
-                    exit_if_imported(args["PLACES_FILE"])
             import_populated_places(
                 db, csv_reader
             )  # IMPORTANT: This import must be done AFTER import_govt_units()
