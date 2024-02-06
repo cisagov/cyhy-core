@@ -24,7 +24,7 @@ for f in cyhy-*; do
   # need to escape special characters in the command so that it is correctly
   # interpreted by the host.
   # shellcheck disable=SC1083
-  echo alias "$f"=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" "$f"\"
+  echo alias "$f"=\"docker run --interactive --tty --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" "$f"\"
 done
 
 # create an alias to start bash in the container
@@ -33,4 +33,4 @@ done
 # to escape special characters in the command so that it is correctly
 # interpreted by the host.
 # shellcheck disable=SC1083
-echo alias cyhy-bash=\"docker run -it --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" /bin/bash\"
+echo alias cyhy-bash=\"docker run --interactive --tty --rm --volume \\\"\\\${CYHY_CONF_DIR:-/etc/cyhy}\\\":/etc/cyhy --volume \\\`pwd\\\`:/home/cyhy \\\"\\\${CYHY_CORE_IMAGE:-cisagov/cyhy-core}\\\" /bin/bash\"
