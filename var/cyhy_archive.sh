@@ -1,9 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Run cyhy-archive script, copy resulting archive files to an AWS S3 bucket,
 # then delete the archive files from the local archive directory
 
-# set -o verbose
+set -o nounset
+set -o errexit
+set -o pipefail
 
 if [ $# -ne 3 ]; then
   echo "Usage: $0 archive-dir s3-bucket-name s3-bucket-region"
