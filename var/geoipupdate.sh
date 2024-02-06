@@ -35,6 +35,6 @@ fi
 GEOIP_CITY_URI="https://download.maxmind.com/app/geoip_download?edition_id=$edition&license_key=$license_key&suffix=tar.gz"
 GEOIP_CITY_DIR="/usr/local/share/GeoIP/"
 
-mkdir -p "$GEOIP_CITY_DIR"
+mkdir --parents "$GEOIP_CITY_DIR"
 
-curl --location "$GEOIP_CITY_URI" | tar zxf - --strip-components=1 --directory="$GEOIP_CITY_DIR"
+curl --location "$GEOIP_CITY_URI" | tar --gzip --extract --file - --strip-components 1 --directory "$GEOIP_CITY_DIR"

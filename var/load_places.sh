@@ -43,7 +43,7 @@ TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
 
 # Create and change to temporary working directory.
-mkdir -p ${TMP_PLACES_DIR}
+mkdir --parents ${TMP_PLACES_DIR}
 cd ${TMP_PLACES_DIR}
 
 # download, unzip and import place files
@@ -51,7 +51,7 @@ cd ${TMP_PLACES_DIR}
 PLACE_FILES="GOVT_UNITS POP_PLACES"
 for PLACE_TYPE in ${PLACE_FILES}; do
   PLACE_URI="${DATA_BASE_URL}${PLACE_TYPE}.zip"
-  curl -O "${PLACE_URI}"
+  curl --remote-name "${PLACE_URI}"
   unzip "./${PLACE_TYPE}.zip" -d "${TMP_PLACES_DIR}"
 
   PLACE_FILE=$(ls ${TMP_PLACES_DIR}/*"${PLACE_TYPE}"*.txt)
@@ -59,7 +59,7 @@ for PLACE_TYPE in ${PLACE_FILES}; do
   if [ -z "${DB_SECTION}" ]; then
     "${SCRIPT_DIR}/GNIS_data_import.py" "${PLACE_FILE}"
   else
-    "${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" "${PLACE_FILE}"
+    "${SCRIPT_DIR}/GNIS_data_import.py" --section "${DB_SECTION}" "${PLACE_FILE}"
   fi
 done
 
@@ -68,9 +68,9 @@ echo "Importing ${ADDL_PLACES_FILE} to DB..."
 if [ -z "${DB_SECTION}" ]; then
   "${SCRIPT_DIR}/GNIS_data_import.py" "${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
 else
-  "${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" \
+  "${SCRIPT_DIR}/GNIS_data_import.py" --section "${DB_SECTION}" \
     "${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
 fi
 
 # clean up
-rm -R ${TMP_PLACES_DIR}
+rm --recursive ${TMP_PLACES_DIR}

@@ -20,7 +20,7 @@ VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 # Install required packages
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install --yes --no-install-recommends \
       build-essential \
       curl \
       dirmngr \
@@ -33,7 +33,7 @@ RUN apt-get update \
 # Install system Python packages for cyhy-core requirements
 # Sourced from:
 # https://github.com/cisagov/ansible-role-cyhy-core/blob/develop/tasks/main.yml
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get install --yes --no-install-recommends \
     python-crypto \
     python-dateutil \
     python-docopt \
@@ -49,7 +49,7 @@ RUN apt-get install -y --no-install-recommends \
 RUN curl --fail --silent --show-error --location https://pgp.mongodb.com/server-4.2.asc | \
     gpg --output /usr/share/keyrings/mongodb-server-4.2.gpg --dearmor
 RUN echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-4.2.gpg ] http://repo.mongodb.org/apt/debian buster/mongodb-org/4.2 main" | tee /etc/apt/sources.list.d/mongodb-org-4.2.list
-RUN apt-get update && apt-get install -y mongodb-org-shell
+RUN apt-get update && apt-get install --yes mongodb-org-shell
 
 # Clean up the apt cache
 RUN apt-get clean
@@ -60,8 +60,8 @@ COPY . ${CYHY_CORE_SRC}
 RUN pip install --no-cache-dir .[dev]
 RUN pip install --no-cache-dir --requirement requirements-cyhy_ops.txt
 RUN var/geoipupdate.sh $maxmind_license_type $maxmind_license_key
-RUN ln -snf ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
-RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
+RUN ln --symbolic --no-dereference --force ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
+RUN ln --symbolic --no-dereference --force ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
 
 USER cyhy
 WORKDIR ${CYHY_HOME}
