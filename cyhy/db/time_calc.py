@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import dateutil
 from dateutil.relativedelta import *
 from dateutil import parser

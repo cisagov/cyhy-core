@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 __all__ = ["GeoLocDB"]
 
 import os
