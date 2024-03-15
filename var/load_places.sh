@@ -36,9 +36,9 @@ DB_SECTION="${1-}"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Base URL for the zip files is derived from the listings at
-# https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data
+# https://www.usgs.gov/us-board-on-geographic-names/download-gnis-data
 # for GOVT_UNITS and POP_PLACES
-DATA_BASE_URL="https://geonames.usgs.gov/docs/stategaz/"
+DATA_BASE_URL="https://prd-tnm.s3.amazonaws.com/StagedProducts/GeographicNames/Archive/TopicalGazetteers/"
 
 TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
