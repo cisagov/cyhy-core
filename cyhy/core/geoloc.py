@@ -40,6 +40,7 @@ RESTRICTED_COUNTRIES = [
     "Venezuela",
     "Zimbabwe",
 ]
+
 # Ensure that the order in GEODB_FILES is used for searching
 for file in GEODB_FILES:
     for path in GEODB_CITY_PATHS:
