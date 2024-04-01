@@ -10,6 +10,8 @@ GEODB_FILES = ["GeoIP2-City.mmdb", "GeoLite2-City.mmdb"]
 GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
 GEODB_FILE_PATHS = []
 
+# The list of restricted countries was provided by CISA International Affairs
+# in March 2024.
 # The MaxMind GeoLite2 and GeoIP2 databases that we support use 
 # https://www.geonames.org/countries/ as the data source for country names.
 # For more info, see: 
