@@ -38,7 +38,7 @@ RESTRICTED_COUNTRIES = [
     "Sudan",
     "Syria",
     "Venezuela",
-    "Zimbabwe"
+    "Zimbabwe",
 ]
 # Ensure that the order in GEODB_FILES is used for searching
 for file in GEODB_FILES:
