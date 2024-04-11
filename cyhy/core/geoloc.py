@@ -78,6 +78,6 @@ class GeoLocDB(object):
             if response.country.name in RESTRICTED_COUNTRIES:
                 return response.country.name
         except AddressNotFoundError:
-            print >> sys.stderr, "CIDR %s not found in geolocation database" % cidr
+            print >> sys.stderr, "IP %s not found in geolocation database" % ip
 
         return ""
