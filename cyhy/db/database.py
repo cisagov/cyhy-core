@@ -1299,15 +1299,14 @@ class RequestDoc(RootDoc):
 
         # Verify that all email address fields in fact
         # contain valid email addresses.
-        contacts = self["agency"].get("contacts")
-        if contacts is not None:
-            for contact in contacts:
-                email_address = contact.get("email")
-                if email_address is not None:
-                    # This should be modified to use fullmatch() when
-                    # this code is ported to Python 3.
-                    if not self.__EmailAddressRegex.match(email_address):
-                        raise ValueError(email_address + " is not a valid email address")
+        contacts = self["agency"].get("contacts", [])
+        for contact in contacts:
+            email_address = contact.get("email")
+            if email_address is not None:
+                # This should be modified to use fullmatch() when this code is
+                # ported to Python 3.
+                if not self.__EmailAddressRegex.match(email_address):
+                    raise ValueError(email_address + " is not a valid email address")
 
         super(RequestDoc, self).save(*args, **kwargs)
 
