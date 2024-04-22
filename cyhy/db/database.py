@@ -4,6 +4,7 @@ from collections import defaultdict, Iterable, OrderedDict
 import copy
 import datetime
 import random
+import re
 import sys
 import time
 
@@ -1031,6 +1032,9 @@ class HostDoc(RootDoc):
 class RequestDoc(RootDoc):
     # TODO: enforce _id
     __collection__ = REQUEST_COLLECTION
+    # This regex was taken from the Python example at
+    # https://emailregex.com/
+    __EmailAddressRegex = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
     structure = {
         "agency": {
             "name": basestring,
@@ -1288,9 +1292,22 @@ class RequestDoc(RootDoc):
             self["agency"]["location"]["gnis_id"] = long(
                 self["agency"]["location"]["gnis_id"]
             )
+
         # Set enrollment date if it was not previously set
         if not self.get("enrolled"):
             self["enrolled"] = util.utcnow()
+
+        # Verify that all email address fields in fact
+        # contain valid email addresses.
+        contacts = self["agency"].get("contacts", [])
+        for contact in contacts:
+            email_address = contact.get("email")
+            if email_address is not None:
+                # This should be modified to use fullmatch() when this code is
+                # ported to Python 3.
+                if not self.__EmailAddressRegex.match(email_address):
+                    raise ValueError(email_address + " is not a valid email address")
+
         super(RequestDoc, self).save(*args, **kwargs)
 
 
