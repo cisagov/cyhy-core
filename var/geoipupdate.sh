@@ -40,4 +40,4 @@ GEOIP_CITY_DIR="/usr/local/share/GeoIP/"
 
 mkdir -p "$GEOIP_CITY_DIR"
 
-curl "$GEOIP_CITY_URI" | tar zxf - --strip-components=1 --directory="$GEOIP_CITY_DIR"
+curl --location "$GEOIP_CITY_URI" | tar zxf - --strip-components=1 --directory="$GEOIP_CITY_DIR"
