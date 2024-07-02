@@ -10,6 +10,8 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
 
+  -A --allow-restricted-ips      Allow restricted IPs to be added to the database.
+                                 [default: False]
   -i STAGE --init-stage STAGE    Override the init-stage specified in file
   -f --force                     Force import of existing request, destroying original
   -s SECTION --section=SECTION   Configuration section to use.
@@ -75,7 +77,7 @@ def has_intersections(db, nets, filename, owner):
         return True
 
 
-def has_restricted_ips(nets):
+def has_restricted_ips(nets, allow_restricted=False):
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda: IPSet())
     for ip in nets:
@@ -92,12 +94,15 @@ def has_restricted_ips(nets):
             print "%s:" % country
             for cidr in cidrs.iter_cidrs():
                 print "    %s" % cidr
-        print "Cannot continue!\nSome addresses associated with restricted countries."
-        return True
+        if allow_restricted:
+            print "WARNING: Restricted IPs will be added to the database."
+        else:
+            print "Cannot continue!\nSome addresses associated with restricted countries."
+            return True
     return False
 
 
-def import_request(db, request, source, force=False, init_stage=None):
+def import_request(db, request, source, force=False, init_stage=None, allow_restricted=False):
     owner = request["_id"]
     # Check if owner already exists
     db_request = db.RequestDoc.get_by_owner(owner)
@@ -116,7 +121,7 @@ def import_request(db, request, source, force=False, init_stage=None):
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
         return False
-    if has_restricted_ips(nets):
+    if has_restricted_ips(nets, allow_restricted):
         # This is not combined with the previous check so the output
         # from each function can be seen so the user can get all messages
         # without multiple runs
@@ -146,7 +151,7 @@ def import_request(db, request, source, force=False, init_stage=None):
     return True
 
 
-def import_file(db, filename, force, init_stage=None):
+def import_file(db, filename, force, init_stage=None, allow_restricted=False):
     try:
         with open(filename, "r") as f:
             # For py3, encoding should move from json.load into open statement
@@ -155,10 +160,10 @@ def import_file(db, filename, force, init_stage=None):
         print ("Document contains a non-ASCII character: {}".format(e))
         return False
 
-    return import_request(db, request, filename, force, init_stage)
+    return import_request(db, request, filename, force, init_stage, allow_restricted)
 
 
-def import_stdin(db, force, init_stage=None):
+def import_stdin(db, force, init_stage=None, allow_restricted=False):
     try:
         # This would need to be changed for py3
         request = json.load(sys.stdin, encoding="ascii")
@@ -166,7 +171,7 @@ def import_stdin(db, force, init_stage=None):
         print ("Document contains a non-ASCII character: {}".format(e))
         return False
 
-    return import_request(db, request, "from stdin", force, init_stage)
+    return import_request(db, request, "from stdin", force, init_stage, allow_restricted)
 
 
 def main():
@@ -174,9 +179,9 @@ def main():
     db = database.db_from_config(args["--section"])
 
     if args["FILE"] != None:
-        success = import_file(db, args["FILE"], args["--force"], args["--init-stage"])
+        success = import_file(db, args["FILE"], args["--force"], args["--init-stage"], args["--allow-restricted-ips"])
     else:
-        success = import_stdin(db, args["--force"], args["--init-stage"])
+        success = import_stdin(db, args["--force"], args["--init-stage"], args["--allow-restricted-ips"])
 
     if not success:
         sys.exit(-1)
