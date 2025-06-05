@@ -914,6 +914,19 @@ class HostDoc(RootDoc):
         host = self.find_one({"_id": int_ip})
         return host
 
+    def get_all_hostname_owners_of_ip(self, ip):
+        # Returns a list of owners of all hostnames associated with the given IP
+        # If no hostnames are found, returns a list containing the IP owner
+        # If no HostDoc is found, returns an empty list
+        result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
+        if result:
+            if result.get("hostnames"):
+                return list({h["owner"] for h in result["hostnames"]})
+            else:
+                return [result["owner"]]
+        # We tried our best, time to give up
+        return list()
+
     def get_owner_of_ip(self, ip, hostname=None):
         result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
         if result:
