@@ -506,6 +506,8 @@ class IPPortTicketManager(object):
         # search for previous open ticket that matches
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
+                # portscans may not have a hostname
+                "hostname": portscan.get("hostname"),
                 "ip_int": portscan["ip_int"],
                 "open": True,
                 "port": portscan["port"],
@@ -534,6 +536,8 @@ class IPPortTicketManager(object):
         cutoff_date = util.utcnow() + self.__reopen_delta
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
+                # portscans may not have a hostname
+                "hostname": portscan.get("hostname"),
                 "ip_int": portscan["ip_int"],
                 "open": False,
                 "port": portscan["port"],
@@ -568,6 +572,8 @@ class IPPortTicketManager(object):
             "service": portscan["service"],
             "severity": 0,
         }
+        # portscans may not have a hostname
+        new_ticket["hostname"] = portscan.get("hostname")
         new_ticket["owner"] = portscan["owner"]
         new_ticket["port"] = portscan["port"]
         new_ticket["protocol"] = portscan["protocol"]
