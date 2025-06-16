@@ -909,6 +909,11 @@ class HostDoc(RootDoc):
         # Return HostDocs with the given hostname in their list of hostnames
         return self.find({"hostnames": {"$elemMatch": {"hostname": hostname}}})
 
+    def get_hosts_with_hostnames(self, hostnames):
+        # Return HostDocs whose list of hostnames contains any of the given list
+        # of hostnames
+        return self.find({"hostnames": {"$elemMatch": {"hostname": {"$in": hostnames}}}})
+
     def get_by_ip(self, ip):
         int_ip = int(ip)
         host = self.find_one({"_id": int_ip})
