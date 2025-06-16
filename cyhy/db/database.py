@@ -1507,6 +1507,7 @@ class SnapshotDoc(RootDoc):
             "cvss_average_vulnerable": float,
         },
         "networks": [CustomIPNetwork()],
+        "hostnames": [basestring],
         "addresses_scanned": int,
         "services": dict,
         "tix_msec_open": {
