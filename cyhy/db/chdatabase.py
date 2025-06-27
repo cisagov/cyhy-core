@@ -466,15 +466,29 @@ class CHDatabase(object):
                 snapshot_oid
             ]  # If you don't have a parent snapshot, you are your own parent; this prevents deletion of
             # this snap if it ever becomes a child of another snapshot that later gets deleted
+
         owner_doc = self.__db.RequestDoc.get_by_owner(owner)
+        snapshot_networks = netaddr.IPSet()
         if owner_doc:
-            snapshot_doc["networks"] = owner_doc.networks.iter_cidrs()
+            snapshot_networks = owner_doc.networks
             snapshot_doc["hostnames"] = owner_doc.get("hostnames", [])
+            if owner_doc.get("hostnames"):
+                for host in self.__db.HostDoc.get_hosts_with_hostnames(
+                    owner_doc["hostnames"]
+                ):
+                    snapshot_networks.add(host.ip)
+
         for descendant in descendants_included:
             descendant_doc = self.__db.RequestDoc.get_by_owner(descendant)
             if descendant_doc:
-                snapshot_doc["networks"] += descendant_doc.networks.iter_cidrs()
+                snapshot_networks = snapshot_networks | descendant_doc.networks
                 snapshot_doc["hostnames"] += descendant_doc.get("hostnames", [])
+                if descendant_doc.get("hostnames"):
+                    for host in self.__db.HostDoc.get_hosts_with_hostnames(
+                        descendant_doc["hostnames"]
+                    ):
+                        snapshot_networks.add(host.ip)
+        snapshot_doc["networks"] = snapshot_networks.iter_cidrs()
 
         if exclude_from_world_stats:
             snapshot_doc["exclude_from_world_stats"] = True
