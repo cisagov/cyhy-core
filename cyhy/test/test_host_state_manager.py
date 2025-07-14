@@ -1,10 +1,9 @@
 #!/usr/bin/env py.test -v
 
-import itertools
 import pytest
-from cyhy.db import DefaultHostStateManager, database
+from cyhy.db import DefaultHostStateManager
 from cyhy.core.common import *
-from common_fixtures import database, ch_db
+from common_fixtures import database
 
 
 @pytest.fixture
