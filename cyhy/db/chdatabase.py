@@ -468,9 +468,10 @@ class CHDatabase(object):
             # this snap if it ever becomes a child of another snapshot that later gets deleted
 
         def add_networks_and_hostnames_to_snapshot(request_doc, snapshot_doc):
-            """Adds networks and hostnames from a request document to a snapshot
-               document. If the request document has hostnames, it also adds the
-               IP addresses of those hostnames to the snapshot."""
+            """Adds networks and hostnames from a request doc to a snapshot doc
+
+               If the request document has hostnames, it also adds the IP
+               addresses of those hostnames to the snapshot."""
             if request_doc:
                 snapshot_doc["networks"] |= request_doc.networks
                 # Since snapshot documents are initialized with their hostnames
