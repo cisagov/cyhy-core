@@ -1,7 +1,10 @@
 # NOTE: Be careful- you really don't want to push this Docker image to the
 # public Docker Hub if it was built with your MaxMind license key!
 
-FROM debian:buster-slim
+# Official Docker images are in the form library/<app> while non-official
+# images are in the form <user>/<app>.
+FROM docker.io/library/debian:buster-slim
+
 LABEL maintainer="Mark Feldhousen <mark.feldhousen@cisa.dhs.gov>"
 LABEL description="Docker image to provide tools for interacting with the CyHy \
 production database."
