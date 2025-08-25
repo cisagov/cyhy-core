@@ -1,7 +1,10 @@
 # NOTE: Be careful- you really don't want to push this Docker image to the
 # public Docker Hub if it was built with your MaxMind license key!
 
-FROM debian:buster-slim
+# Official Docker images are in the form library/<app> while non-official
+# images are in the form <user>/<app>.
+FROM docker.io/library/debian:buster-slim
+
 LABEL maintainer="Mark Feldhousen <mark.feldhousen@cisa.dhs.gov>"
 LABEL description="Docker image to provide tools for interacting with the CyHy \
 production database."
@@ -17,6 +20,14 @@ RUN groupadd --system cyhy && useradd --system --gid cyhy cyhy
 RUN mkdir ${CYHY_HOME}
 RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
+
+###
+# Remove existing apt SourceList configuration and add in one configured
+# to use the Debian Archive. This is necessary because the Debian Buster
+# apt repository was archived.
+###
+RUN rm /etc/apt/sources.list
+COPY docker/archive.list /etc/apt/sources.list.d/
 
 # Install required packages
 RUN apt-get update \
