@@ -22,7 +22,7 @@ RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
 ###
-# Remove existing apt SourceList confniguration and add in one configured
+# Remove existing apt SourceList configuration and add in one configured
 # to use the Debian Archive. This is necessary because the Debian Buster
 # apt repository was archived.
 ###
