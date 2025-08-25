@@ -21,6 +21,14 @@ RUN mkdir ${CYHY_HOME}
 RUN chown cyhy:cyhy ${CYHY_HOME}
 VOLUME ${CYHY_ETC} ${CYHY_HOME}
 
+###
+# Remove existing apt SourceList confniguration and add in one configured
+# to use the Debian Archive. This is necessary because the Debian Buster
+# apt repository was archived.
+###
+RUN rm /etc/apt/sources.list
+COPY docker/archive.list /etc/apt/sources.list.d/
+
 # Install required packages
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
