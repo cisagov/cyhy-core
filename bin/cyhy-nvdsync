@@ -31,28 +31,60 @@ from docopt import docopt
 from cyhy.db import database
 from cyhy.util import util
 
-NVD_URL = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{year}.json.gz"
+NVD_URL = "https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
+NVD_SOURCE_EMAIL = "nvd@nist.gov"
 
 
 def parse_json(db, json_stream):
     data = json.load(json_stream)
 
-    if data.get("CVE_data_type") != "CVE":
+    if data.get("format") != "NVD_CVE":
         raise ValueError("JSON does not look like valid NVD CVE data.")
 
-    for entry in data.get("CVE_Items", []):
-        cve_id = entry["cve"]["CVE_data_meta"]["ID"]
-        # Reject CVEs that don't have baseMetricV2 or baseMetricV3 CVSS data
-        if not any(k in entry["impact"] for k in ["baseMetricV2", "baseMetricV3"]):
+    for entry in data.get("vulnerabilities", []):
+        try:
+            cve_id = entry["cve"]["id"]
+        except KeyError:
+            print "Skipping; invalid JSON - no id found for CVE: " + entry
+            continue
+
+        # Reject CVEs that don't have V2 or V3 CVSS data
+        if not any(k in entry["cve"].get("metrics", {})
+            for k in [
+                "cvssMetricV2",
+                "cvssMetricV30",
+                "cvssMetricV31",
+            ]):
             # Make sure they are removed from our db.
             db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
             print "x",
         else:
+            # Grab newest CVSS metrics with NVD_SOURCE_EMAIL as the source
+            cvss_base_score = None
+            cvss_version = None
+            try:
+                for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
+                    if v in entry["cve"].get("metrics", {}):
+                        for metric in entry["cve"]["metrics"][v]:
+                            if metric.get("source") == NVD_SOURCE_EMAIL:
+                                cvss_base_score = metric["cvssData"]["baseScore"]
+                                cvss_version = metric["cvssData"]["version"]
+                                break
+                    if cvss_base_score is not None:
+                        # Break out of outer loop
+                        break
+
+                if cvss_base_score is None or cvss_version is None:
+                    # Remove CVE (if it exists) from database
+                    db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
+                    print "x",
+                    continue
+            except KeyError:
+                print "Skipping; invalid JSON for CVE: " + cve
+
             print ".",
-            version = "V3" if "baseMetricV3" in entry["impact"] else "V2"
-            cvss_base_score = entry["impact"]["baseMetric" + version]["cvss" + version]["baseScore"]
-            cvss_version = entry["impact"]["baseMetric" + version]["cvss" + version]["version"]
+            # Upsert CVE document in the database
             entry_doc = db.CVEDoc({
                 "_id": cve_id,
                 "cvss_score": float(cvss_base_score),
