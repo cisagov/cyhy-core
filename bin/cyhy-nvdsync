@@ -33,6 +33,7 @@ from cyhy.util import util
 
 NVD_URL = "https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{year}.json.gz"
 NVD_FIRST_YEAR = 2002
+NVD_SOURCE_EMAIL = "nvd@nist.gov"
 
 
 def parse_json(db, json_stream):
@@ -59,18 +60,20 @@ def parse_json(db, json_stream):
             db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
             print "x",
         else:
-            # Determine newest CVSS metrics version containing a "Primary"
-            # metric in the CVE data
+            # Grab newest CVSS metrics with NVD_SOURCE_EMAIL as the source
             cvss_base_score = None
             cvss_version = None
             try:
                 for v in ["cvssMetricV31", "cvssMetricV30", "cvssMetricV2"]:
                     if v in entry["cve"].get("metrics", {}):
                         for metric in entry["cve"]["metrics"][v]:
-                            if metric.get("type") == "Primary":
+                            if metric.get("source") == NVD_SOURCE_EMAIL:
                                 cvss_base_score = metric["cvssData"]["baseScore"]
                                 cvss_version = metric["cvssData"]["version"]
                                 break
+                    if cvss_base_score is not None:
+                        # Break out of outer loop
+                        break
 
                 if cvss_base_score is None or cvss_version is None:
                     # Remove CVE (if it exists) from database
