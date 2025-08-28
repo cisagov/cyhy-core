@@ -16,15 +16,15 @@ Options:
   --version                       Show version.
 """
 
-# standard python libraries
+# Standard Python Libraries
 import logging
 
-# third-party libraries (install with pip)
+# Third-Party Libraries
 from dns import resolver, exception
 from docopt import docopt
 from netaddr import IPAddress, AddrFormatError
 
-# intra-project modules
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.core.common import STAGE, TICKET_EVENT
 from cyhy.core.geoloc import GeoLocDB
