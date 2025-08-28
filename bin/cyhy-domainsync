@@ -132,7 +132,7 @@ def main():
                     # ]
 
                     # If the hostnames list doesn't exist, create it
-                    if not host_doc.get("hostnames"):
+                    if host_doc.get("hostnames") is None:
                         host_doc["hostnames"] = []
 
                     # If the hostname is already in the list and if the
