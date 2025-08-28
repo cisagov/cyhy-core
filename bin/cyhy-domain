@@ -62,7 +62,7 @@ def read_file(filename):
 
 
 def do_list(db, owner):
-    request = db.RequestDoc.find_one({"_id": owner})
+    request = db.RequestDoc.get_by_owner(owner)
     for h in request.get("hostnames", []):
         print(h)
 
@@ -100,7 +100,7 @@ def add(db, owner, domains):
     if domain_conflict:
         sys.exit(-1)
 
-    request = db.RequestDoc.find_one({"_id": owner})
+    request = db.RequestDoc.get_by_owner(owner)
     if request.get("hostnames"):
         request["hostnames"] = sorted(request["hostnames"] + domains)
     else:
@@ -113,7 +113,7 @@ def add(db, owner, domains):
 
 
 def remove(db, owner, domains):
-    request = db.RequestDoc.find_one({"_id": owner})
+    request = db.RequestDoc.get_by_owner(owner)
 
     unowned_domains = []
     for d in domains:
@@ -259,12 +259,12 @@ def main():
         sys.exit(0)
 
     if args.get("OWNER"):
-        if not db.RequestDoc.find_one({"_id": args["OWNER"]}):
+        if not db.RequestDoc.get_by_owner(args["OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["OWNER"]
             sys.exit(-1)
     
     if args.get("NEW_OWNER"):
-        if not db.RequestDoc.find_one({"_id": args["NEW_OWNER"]}):
+        if not db.RequestDoc.get_by_owner(args["NEW_OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["NEW_OWNER"]
             sys.exit(-1)
 
