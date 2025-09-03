@@ -485,12 +485,17 @@ class CHDatabase(object):
                         snapshot_doc["networks"].add(host.ip)
 
         owner_doc = self.__db.RequestDoc.get_by_owner(owner)
+        # Initialize networks to an empty IPSet so we can easily add to it as we
+        # build the snapshot.  When finished, it will be converted to a list of
+        # CIDRs to conform to the SnapshotDoc schema.
         snapshot_doc["networks"] = netaddr.IPSet()
         add_networks_and_hostnames_to_snapshot(owner_doc, snapshot_doc)
 
         for descendant in descendants_included:
             descendant_doc = self.__db.RequestDoc.get_by_owner(descendant)
             add_networks_and_hostnames_to_snapshot(descendant_doc, snapshot_doc)
+        # Convert networks from an IPSet to a list of CIDRs to conform to the
+        # SnapshotDoc schema.
         snapshot_doc["networks"] = snapshot_doc["networks"].iter_cidrs()
 
         if exclude_from_world_stats:
