@@ -200,6 +200,7 @@ class VulnTicketManager(object):
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "hostname": vuln["hostname"],
                 "open": True,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
@@ -246,6 +247,7 @@ class VulnTicketManager(object):
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
                 "ip_int": long(vuln["ip"]),
+                "hostname": vuln["hostname"],
                 "open": False,
                 "port": vuln["port"],
                 "protocol": vuln["protocol"],
@@ -288,6 +290,7 @@ class VulnTicketManager(object):
         # time to open a new ticket
         new_ticket = self.__db.TicketDoc()
         new_ticket.ip = vuln["ip"]
+        new_ticket["hostname"] = vuln["hostname"]
         new_ticket["owner"] = vuln["owner"]
         new_ticket["port"] = vuln["port"]
         new_ticket["protocol"] = vuln["protocol"]
@@ -348,6 +351,12 @@ class VulnTicketManager(object):
         #                                     'open':True})
 
         # work-around using a pipeline
+        #
+        # Note: There is no need to include hostnames in this pipeline because
+        # when we scan an IP address, that scan includes all hostnames
+        # associated with that IP.  This means we can close all matching tickets
+        # (IP/port/source_id/source) that weren't seen during the scan (i.e. not
+        # in self.__seen_ticket_ids).
         tickets = database.run_pipeline_cursor(
             close_tickets_pl(
                 ip_ints,
@@ -497,6 +506,8 @@ class IPPortTicketManager(object):
         # search for previous open ticket that matches
         prev_open_ticket = self.__db.TicketDoc.find_one(
             {
+                # portscans may not have a hostname
+                "hostname": portscan.get("hostname"),
                 "ip_int": portscan["ip_int"],
                 "open": True,
                 "port": portscan["port"],
@@ -525,6 +536,8 @@ class IPPortTicketManager(object):
         cutoff_date = util.utcnow() + self.__reopen_delta
         reopen_ticket = self.__db.TicketDoc.find_one(
             {
+                # portscans may not have a hostname
+                "hostname": portscan.get("hostname"),
                 "ip_int": portscan["ip_int"],
                 "open": False,
                 "port": portscan["port"],
@@ -559,6 +572,8 @@ class IPPortTicketManager(object):
             "service": portscan["service"],
             "severity": 0,
         }
+        # portscans may not have a hostname
+        new_ticket["hostname"] = portscan.get("hostname")
         new_ticket["owner"] = portscan["owner"]
         new_ticket["port"] = portscan["port"]
         new_ticket["protocol"] = portscan["protocol"]

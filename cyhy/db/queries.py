@@ -8,7 +8,13 @@ import database
 def addresses_scanned_pl(owners):
     return (
         [
-            {"$match": {"owner": {"$in": owners}, "latest_scan.DONE": {"$ne": None}}},
+            {"$match": {
+                "$or": [
+                    {"owner": {"$in": owners}},
+                    {"hostnames": {"$elemMatch": {"owner": {"$in": owners}}}}
+                ],
+                "latest_scan.DONE": {"$ne": None}
+            }},
             {"$group": {"_id": {}, "addresses_scanned": {"$sum": 1}}},
         ],
         database.HOST_COLLECTION,
@@ -18,7 +24,13 @@ def addresses_scanned_pl(owners):
 def host_count_pl(owners):
     return (
         [
-            {"$match": {"owner": {"$in": owners}, "state.up": True}},
+            {"$match": {
+                "$or": [
+                    {"owner": {"$in": owners}},
+                    {"hostnames": {"$elemMatch": {"owner": {"$in": owners}}}}
+                ],
+                "state.up": True
+            }},
             {"$group": {"_id": {}, "host_count": {"$sum": 1}}},
         ],
         database.HOST_COLLECTION,
@@ -222,7 +234,11 @@ def time_span(snapshot_oid):
 def host_time_span(owners):
     return (
         [
-            {"$match": {"owner": {"$in": owners}}},
+            {"$match": {"$or":
+                [
+                    {"owner": {"$in": owners}},
+                    {"hostnames": {"$elemMatch": {"owner": {"$in": owners}}}}
+                ]}},
             {
                 "$group": {
                     "_id": {},

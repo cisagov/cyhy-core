@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cyhy-core",
-    version="0.0.2",
+    version="1.0.0",
     author="Mark Feldhousen Jr.",
     author_email="mark.feldhousen@cisa.dhs.gov",
     packages=find_packages(),
@@ -11,6 +11,8 @@ setup(
     scripts=[
         "bin/cyhy-archive",
         "bin/cyhy-control",
+        "bin/cyhy-domain",
+        "bin/cyhy-domainsync",
         "bin/cyhy-export",
         "bin/cyhy-geoip",
         "bin/cyhy-import",
@@ -30,6 +32,7 @@ setup(
     description="Core scanning libraries for Cyber Hygiene",
     long_description=open("README.md").read(),
     install_requires=[
+        "dnspython >= 1.16.0",
         "docopt >= 0.6.2",
         "geoip2 >= 2.3.0",
         "maxminddb <2.0.0",
@@ -42,6 +45,7 @@ setup(
         "python-dateutil >= 2.2",
         "PyYAML >= 3.12",
         "six >= 1.9",
+        "validators == 0.14.2",
     ],
     extras_require={"dev": ["ipython >= 5.8.0", "mock >= 2.0.0"]},
 )

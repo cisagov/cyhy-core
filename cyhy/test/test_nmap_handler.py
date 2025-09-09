@@ -10,7 +10,7 @@ sys.path.append(os.path.join(myDir, ".."))
 import pytest
 
 import cyhy.util as util
-from cyhy.nmap.nmap_handler import NmapContentHander
+from cyhy_commander.nmap.nmap_handler import NmapContentHandler
 from xml.sax import parse
 
 TEST_NMAP_FILENAME = "inputs/test-fullscan.xml"
@@ -56,7 +56,7 @@ def your_mom():
 class TestNmapHandler:
     def test_parse(self, your_mom):
         # py.test doesn't allow __init__
-        handler = NmapContentHander(
+        handler = NmapContentHandler(
             your_mom.netscan_host_callback, your_mom.end_callback
         )
         f = open(TEST_NMAP_FILENAME, "rb")

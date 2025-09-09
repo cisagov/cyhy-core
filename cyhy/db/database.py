@@ -349,50 +349,51 @@ class HireDoc(RootDoc):
 class TicketDoc(RootDoc):
     __collection__ = TICKET_COLLECTION
     structure = {
-        "ip_int": long,
-        "source": basestring,
-        "source_id": int,
-        "owner": basestring,
-        "ip": CustomIPAddress(),
-        "port": int,
-        "protocol": basestring,
-        "open": bool,
-        "false_positive": bool,
-        "time_opened": datetime.datetime,
-        "last_change": datetime.datetime,
-        "time_closed": datetime.datetime,
         "details": dict,
         "events": [
             {
-                "time": datetime.datetime,
                 "action": basestring,
                 "reason": basestring,
                 "reference": ObjectId,
+                "time": datetime.datetime,
             }
         ],
+        "false_positive": bool,
+        "hostname": basestring,
+        "ip_int": long,
+        "ip": CustomIPAddress(),
+        "last_change": datetime.datetime,
         "loc": (float, float),
+        "open": bool,
+        "owner": basestring,
+        "port": int,
+        "protocol": basestring,
+        "source_id": int,
+        "source": basestring,
+        "time_closed": datetime.datetime,
+        "time_opened": datetime.datetime,
     }
     required_fields = [
-        "source",
-        "owner",
-        "ip",
-        "ip_int",
-        "port",
-        "protocol",
-        "last_change",
-        "time_opened",
-        "open",
-        "false_positive",
-        "source_id",
         "details",
         "events",
+        "false_positive",
+        "ip_int",
+        "ip",
+        "last_change",
+        "open",
+        "owner",
+        "port",
+        "protocol",
+        "source_id",
+        "source",
+        "time_opened",
     ]
     default_values = {
-        "last_change": util.utcnow,
-        "time_opened": util.utcnow,
-        "open": True,
-        "false_positive": False,
         "events": [],
+        "false_positive": False,
+        "last_change": util.utcnow,
+        "open": True,
+        "time_opened": util.utcnow,
     }
 
     @property
@@ -457,9 +458,10 @@ class TicketDoc(RootDoc):
     def get_indices(self):
         return (
             (
-                "ip_port_protocol_source_open_false_positive",
+                "ip_hostname_port_protocol_source_open_false_positive",
                 [
                     ("ip_int", 1),
+                    ("hostname", 1),
                     ("port", 1),
                     ("protocol", 1),
                     ("source", 1),
@@ -468,9 +470,18 @@ class TicketDoc(RootDoc):
                     ("false_positive", 1),
                 ],
                 False,
-                False,
+                True,
             ),
-            ("ip_open", [("ip_int", 1), ("open", 1)], False, False),
+            (
+                "ip_hostname_open",
+                [
+                    ("ip_int", 1),
+                    ("hostname", 1),
+                    ("open", 1)
+                ],
+                False,
+                True,
+            ),
             ("open_owner", [("open", 1), ("owner", 1)], False, False),
             ("time_opened", [("time_opened", 1), ("open", 1)], False, False),
             ("last_change", [("last_change", 1)], False, False),
@@ -724,26 +735,32 @@ class PortScanDoc(ScanDoc):
 class VulnScanDoc(ScanDoc):
     __collection__ = VULN_SCAN_COLLECTION
     structure = {
-        "protocol": basestring,
-        "port": int,
-        "service": dict,
         "cvss_base_score": float,
         "cvss_vector": basestring,
         "description": basestring,
         "fname": basestring,
+        "hostname": basestring,
         "plugin_family": basestring,
         "plugin_id": int,
         "plugin_modification_date": datetime.datetime,
         "plugin_name": basestring,
         "plugin_publication_date": datetime.datetime,
         "plugin_type": basestring,
+        "port": int,
+        "protocol": basestring,
         "risk_factor": basestring,
+        "service": basestring,
         "severity": int,
         "solution": basestring,
         "synopsis": basestring,
-        "service": basestring,  # overrides
     }
-    required_fields = ["cvss_base_score", "severity", "protocol", "port", "service"]
+    required_fields = [
+        "cvss_base_score",
+        "port",
+        "protocol",
+        "service",
+        "severity",
+    ]
     default_values = {"cvss_base_score": 0.0, "source": "nessus"}
 
     def get_indices(self):
@@ -766,16 +783,12 @@ class HostDoc(RootDoc):
     __collection__ = HOST_COLLECTION
     structure = {
         "_id": long,  # IP as integer
+        # Map hostnames to owners, e.g.
+        # [ {"hostname: "foo.gov", "owner: "FOO"}
+        #   {"hostname: "bar.gov", "owner: "BAR"} ]
+        "hostnames": list,
         "ip": CustomIPAddress(),
-        "owner": basestring,
         "last_change": datetime.datetime,
-        "next_scan": datetime.datetime,
-        "state": dict,  # {'reason':basestring, 'up':bool}, #TODO bug in mongokit api
-        "stage": basestring,
-        "status": basestring,
-        "loc": (float, float),
-        "priority": int,
-        "r": float,
         "latest_scan": {
             STAGE.NETSCAN1: datetime.datetime,
             STAGE.NETSCAN2: datetime.datetime,
@@ -783,25 +796,28 @@ class HostDoc(RootDoc):
             STAGE.VULNSCAN: datetime.datetime,
             STATUS.DONE: datetime.datetime,
         },
+        "loc": (float, float),
+        "next_scan": datetime.datetime,
+        "owner": basestring,
+        "priority": int,
+        "r": float,
+        "stage": basestring,
+        "state": dict,  # {'reason':basestring, 'up':bool}, #TODO bug in mongokit api
+        "status": basestring,
     }
     required_fields = [
         "_id",
         "ip",
-        "owner",
         "last_change",
-        "state",
-        "stage",
-        "status",
+        "owner",
         "priority",
         "r",
+        "stage",
+        "state",
+        "status",
     ]
     default_values = {
         "last_change": util.utcnow,
-        "priority": 0,
-        "r": random.random,
-        "stage": STAGE.NETSCAN1,
-        "status": STATUS.WAITING,
-        "state": {"reason": "new", "up": False},
         "latest_scan": {
             STAGE.NETSCAN1: None,
             STAGE.NETSCAN2: None,
@@ -809,6 +825,11 @@ class HostDoc(RootDoc):
             STAGE.VULNSCAN: None,
             STATUS.DONE: None,
         },
+        "priority": 0,
+        "r": random.random,
+        "stage": STAGE.NETSCAN1,
+        "state": {"reason": "new", "up": False},
+        "status": STATUS.WAITING,
     }
 
     def save(self, *args, **kwargs):
@@ -884,17 +905,44 @@ class HostDoc(RootDoc):
         count = self.find({"stage": stage, "status": status, "owner": owner}).count()
         return count
 
+    def get_by_hostname(self, hostname):
+        # Return HostDocs with the given hostname in their list of hostnames
+        return self.find({"hostnames": {"$elemMatch": {"hostname": hostname}}})
+
+    def get_hosts_with_hostnames(self, hostnames):
+        # Return HostDocs whose list of hostnames contains any of the given list
+        # of hostnames
+        return self.find({"hostnames": {"$elemMatch": {"hostname": {"$in": hostnames}}}})
+
     def get_by_ip(self, ip):
         int_ip = int(ip)
         host = self.find_one({"_id": int_ip})
         return host
 
-    def get_owner_of_ip(self, ip):
-        result = self.find_one({"_id": int(ip)}, {"owner": True})
+    def get_all_hostname_owners_of_ip(self, ip):
+        # Returns a list of owners of all hostnames associated with the given IP
+        # If no hostnames are found, returns a list containing the IP owner
+        # If no HostDoc is found, returns an empty list
+        result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
         if result:
-            return result["owner"]
-        else:
-            return None
+            if result.get("hostnames"):
+                return list({h["owner"] for h in result["hostnames"]})
+            else:
+                return [result["owner"]]
+        # We tried our best, time to give up
+        return list()
+
+    def get_owner_of_ip(self, ip, hostname=None):
+        result = self.find_one({"_id": int(ip)}, {"hostnames": True, "owner": True})
+        if result:
+            if hostname:
+                for h in result.get("hostnames", []):
+                    if h["hostname"] == hostname:
+                        return h["owner"]
+            else:
+                return result["owner"]
+        # we tried our best, time to give up
+        return None
 
     def exists(self, stage, status):
         one = self.find_one({"stage": stage, "status": status})
@@ -909,14 +957,14 @@ class HostDoc(RootDoc):
         if owner != None:
             rs = self.find(
                 spec={"status": status, "stage": stage, "owner": owner},
-                fields={"ip": True},
+                fields={"ip": True, "hostnames": True},
                 sort=[("priority", 1), ("r", 1)],
                 limit=count,
             )
         else:
             rs = self.find(
                 spec={"status": status, "stage": stage},
-                fields={"ip": True},
+                fields={"ip": True, "hostnames": True},
                 sort=[("priority", 1), ("r", 1)],
                 limit=count,
             )
@@ -1037,58 +1085,59 @@ class RequestDoc(RootDoc):
     __EmailAddressRegex = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
     structure = {
         "agency": {
-            "name": basestring,
             "acronym": basestring,
-            "type": basestring,  # TODO: Remove this field now that hierarchy is implemented
             "contacts": [
                 {
-                    "phone": basestring,
-                    "name": basestring,
                     "email": basestring,
+                    "name": basestring,
+                    "phone": basestring,
                     "type": basestring,  # addition for POC types
                 }
             ],
             "location": {
+                "country_name": basestring,
+                "country": basestring,
+                "county_fips": basestring,
+                "county": basestring,
                 "gnis_id": long,  # See info about this ID in PlaceDoc below
                 "name": basestring,
-                "state": basestring,
                 "state_fips": basestring,
                 "state_name": basestring,
-                "county": basestring,
-                "county_fips": basestring,
-                "country": basestring,
-                "country_name": basestring,
+                "state": basestring,
             },
+            "name": basestring,
+            "type": basestring,  # TODO: Remove this field now that hierarchy is implemented
         },
+        "children": list,
         "enrolled": datetime.datetime,
-        "period_start": datetime.datetime,
-        "windows": [{"duration": int, "start": basestring, "day": basestring}],
-        "networks": [CustomIPNetwork()],
+        "hostnames": list,
         "init_stage": basestring,
-        "scan_limits": list,  # TODO elaborate
         "key": basestring,  # TODO encrypt?
-        "scheduler": basestring,
-        "scan_types": list,
+        "networks": [CustomIPNetwork()],
+        "period_start": datetime.datetime,
         "report_period": basestring,
         "report_types": list,
-        "stakeholder": bool,
-        "children": list,
         "retired": bool,
+        "scan_limits": list,  # TODO elaborate
+        "scan_types": list,
+        "scheduler": basestring,
+        "stakeholder": bool,
+        "windows": [{"day": basestring, "duration": int, "start": basestring}],
     }
     required_fields = [
-        "agency.name",
         "agency.acronym",
-        "period_start",
-        "windows",
+        "agency.name",
         "init_stage",
+        "period_start",
         "stakeholder",
+        "windows",
     ]
     default_values = {
-        "period_start": util.utcnow,
-        "windows": [{"duration": 168, "start": "00:00:00", "day": "Sunday"}],
         "init_stage": "NETSCAN1",
-        "stakeholder": False,
+        "period_start": util.utcnow,
         "retired": False,
+        "stakeholder": False,
+        "windows": [{"day": "Sunday", "duration": 168, "start": "00:00:00"}],
     }
 
     @property
@@ -1458,6 +1507,7 @@ class SnapshotDoc(RootDoc):
             "cvss_average_vulnerable": float,
         },
         "networks": [CustomIPNetwork()],
+        "hostnames": [basestring],
         "addresses_scanned": int,
         "services": dict,
         "tix_msec_open": {

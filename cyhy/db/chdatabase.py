@@ -273,16 +273,15 @@ class CHDatabase(object):
         self.__logger.debug('Updated %d "down" hosts.' % hosts_processed)
 
     def fetch_ready_hosts(self, count, stage, owner=None, waiting_too=False):
-        hosts = self.__db.HostDoc.get_some_for_stage(stage, count, owner, waiting_too)
+        hosts = list(
+            self.__db.HostDoc.get_some_for_stage(stage, count, owner, waiting_too)
+        )
         # NOTE: there is a race condition here, but it won't occur with one commander.
         # And the worst case scenario is that a host is scanned twice
         # Used to be slow multiple find_and_update
-        ips = []
         for host in hosts:
-            int_ip = host["_id"]
-            self.transition_host(int_ip)
-            ips.append(host["ip"])
-        return ips
+            self.transition_host(host["_id"])
+        return hosts
 
     def get_open_ports(self, ip_list):
         """takes a list of IPs and returns a sorted list of open ports"""
@@ -467,13 +466,37 @@ class CHDatabase(object):
                 snapshot_oid
             ]  # If you don't have a parent snapshot, you are your own parent; this prevents deletion of
             # this snap if it ever becomes a child of another snapshot that later gets deleted
-        snapshot_doc["networks"] = self.__db.RequestDoc.get_by_owner(
-            owner
-        ).networks.iter_cidrs()
+
+        def add_networks_and_hostnames_to_snapshot(request_doc, snapshot_doc):
+            """Adds networks and hostnames from a request doc to a snapshot doc
+
+               If the request document has hostnames, it also adds the IP
+               addresses of those hostnames to the snapshot."""
+            if request_doc:
+                snapshot_doc["networks"] |= request_doc.networks
+                # Since snapshot documents are initialized with their hostnames
+                # field set to an empty list, we can safely assume that
+                # snapshot_doc["hostnames"] is always a list.
+                snapshot_doc["hostnames"] += request_doc.get("hostnames", [])
+                # If the request doc has hostnames, add the IP addresses of
+                # those hostnames to the snapshot.
+                if request_doc.get("hostnames"):
+                    for host in self.__db.HostDoc.get_hosts_with_hostnames(request_doc["hostnames"]):
+                        snapshot_doc["networks"].add(host.ip)
+
+        owner_doc = self.__db.RequestDoc.get_by_owner(owner)
+        # Initialize networks to an empty IPSet so we can easily add to it as we
+        # build the snapshot.  When finished, it will be converted to a list of
+        # CIDRs to conform to the SnapshotDoc schema.
+        snapshot_doc["networks"] = netaddr.IPSet()
+        add_networks_and_hostnames_to_snapshot(owner_doc, snapshot_doc)
+
         for descendant in descendants_included:
-            snapshot_doc["networks"] += self.__db.RequestDoc.get_by_owner(
-                descendant
-            ).networks.iter_cidrs()
+            descendant_doc = self.__db.RequestDoc.get_by_owner(descendant)
+            add_networks_and_hostnames_to_snapshot(descendant_doc, snapshot_doc)
+        # Convert networks from an IPSet to a list of CIDRs to conform to the
+        # SnapshotDoc schema.
+        snapshot_doc["networks"] = snapshot_doc["networks"].iter_cidrs()
 
         if exclude_from_world_stats:
             snapshot_doc["exclude_from_world_stats"] = True
