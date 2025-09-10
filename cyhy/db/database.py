@@ -870,6 +870,18 @@ class HostDoc(RootDoc):
                 False,
                 False,
             ),
+            (
+                "hostnames_latest_scan_done",
+                [("hostnames.owner", 1), ("latest_scan.DONE", 1)],
+                False,
+                True,
+            ),
+            (
+                "hostnames_latest_scan_vulnscan",
+                [("hostnames.owner", 1), ("state.up", 1), ("latest_scan.VULNSCAN", 1)],
+                False,
+                True,
+            ),
         )
 
     @property
