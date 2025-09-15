@@ -35,9 +35,8 @@ from cyhy.util import util
 
 
 def read_file(filename):
-    f = open(filename, "r")
-    valid_domains, invalid_domains = util.parse_domains(f.readlines())
-    f.close()
+    with open(filename, "r") as f:
+        valid_domains, invalid_domains = util.parse_domains(f.readlines())
     return valid_domains, invalid_domains
 
 
