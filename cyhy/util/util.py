@@ -18,6 +18,7 @@ __all__ = [
     "report_dates",
     "utcnow",
     "warn_and_confirm",
+    "parse_domains",
 ]
 
 # Standard Python Libraries
@@ -35,6 +36,7 @@ import time
 from dateutil.relativedelta import relativedelta, SU, MO, TU, WE, TH, FR, SA
 import dateutil.tz as tz
 import netaddr
+from validators import domain as valid_domain
 
 
 def ranges(i):
@@ -276,3 +278,28 @@ def warn_and_confirm(message):
     print >> sys.stderr
     yes = raw_input('Type "yes" if you are sure that you want to continue: ')
     return yes == "yes"
+
+
+def parse_domains(domains):
+    '''Parses a list of domains and determines which are valid and which are not.
+    
+    Args:
+        domains (list): A list of domain strings to parse.
+    
+    Returns:
+        valid_domains (set): A set of valid domain strings.
+        invalid_domains (set): A set of invalid domain strings.
+    '''
+    valid_domains = set()
+    invalid_domains = set()
+    for d in domains:
+        d = d.split("#", 1)[0]  # Remove comments
+        d = d.strip()
+        if not d:
+            # Skip blank lines
+            continue
+        if not valid_domain(d):
+            invalid_domains.add(d)
+        else:
+            valid_domains.add(d)
+    return valid_domains, invalid_domains
