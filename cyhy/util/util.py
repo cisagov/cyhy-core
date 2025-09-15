@@ -20,18 +20,21 @@ __all__ = [
     "warn_and_confirm",
 ]
 
-import sys
+# Standard Python Libraries
+from collections import OrderedDict
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
+import bson
 import itertools
 import json
-import bson
-from collections import OrderedDict
-import netaddr
-import dateutil.tz as tz
-from datetime import datetime
-import time
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
+import time
+
+# Third-Party Libraries
 from dateutil.relativedelta import relativedelta, SU, MO, TU, WE, TH, FR, SA
+import dateutil.tz as tz
+import netaddr
 
 
 def ranges(i):
