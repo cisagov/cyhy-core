@@ -34,23 +34,24 @@ from cyhy.util import util
 from ConfigParser import SafeConfigParser
 from cyhy.core.common import *
 
-THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
-AGENCY = "AGENCY"
-POC = "POC"
-NETWORKS = "NETWORKS"
-NAME = "name"
-EMAIL = "email"
-PHONE = "phone"
 ACRONYM = "acronym"
-TYPE = "type"
-STAKEHOLDER = "stakeholder"
-SCAN_TYPES = "scan_types"
-KEY = "key"
-REPORTING = "REPORTING"
-RPT_TYPES = "report_types"
-RPT_PERIOD = "report_period"
-LOCATION = "location"
+AGENCY = "AGENCY"
+EMAIL = "email"
 GNIS_ID = "gnis_id"
+HOSTNAMES = "HOSTNAMES"
+KEY = "key"
+LOCATION = "location"
+NAME = "name"
+NETWORKS = "NETWORKS"
+PHONE = "phone"
+POC = "POC"
+REPORTING = "REPORTING"
+RPT_PERIOD = "report_period"
+RPT_TYPES = "report_types"
+SCAN_TYPES = "scan_types"
+STAKEHOLDER = "stakeholder"
+THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
+TYPE = "type"
 
 
 def write_blank_config():
