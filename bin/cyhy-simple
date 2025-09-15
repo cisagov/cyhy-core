@@ -18,12 +18,17 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
+# Standard Python Libraries
 import codecs
-import sys
-import os
-from docopt import docopt
-import netaddr
 import datetime
+import netaddr
+import os
+import sys
+
+# Third-Party Libraries
+from docopt import docopt
+
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.util import util
 from ConfigParser import SafeConfigParser
