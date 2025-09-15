@@ -59,6 +59,7 @@ def write_blank_config():
     config.add_section(AGENCY)
     config.add_section(POC)
     config.add_section(NETWORKS)
+    config.add_section(HOSTNAMES)
     config.add_section(REPORTING)
     config.set(AGENCY, NAME, "")
     config.set(AGENCY, ACRONYM, "")
@@ -214,6 +215,18 @@ def fill_in(db, file_pointer, force=False):
             nets.add(net)
 
     request.add_networks(nets)
+
+    # Process hostnames
+    request["hostnames"] = []
+    if HOSTNAMES in config.sections() and config.items(HOSTNAMES):
+        hostnames = [h for h, _ in config.items(HOSTNAMES)]
+        valid_hostnames, invalid_hostnames = util.parse_domains(hostnames)
+        if invalid_hostnames:
+            print >> sys.stderr, "Invalid hostname(s):"
+            for h in sorted(invalid_hostnames):
+                print >> sys.stderr, h
+            sys.exit(-1)
+        request["hostnames"] = sorted(valid_hostnames)
 
     return request
 
