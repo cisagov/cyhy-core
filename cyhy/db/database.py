@@ -772,6 +772,7 @@ class VulnScanDoc(ScanDoc):
                 False,
                 False,
             ),
+            ("latest_time", [("latest", 1), ("time", 1)], False, False),
         )
 
     def save(self, *args, **kwargs):
