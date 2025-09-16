@@ -27,38 +27,17 @@ import sys
 
 # Third-Party Libraries
 from docopt import docopt
-from validators import domain as valid_domain
 
 # cisagov Libraries
 from cyhy.core.common import *
 from cyhy.db import database
 from cyhy.util import util
 
-def parse_domains(domains):
-    parsed_domains = set()
-    invalid_domains = set()
-    for d in domains:
-        d = d.split("#", 1)[0]  # remove comments
-        d = d.strip()
-        if not d:
-            # skip blank lines
-            continue
-        if not valid_domain(d):
-            invalid_domains.add(d)
-        else:
-            parsed_domains.add(d)
-    
-    if invalid_domains:
-        print "ERROR - invalid domain(s):"
-        for d in invalid_domains:
-            print(d)
-        sys.exit(-1)
-    return parsed_domains
-
 
 def read_file(filename):
-    f = open(filename, "r")
-    return parse_domains(f.readlines())
+    with open(filename, "r") as f:
+        valid_domains, invalid_domains = util.parse_domains(f.readlines())
+    return valid_domains, invalid_domains
 
 
 def do_list(db, owner):
@@ -250,7 +229,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 
 
 def main():
-    args = docopt(__doc__, version="v1.0.0")
+    args = docopt(__doc__, version="v1.0.1")
 
     db = database.db_from_config(args["--section"], args["--config-file"])
 
@@ -272,13 +251,23 @@ def main():
         do_list(db, args["OWNER"])
         sys.exit(0)
 
-    domains = parse_domains(args["DOMAINS"])
+    valid_domains, invalid_domains = util.parse_domains(args["DOMAINS"])
     if args["--file"] != None:
-        f_domains = read_file(args["--file"])
-        domains.update(f_domains)
-    elif len(domains) == 0:
-        domains.update(parse_domains(sys.stdin.readlines()))
-    domains = list(domains)
+        f_valid_domains, f_invalid_domains = read_file(args["--file"])
+        valid_domains.update(f_valid_domains)
+        invalid_domains.update(f_invalid_domains)
+    elif len(valid_domains) == 0:
+        stdin_valid_domains, stdin_invalid_domains = util.parse_domains(sys.stdin.readlines())
+        valid_domains.update(stdin_valid_domains)
+        invalid_domains.update(stdin_invalid_domains)
+    
+    if invalid_domains:
+        print "ERROR - Invalid domain(s):"
+        for d in sorted(invalid_domains):
+            print(d)
+        sys.exit(-1)
+
+    domains = list(valid_domains)
 
     if args["add"]:
         add(db, args["OWNER"], domains)

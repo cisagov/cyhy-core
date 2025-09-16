@@ -18,34 +18,40 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
+# Standard Python Libraries
 import codecs
-import sys
-import os
-from docopt import docopt
-import netaddr
 import datetime
+import netaddr
+import os
+import sys
+
+# Third-Party Libraries
+from docopt import docopt
+
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.util import util
 from ConfigParser import SafeConfigParser
 from cyhy.core.common import *
 
-THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
-AGENCY = "AGENCY"
-POC = "POC"
-NETWORKS = "NETWORKS"
-NAME = "name"
-EMAIL = "email"
-PHONE = "phone"
 ACRONYM = "acronym"
-TYPE = "type"
-STAKEHOLDER = "stakeholder"
-SCAN_TYPES = "scan_types"
-KEY = "key"
-REPORTING = "REPORTING"
-RPT_TYPES = "report_types"
-RPT_PERIOD = "report_period"
-LOCATION = "location"
+AGENCY = "AGENCY"
+EMAIL = "email"
 GNIS_ID = "gnis_id"
+HOSTNAMES = "HOSTNAMES"
+KEY = "key"
+LOCATION = "location"
+NAME = "name"
+NETWORKS = "NETWORKS"
+PHONE = "phone"
+POC = "POC"
+REPORTING = "REPORTING"
+RPT_PERIOD = "report_period"
+RPT_TYPES = "report_types"
+SCAN_TYPES = "scan_types"
+STAKEHOLDER = "stakeholder"
+THE_VERY_DISTANT_FUTURE = datetime.datetime(9999, 1, 1, 0, 0)
+TYPE = "type"
 
 
 def write_blank_config():
@@ -53,6 +59,7 @@ def write_blank_config():
     config.add_section(AGENCY)
     config.add_section(POC)
     config.add_section(NETWORKS)
+    config.add_section(HOSTNAMES)
     config.add_section(REPORTING)
     config.set(AGENCY, NAME, "")
     config.set(AGENCY, ACRONYM, "")
@@ -209,11 +216,23 @@ def fill_in(db, file_pointer, force=False):
 
     request.add_networks(nets)
 
+    # Process hostnames
+    request["hostnames"] = []
+    if HOSTNAMES in config.sections() and config.items(HOSTNAMES):
+        hostnames = [h for h, _ in config.items(HOSTNAMES)]
+        valid_hostnames, invalid_hostnames = util.parse_domains(hostnames)
+        if invalid_hostnames:
+            print >> sys.stderr, "Invalid hostname(s):"
+            for h in sorted(invalid_hostnames):
+                print >> sys.stderr, h
+            sys.exit(-1)
+        request["hostnames"] = sorted(valid_hostnames)
+
     return request
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.3")
+    args = docopt(__doc__, version="v1.0.0")
 
     if args["--blank"]:
         write_blank_config()
