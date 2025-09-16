@@ -15,6 +15,8 @@ Options:
   -h --help                      Show this screen.
   --version                      Show version.
 
+  -A --allow-restricted-ips      Allow restricted IPs to be added to the database.
+                                 [default: False]
   -f FILENAME --file=FILENAME    Read addresses from a file.
   -s SECTION --section=SECTION   Configuration section to use.
 
@@ -165,7 +167,7 @@ def do_list_all(db):
     print_intersections(intersections)
 
 
-def add(db, owner, cidrs):
+def add(db, owner, cidrs, allow_restricted=False):
     intersections = db.RequestDoc.get_all_intersections(
         cidrs
     )  # intersections from database
@@ -185,8 +187,11 @@ def add(db, owner, cidrs):
             print "%s:" % country
             for cidr in cidrs.iter_cidrs():
                 print "    %s" % cidr
-        print "Cannot continue!\nSome addresses associated with restricted countries."
-        sys.exit(-1)
+        if allow_restricted:
+            print "WARNING: Restricted IPs will be added to the database."
+        else:
+            print "Cannot continue!\nSome addresses associated with restricted countries."
+            sys.exit(-1)
 
     intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
     if intersections:
@@ -481,7 +486,7 @@ def main():
         print "# %d" % len(nets)
         print_cidrs(nets, indent=0)
     elif args["add"]:
-        add(db, args["OWNER"], nets)
+        add(db, args["OWNER"], nets, args["--allow-restricted-ips"])
     elif args["remove"]:
         wrapped_remove(db, args["OWNER"], nets)
     elif args["compare"]:
