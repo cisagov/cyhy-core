@@ -20,7 +20,7 @@ S3_BUCKET_REGION=$3
 
 # Run cyhy-archive script
 echo "Starting cyhy-archive script, creating archives in ${ARCHIVE_DIR}..."
-/usr/local/bin/cyhy-archive ${ARCHIVE_DIR}
+/usr/local/bin/cyhy-archive --no-commander-pause ${ARCHIVE_DIR}
 
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
