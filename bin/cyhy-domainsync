@@ -61,7 +61,7 @@ def close_tickets(db, ip, hostname, reason):
         "time": now,
     }
     result = db.TicketDoc.collection.update(
-        {"ip_int": int(ip), "hostname": hostname, "closed": False},
+        {"ip_int": int(ip), "hostname": hostname, "open": True},
         # Force false_positive to False since the ticket is being closed
         {"$set": {"false_positive": False, 
                   "open": False, 
