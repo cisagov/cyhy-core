@@ -263,7 +263,7 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
 
 def main():
     start_time = util.utcnow()
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
     logging_setup(args["--debug"])
     logger.info("cyhy-archive started")
     db = database.db_from_config(args["--section"])
