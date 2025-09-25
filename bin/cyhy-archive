@@ -215,19 +215,23 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
             delete_success = delete_output.get("ok")
             results["deleted_counts"][collection_name] = delete_output.get("n")
 
-            # check that number of deleted documents matches the number of exported/archived documents
+            # Compare the number of deleted documents to the number of
+            # exported/archived documents and log a warning if they don't match.
+            # The counts should match when the commander has been paused, but if
+            # the commander is still running, it is possible that documents had
+            # their "latest" flag set to False after the export but before the
+            # delete.
             if (
                 results["deleted_counts"][collection_name]
                 != results["exported_counts"][collection_name]
             ):
-                logger.error(
+                logger.warning(
                     "{}: count of exported documents ({:,}) does not match count of deleted documents ({:,})".format(
                         collection_name,
                         results["exported_counts"][collection_name],
                         results["deleted_counts"][collection_name],
                     )
                 )
-                return results
             results["delete_success"] = True
             logger.info(
                 "{}: {:,} documents successfully deleted".format(
@@ -259,7 +263,7 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
 
 def main():
     start_time = util.utcnow()
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
     logging_setup(args["--debug"])
     logger.info("cyhy-archive started")
     db = database.db_from_config(args["--section"])
