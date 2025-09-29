@@ -93,7 +93,6 @@ def print_ticket_details(tickets):
         t.pop("open_flag_str")
         t.pop("fp_flag_str")
         t.pop("severity_str")
-        t.pop("hostname")
 
 
 def list_false_positive(db, cidrs):
