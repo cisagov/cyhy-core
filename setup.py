@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cyhy-core",
-    version="1.1.4",
+    version="1.1.5",
     author="Mark Feldhousen Jr.",
     author_email="mark.feldhousen@cisa.dhs.gov",
     packages=find_packages(),
