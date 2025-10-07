@@ -496,6 +496,17 @@ class TicketDoc(RootDoc):
                 True,
             ),
             ("snapshots_source", [("snapshots", 1), ("source", 1)], False, True),
+            (
+                "source_source_id_snapshots_false_positive",
+                [
+                    ("source", 1),
+                    ("source_id", 1),
+                    ("snapshots", 1),
+                    ("false_positive", 1),
+                ],
+                False,
+                True,
+            ),
         )
 
     def save(self, *args, **kwargs):
