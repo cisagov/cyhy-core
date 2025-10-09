@@ -486,6 +486,28 @@ class TicketDoc(RootDoc):
             ("time_opened", [("time_opened", 1), ("open", 1)], False, False),
             ("last_change", [("last_change", 1)], False, False),
             ("time_closed", [("time_closed", 1)], False, True),
+            (
+                "snapshots_false_positive_source",
+                [
+                    ("snapshots", 1),
+                    ("false_positive", 1),
+                    ("source", 1),
+                ],
+                False,
+                True,
+            ),
+            ("snapshots_source", [("snapshots", 1), ("source", 1)], False, True),
+            (
+                "source_source_id_snapshots_false_positive",
+                [
+                    ("source", 1),
+                    ("source_id", 1),
+                    ("snapshots", 1),
+                    ("false_positive", 1),
+                ],
+                False,
+                True,
+            ),
         )
 
     def save(self, *args, **kwargs):
