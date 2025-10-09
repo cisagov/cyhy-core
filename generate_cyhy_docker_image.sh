@@ -80,7 +80,7 @@ check_dependencies
 
 BASE_IMAGE_NAME="$(echo "$IMAGE_NAME" | tr "/" "_")_$IMAGE_TAG"
 IMAGE_OUTPUT_FILE="${BASE_IMAGE_NAME}_$(date +'%Y%m%d').tgz"
-if [ -z ${MAXMIND_LICENSE_KEY} ]; then
+if [ -z "${MAXMIND_LICENSE_KEY}" ]; then
   MAXMIND_LICENSE_KEY=$(aws ssm get-parameter \
     --output text \
     --name "/cyhy/core/geoip/license_key" \
