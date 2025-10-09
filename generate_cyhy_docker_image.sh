@@ -6,6 +6,7 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
+MAXMIND_LICENSE_KEY=""
 IMAGE_NAME="cisagov/cyhy-core"
 IMAGE_TAG="latest"
 
