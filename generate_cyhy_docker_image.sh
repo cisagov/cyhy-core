@@ -89,7 +89,8 @@ if [ -z "${MAXMIND_LICENSE_KEY}" ]; then
     | awk -F"\t" '{print $6}')
 fi
 
-docker build --tag "$IMAGE_NAME:$IMAGE_TAG" \
+MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" docker build --tag "$IMAGE_NAME:$IMAGE_TAG" \
   --build-arg maxmind_license_type="full" \
-  --build-arg maxmind_license_key="$MAXMIND_LICENSE_KEY" .
+  --secret type=env,id=MAXMIND_LICENSE_KEY,env=MAXMIND_LICENSE_KEY \
+  .
 docker save "$IMAGE_NAME:$IMAGE_TAG" | gzip > "$IMAGE_OUTPUT_FILE"

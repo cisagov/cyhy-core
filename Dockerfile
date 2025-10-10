@@ -13,7 +13,6 @@ ENV CYHY_HOME="/home/cyhy" \
     CYHY_CORE_SRC="/usr/src/cyhy-core" \
     PYTHONIOENCODING="utf8"
 ARG maxmind_license_type="lite"
-ARG maxmind_license_key
 
 RUN groupadd --system cyhy && useradd --system --gid cyhy cyhy
 
@@ -70,7 +69,8 @@ WORKDIR ${CYHY_CORE_SRC}
 COPY . ${CYHY_CORE_SRC}
 RUN pip install --no-cache-dir .[dev]
 RUN pip install --no-cache-dir --requirement requirements-cyhy_ops.txt
-RUN var/geoipupdate.sh $maxmind_license_type $maxmind_license_key
+RUN --mount=type=secret,id=MAXMIND_LICENSE_KEY,env=MAXMIND_LICENSE_KEY \
+    var/geoipupdate.sh $maxmind_license_type $MAXMIND_LICENSE_KEY
 RUN ln -snf ${CYHY_CORE_SRC}/var/getenv /usr/local/bin
 RUN ln -snf ${CYHY_CORE_SRC}/var/getopsenv /usr/local/bin
 
