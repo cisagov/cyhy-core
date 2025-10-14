@@ -905,6 +905,7 @@ class HostDoc(RootDoc):
                 False,
                 True,
             ),
+            ("hostnames_hostname", [("hostnames.hostname", 1)], False, True),
         )
 
     @property
