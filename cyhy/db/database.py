@@ -508,6 +508,18 @@ class TicketDoc(RootDoc):
                 False,
                 True,
             ),
+            (
+                "owner_source_false_positive_severity_time_closed",
+                [
+                    ("owner", 1),
+                    ("source", 1),
+                    ("false_positive", 1),
+                    ("details.severity", 1),
+                    ("time_closed", 1),
+                ],
+                False,
+                True,
+            ),
         )
 
     def save(self, *args, **kwargs):
