@@ -83,6 +83,7 @@ def close_tickets(db, ip, hostname, reason):
     return result["nModified"]
 
 def main():
+    args = docopt(__doc__, version="v1.0.2")
 
     # Dictionary to track certain DNS exceptions encountered during processing
     dns_exceptions = {
