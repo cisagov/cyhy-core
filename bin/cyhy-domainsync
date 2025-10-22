@@ -227,6 +227,11 @@ def main():
         tally_doc.sync(db)
         print("Synchronized " + default_owner + " TallyDoc")
 
+        print("\nDNS exceptions encountered during processing:")
+        for exception_type, entries in dns_exceptions.items():
+            print("  %s: %d occurrences" % (exception_type, len(entries)))
+            for entry in entries:
+                print("    %s (%s)" % (entry["hostname"], entry["owner"]))
 
     except:
         logging.exception("Unexpected exception")
