@@ -43,10 +43,18 @@ def get_ipv4_addresses(hostname):
         answers = resolver.query(hostname, 'A')
         ip_list = [IPAddress(answer.address) for answer in answers]
         return set(ip_list)
-    except exception.DNSException as e:
-        # Could not resolve domain name
-        return set()
+    # Could not resolve domain name
     except AddrFormatError:
+        print("    Warning: Address format error for " + hostname)
+        return set()
+    except resolver.NoAnswer:
+        print("    Warning: DNS NoAnswer (no A records found) for " + hostname)
+        return set()
+    except resolver.NXDOMAIN:
+        print("    Warning: DNS NXDOMAIN (no domain exists) for " + hostname)
+        return set()
+    except resolver.YXDOMAIN:
+        print("    Warning: DNS YXDOMAIN (query name too long after DNAME substitution) for " + hostname)
         return set()
 
 def close_tickets(db, ip, hostname, reason):
