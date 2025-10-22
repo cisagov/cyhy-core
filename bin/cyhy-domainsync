@@ -83,7 +83,14 @@ def close_tickets(db, ip, hostname, reason):
     return result["nModified"]
 
 def main():
-    args = docopt(__doc__, version="v1.0.1")
+
+    # Dictionary to track certain DNS exceptions encountered during processing
+    dns_exceptions = {
+        "DNSException": [],
+        "NoNameservers": [],
+        "Timeout": [],
+    }
+
     try:
         db = database.db_from_config(args["--section"], args["--config-file"])
 
@@ -111,7 +118,36 @@ def main():
 
                 print("  " + str(hostdocs.count()) + " HostDocs currently reference this hostname")
 
-                ip_set = get_ipv4_addresses(hostname)
+                try:
+                    ip_set = get_ipv4_addresses(hostname)
+                # Note that the following DNS exceptions do not trigger any
+                # changes to HostDocs or TicketDocs, as opposed to those handled
+                # within get_ipv4_addresses().  This is because these exceptions
+                # likely indicate a temporary DNS issue or misconfiguration, and
+                # we don't want to make any HostDoc or TicketDoc changes based
+                # on incomplete or invalid DNS results.
+                except resolver.NoNameservers as e:
+                    print("    Warning: No nameservers available to resolve " + hostname)
+                    print(str(e))
+                    dns_exceptions["NoNameservers"].append(
+                        {"hostname": hostname, "owner": r["_id"]}
+                    )
+                    continue  # Skip to the next hostname
+                except resolver.Timeout as e:
+                    print("    Warning: DNS query timed out for " + hostname)
+                    print(str(e))
+                    dns_exceptions["Timeout"].append(
+                        {"hostname": hostname, "owner": r["_id"]}
+                    )
+                    continue  # Skip to the next hostname
+                except exception.DNSException as e:
+                    print("    Warning: Unexpected DNS exception for " + hostname)
+                    print(str(e))
+                    dns_exceptions["DNSException"].append(
+                        {"hostname": hostname, "owner": r["_id"]}
+                    )
+                    continue  # Skip to the next hostname
+
                 print("  " + str(len(ip_set)) + " IPv4 addresses found for this hostname")
                 for ip in ip_set:
                     print("    " + str(ip)),
