@@ -17,6 +17,9 @@
 - color: 07648d
   description: This issue will be advertised on code.gov's Open Tasks page (https://code.gov/open-tasks)
   name: code.gov
+- color: ffd343
+  description: Pull requests that update cyhy-core command-line tools
+  name: command-line tools
 - color: 0366d6
   description: Pull requests that update a dependency file
   name: dependencies

@@ -12,6 +12,10 @@ ansible:
   - changed-files:
       - any-glob-to-any-file:
           - "**/ansible/**"
+command-line tools:
+  - changed-files:
+      - any-glob-to-any-file:
+          - bin/**
 dependencies:
   - changed-files:
       - any-glob-to-any-file:
