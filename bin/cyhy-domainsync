@@ -50,8 +50,9 @@ def get_ipv4_addresses(hostname):
     except resolver.NoAnswer:
         print("    Warning: DNS NoAnswer (no A records found) for " + hostname)
         return set()
-    except resolver.NXDOMAIN:
+    except resolver.NXDOMAIN as e:
         print("    Warning: DNS NXDOMAIN (no domain exists) for " + hostname)
+        print("    " + str(e))
         return set()
     except resolver.YXDOMAIN:
         print("    Warning: DNS YXDOMAIN (query name too long after DNAME substitution) for " + hostname)
