@@ -125,6 +125,20 @@ def remove(db, owner, domains):
         if count:
             print "Removed %s from %d hosts documents" % (d, count)
 
+    # Close open tickets referencing the removed domains
+    ticket_closing_time = util.utcnow()
+    count = 0
+    for t in db.TicketDoc.find(
+        {"hostname": {"$in": domains}, "open": True}
+    ):
+        t["open"] = False
+        t["time_closed"] = ticket_closing_time
+        t.add_event(
+            TICKET_EVENT.CLOSED, "hostname moved out of scope", time=ticket_closing_time
+        )
+        t.save()
+        count += 1
+    print "Closed %d open tickets referencing removed domain(s)" % count
 
 def check(db, domains):
     domain_owners = get_existing_domains_and_owners(db)
