@@ -90,14 +90,36 @@ def get_ipv4_addresses(hostname):
 
 def add(db, owner, domains):
     domain_owners = get_existing_domains_and_owners(db)
+
+    owned_domains = []
+    unresolvable_domains = []
     
-    domain_conflict = False
+    domain_problem = False
     for d in domains:
+        # Check if domain is already owned by another CyHy entity
         if d in domain_owners:
-            domain_conflict = True
+            domain_problem = True
             print "ERROR - %s is already owned by: %s" % (d, domain_owners[d])
+            owned_domains.append(d)
+            continue
+
+        # Check if domain resolves to at least one IPv4 address
+        if not get_ipv4_addresses(d):
+            domain_problem = True
+            print "ERROR - %s does not resolve to any IPv4 addresses" % d
+            unresolvable_domains.append(d)
     
-    if domain_conflict:
+    if domain_problem:
+        print "\n=== Summary of domain errors ==="
+        if owned_domains:
+            print "\nDomains already owned by other CyHy entities:"
+            for d in sorted(owned_domains):
+                print "%s" % d
+        if unresolvable_domains:
+            print "\nDomains that do not resolve to any IPv4 addresses:"
+            for d in sorted(unresolvable_domains):
+                print "%s" % d
+        print "\nEXITING without adding any domains."
         sys.exit(-1)
 
     request = db.RequestDoc.get_by_owner(owner)
