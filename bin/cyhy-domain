@@ -114,11 +114,11 @@ def add(db, owner, domains):
         if owned_domains:
             print "\nDomains already owned by other CyHy entities:"
             for d in sorted(owned_domains):
-                print "%s" % d
+                print d
         if unresolvable_domains:
             print "\nDomains that do not resolve to any IPv4 addresses:"
             for d in sorted(unresolvable_domains):
-                print "%s" % d
+                print d
         print "\nEXITING without adding any domains."
         sys.exit(-1)
 
