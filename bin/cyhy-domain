@@ -26,7 +26,9 @@ Notes:
 import sys
 
 # Third-Party Libraries
+from dns import resolver, exception
 from docopt import docopt
+from netaddr import IPAddress
 
 # cisagov Libraries
 from cyhy.core.common import *
@@ -65,6 +67,25 @@ def get_existing_domains_and_owners(db):
         for h in r["hostnames"]:
             domain_owners[h] = "%s (%s)" % (r["agency"]["name"], r["_id"])
     return domain_owners
+
+
+def get_ipv4_addresses(hostname):
+    """Return a set of IPv4 addresses for the given hostname."""
+    try:
+        answers = resolver.query(hostname, 'A')
+        ip_list = [IPAddress(answer.address) for answer in answers]
+        return set(ip_list)
+    # Could not resolve domain name
+    except resolver.NoNameservers as e:
+        print "Warning: No nameservers available to resolve %s" % hostname
+        print str(e)
+    except resolver.Timeout as e:
+        print "Warning: DNS query timed out for %s" % hostname
+        print str(e)
+    except exception.DNSException as e:
+        print "Warning: Unexpected DNS exception for %s" % hostname
+        print str(e)
+    return set()
 
 
 def add(db, owner, domains):
