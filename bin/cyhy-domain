@@ -14,6 +14,8 @@ Options:
   -c FILE --config-file=FILE     Configuration file to use.
   -f FILENAME --file=FILENAME    Read domains from a file.
   -h --help                      Show this screen.
+  -o --no-owned                  Do not add domains that resolve to an IP owned
+                                 by a non-default CyHy entity.
   -s SECTION --section=SECTION   Configuration section to use.
   --version                      Show version.
 
@@ -88,12 +90,13 @@ def get_ipv4_addresses(hostname):
     return set()
 
 
-def add(db, owner, domains):
+def add(db, owner, domains, disallow_owned_ips):
     domain_owners = get_existing_domains_and_owners(db)
 
     owned_domains = []
+    resolves_to_owned_ip_domains = []
     unresolvable_domains = []
-    
+
     domain_problem = False
     for d in domains:
         # Check if domain is already owned by another CyHy entity
@@ -104,10 +107,24 @@ def add(db, owner, domains):
             continue
 
         # Check if domain resolves to at least one IPv4 address
-        if not get_ipv4_addresses(d):
+        domain_ips = get_ipv4_addresses(d)
+        if not domain_ips:
             domain_problem = True
             print "ERROR - %s does not resolve to any IPv4 addresses" % d
             unresolvable_domains.append(d)
+            continue
+
+        # If --no-owned option was specified, check if any resolved IPs for this
+        # domain are already owned by a CyHy entity other than the DEFAULT_OWNER
+        # and if so, do not add the domain.
+        if disallow_owned_ips:
+            for ip in domain_ips:
+                existing_hostdoc = db.HostDoc.get_by_ip(ip)
+                if existing_hostdoc and existing_hostdoc["owner"] != DEFAULT_OWNER:
+                    domain_problem = True
+                    print "ERROR - %s resolves to IP %s owned by %s in CyHy" % (d, ip, existing_hostdoc["owner"])
+                    resolves_to_owned_ip_domains.append(d)
+                    break
     
     if domain_problem:
         print "\n=== Summary of domain errors ==="
@@ -118,6 +135,10 @@ def add(db, owner, domains):
         if unresolvable_domains:
             print "\nDomains that do not resolve to any IPv4 addresses:"
             for d in sorted(unresolvable_domains):
+                print d
+        if resolves_to_owned_ip_domains:
+            print "\nDomains that resolve to an IP already owned by a CyHy entity:"
+            for d in sorted(resolves_to_owned_ip_domains):
                 print d
         print "\nEXITING without adding any domains."
         sys.exit(-1)
@@ -327,7 +348,7 @@ def main():
     domains = list(valid_domains)
 
     if args["add"]:
-        add(db, args["OWNER"], domains)
+        add(db, args["OWNER"], domains, args["--no-owned"])
     elif args["check"]:
         check(db, domains)
     elif args["move"]:
