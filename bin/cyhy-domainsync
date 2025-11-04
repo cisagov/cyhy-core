@@ -122,6 +122,7 @@ def main():
 
                 print("  " + str(hostdocs.count()) + " HostDocs currently reference this hostname")
 
+                ip_set = set()
                 try:
                     ip_set = get_ipv4_addresses(hostname)
                 # Note that the following DNS exceptions do not trigger any
