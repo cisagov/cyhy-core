@@ -92,6 +92,8 @@ def main():
         "NoNameservers": [],
         "Timeout": [],
     }
+    # List of unresolvable hostnames that may need to be investigated
+    unresolvable_hostnames = []
 
     try:
         db = database.db_from_config(args["--section"], args["--config-file"])
@@ -134,6 +136,7 @@ def main():
                     dns_exceptions["NoNameservers"].append(
                         {"hostname": hostname, "owner": r["_id"]}
                     )
+                    unresolvable_hostnames.append(hostname)
                     continue  # Skip to the next hostname
                 except resolver.Timeout as e:
                     print("    Warning: DNS query timed out for " + hostname)
@@ -151,6 +154,9 @@ def main():
                     continue  # Skip to the next hostname
 
                 print("  " + str(len(ip_set)) + " IPv4 addresses found for this hostname")
+                if not ip_set:
+                    unresolvable_hostnames.append(hostname)
+
                 for ip in ip_set:
                     print("    " + str(ip)),
                     # Lookup the HostDoc for this IP address
@@ -228,6 +234,12 @@ def main():
             tally_doc.save()
         tally_doc.sync(db)
         print("Synchronized " + default_owner + " TallyDoc")
+
+        print("\nHostnames that do not resolve to any IPv4 addresses - %s occurrences" %
+              len(unresolvable_hostnames))
+        print("(excludes DNS timeouts and unknown DNS exceptions):")
+        for hostname in sorted(unresolvable_hostnames):
+            print("  %s" % hostname)
 
         print("\nDNS exceptions encountered during processing:")
         for exception_type, entries in dns_exceptions.items():
