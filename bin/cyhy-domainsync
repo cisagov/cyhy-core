@@ -236,7 +236,7 @@ def main():
         tally_doc.sync(db)
         print("Synchronized " + default_owner + " TallyDoc")
 
-        print("\nHostnames that do not resolve to any IPv4 addresses - %s occurrences" %
+        print("\nHostnames that do not resolve to any IPv4 addresses - %d occurrences" %
               len(unresolvable_hostnames))
         print("(excludes DNS timeouts and unknown DNS exceptions):")
         for hostname in sorted(unresolvable_hostnames):
