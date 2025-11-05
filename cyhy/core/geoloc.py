@@ -12,9 +12,9 @@ GEODB_FILE_PATHS = []
 
 # The list of restricted countries was provided by CISA International Affairs
 # in March 2024.
-# The MaxMind GeoLite2 and GeoIP2 databases that we support use 
+# The MaxMind GeoLite2 and GeoIP2 databases that we support use
 # https://www.geonames.org/countries/ as the data source for country names.
-# For more info, see: 
+# For more info, see:
 # https://support.maxmind.com/hc/en-us/articles/4414877149467-IP-Geolocation-Data#h_01FRRNFD5Z5EWNCAXM6SZZ5H2C
 RESTRICTED_COUNTRIES = [
     "Afghanistan",
@@ -78,6 +78,6 @@ class GeoLocDB(object):
             if response.country.name in RESTRICTED_COUNTRIES:
                 return response.country.name
         except AddressNotFoundError:
-            print >> sys.stderr, "IP %s not found in geolocation database" % ip
+            print >>sys.stderr, "IP %s not found in geolocation database" % ip
 
         return ""

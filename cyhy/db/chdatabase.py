@@ -42,8 +42,8 @@ class CHDatabase(object):
 
     def __init__(self, db, state_manager=None, scheduler=None, next_scan_limit=2000):
         """db: MongoDB instance
-           state_manager: class that implements a HostStateManager
-           scheduler: class that implements a Scheduler"""
+        state_manager: class that implements a HostStateManager
+        scheduler: class that implements a Scheduler"""
         self.__db = db
         self.__logger = logging.getLogger(__name__)
         self.__scheduler = scheduler
@@ -183,9 +183,9 @@ class CHDatabase(object):
         self, ip, up=None, reason=None, has_open_ports=None, was_failure=False
     ):
         """Attempts to move host from one state to another.
-           returns (HostDoc, state_changed)
-            - HostDoc: host that was transitioned
-            - state_changed: True if the state changed, False otherwise."""
+        returns (HostDoc, state_changed)
+         - HostDoc: host that was transitioned
+         - state_changed: True if the state changed, False otherwise."""
         host = self.__db.HostDoc.get_by_ip(ip)
         if host == None:
             self.__logger.warning(
@@ -470,8 +470,8 @@ class CHDatabase(object):
         def add_networks_and_hostnames_to_snapshot(request_doc, snapshot_doc):
             """Adds networks and hostnames from a request doc to a snapshot doc
 
-               If the request document has hostnames, it also adds the IP
-               addresses of those hostnames to the snapshot."""
+            If the request document has hostnames, it also adds the IP
+            addresses of those hostnames to the snapshot."""
             if request_doc:
                 snapshot_doc["networks"] |= request_doc.networks
                 # Since snapshot documents are initialized with their hostnames
@@ -481,7 +481,9 @@ class CHDatabase(object):
                 # If the request doc has hostnames, add the IP addresses of
                 # those hostnames to the snapshot.
                 if request_doc.get("hostnames"):
-                    for host in self.__db.HostDoc.get_hosts_with_hostnames(request_doc["hostnames"]):
+                    for host in self.__db.HostDoc.get_hosts_with_hostnames(
+                        request_doc["hostnames"]
+                    ):
                         snapshot_doc["networks"].add(host.ip)
 
         owner_doc = self.__db.RequestDoc.get_by_owner(owner)
