@@ -28,7 +28,7 @@ Notes:
 import sys
 
 # Third-Party Libraries
-from dns import resolver, exception
+from dns import exception, resolver
 from docopt import docopt
 from netaddr import IPAddress
 
