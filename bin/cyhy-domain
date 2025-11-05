@@ -14,6 +14,8 @@ Options:
   -c FILE --config-file=FILE     Configuration file to use.
   -f FILENAME --file=FILENAME    Read domains from a file.
   -h --help                      Show this screen.
+  -o --no-owned                  Do not add domains that resolve to an IP owned
+                                 by a non-default CyHy entity.
   -s SECTION --section=SECTION   Configuration section to use.
   --version                      Show version.
 
@@ -26,7 +28,9 @@ Notes:
 import sys
 
 # Third-Party Libraries
+from dns import exception, resolver
 from docopt import docopt
+from netaddr import IPAddress
 
 # cisagov Libraries
 from cyhy.core.common import *
@@ -67,16 +71,79 @@ def get_existing_domains_and_owners(db):
     return domain_owners
 
 
-def add(db, owner, domains):
+def get_ipv4_addresses(hostname):
+    """Return a set of IPv4 addresses for the given hostname."""
+    ip_set = set()
+    try:
+        answers = resolver.query(hostname, 'A')
+    # Could not resolve domain name
+    except resolver.NoNameservers as e:
+        print "Warning: No nameservers available to resolve %s" % hostname
+        print str(e)
+    except resolver.Timeout as e:
+        print "Warning: DNS query timed out for %s" % hostname
+        print str(e)
+    except exception.DNSException as e:
+        print "Warning: Unexpected DNS exception for %s" % hostname
+        print str(e)
+    else:
+        ip_list = [IPAddress(answer.address) for answer in answers]
+        ip_set = set(ip_list)
+    finally:
+        return ip_set
+
+
+def add(db, owner, domains, disallow_owned_ips):
     domain_owners = get_existing_domains_and_owners(db)
-    
-    domain_conflict = False
+
+    owned_domains = []
+    resolves_to_owned_ip_domains = []
+    unresolvable_domains = []
+
+    domain_problem = False
     for d in domains:
+        # Check if domain is already owned by another CyHy entity
         if d in domain_owners:
-            domain_conflict = True
+            domain_problem = True
             print "ERROR - %s is already owned by: %s" % (d, domain_owners[d])
+            owned_domains.append(d)
+            continue
+
+        # Check if domain resolves to at least one IPv4 address
+        domain_ips = get_ipv4_addresses(d)
+        if not domain_ips:
+            domain_problem = True
+            print "ERROR - %s does not resolve to any IPv4 addresses" % d
+            unresolvable_domains.append(d)
+            continue
+
+        # If --no-owned option was specified, check if any resolved IPs for this
+        # domain are already owned by a CyHy entity other than the DEFAULT_OWNER
+        # and if so, do not add the domain.
+        if disallow_owned_ips:
+            for ip in domain_ips:
+                existing_hostdoc = db.HostDoc.get_by_ip(ip)
+                if existing_hostdoc and existing_hostdoc["owner"] != DEFAULT_OWNER:
+                    domain_problem = True
+                    print "ERROR - %s resolves to IP %s owned by %s in CyHy" % (d, ip, existing_hostdoc["owner"])
+                    resolves_to_owned_ip_domains.append(d)
+                    break
     
-    if domain_conflict:
+    if domain_problem:
+        print "\n=== Summary of domain errors ==="
+        if owned_domains:
+            print "\nDomains already owned by other CyHy entities:"
+            for d in sorted(owned_domains):
+                print d
+        if unresolvable_domains:
+            print "\nDomains that do not resolve to any IPv4 addresses:"
+            for d in sorted(unresolvable_domains):
+                print d
+        if resolves_to_owned_ip_domains:
+            print "\nDomains that resolve to an IP already owned by a CyHy entity:"
+            for d in sorted(resolves_to_owned_ip_domains):
+                print d
+        print "\nEXITING without adding any domains."
         sys.exit(-1)
 
     request = db.RequestDoc.get_by_owner(owner)
@@ -243,7 +310,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 
 
 def main():
-    args = docopt(__doc__, version="v1.1.0")
+    args = docopt(__doc__, version="v1.2.0")
 
     db = database.db_from_config(args["--section"], args["--config-file"])
 
@@ -284,7 +351,7 @@ def main():
     domains = list(valid_domains)
 
     if args["add"]:
-        add(db, args["OWNER"], domains)
+        add(db, args["OWNER"], domains, args["--no-owned"])
     elif args["check"]:
         check(db, domains)
     elif args["move"]:
