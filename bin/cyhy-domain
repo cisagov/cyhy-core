@@ -73,10 +73,9 @@ def get_existing_domains_and_owners(db):
 
 def get_ipv4_addresses(hostname):
     """Return a set of IPv4 addresses for the given hostname."""
+    ip_set = set()
     try:
         answers = resolver.query(hostname, 'A')
-        ip_list = [IPAddress(answer.address) for answer in answers]
-        return set(ip_list)
     # Could not resolve domain name
     except resolver.NoNameservers as e:
         print "Warning: No nameservers available to resolve %s" % hostname
@@ -87,7 +86,11 @@ def get_ipv4_addresses(hostname):
     except exception.DNSException as e:
         print "Warning: Unexpected DNS exception for %s" % hostname
         print str(e)
-    return set()
+    else:
+        ip_list = [IPAddress(answer.address) for answer in answers]
+        ip_set = set(ip_list)
+    finally:
+        return ip_set
 
 
 def add(db, owner, domains, disallow_owned_ips):
