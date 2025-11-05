@@ -106,7 +106,7 @@ def combine_results(d, results, envelope=None):
 
 def run_pipeline((pipeline, collection), db):
     """Run an aggregation using a pipeline, collection tuple like those provided
-       in the queries module."""
+    in the queries module."""
     try:
         results = db[collection].aggregate(pipeline, allowDiskUse=True)
     except OperationFailure, e:
@@ -120,7 +120,7 @@ def run_pipeline((pipeline, collection), db):
 
 def run_pipeline_cursor((pipeline, collection), db):
     """Like run_pipeline but uses a cursor to access results larger than the max
-       MongoDB size."""
+    MongoDB size."""
     cursor = db[collection].aggregate(pipeline, allowDiskUse=True, cursor={})
     results = []
     for doc in cursor:
@@ -474,11 +474,7 @@ class TicketDoc(RootDoc):
             ),
             (
                 "ip_hostname_open",
-                [
-                    ("ip_int", 1),
-                    ("hostname", 1),
-                    ("open", 1)
-                ],
+                [("ip_int", 1), ("hostname", 1), ("open", 1)],
                 False,
                 True,
             ),
@@ -960,7 +956,9 @@ class HostDoc(RootDoc):
     def get_hosts_with_hostnames(self, hostnames):
         # Return HostDocs whose list of hostnames contains any of the given list
         # of hostnames
-        return self.find({"hostnames": {"$elemMatch": {"hostname": {"$in": hostnames}}}})
+        return self.find(
+            {"hostnames": {"$elemMatch": {"hostname": {"$in": hostnames}}}}
+        )
 
     def get_by_ip(self, ip):
         int_ip = int(ip)
@@ -1046,7 +1044,7 @@ class HostDoc(RootDoc):
 
     def reset_state_by_owner(self, owner, init_stage, jump_start=False):
         """Moves hosts back to initial stage and resets status for a single-scan.
-           jump_start allows previously up hosts to skip the NETSCANx stages."""
+        jump_start allows previously up hosts to skip the NETSCANx stages."""
         now = util.utcnow()
         if jump_start:
             self.collection.update(
@@ -1130,7 +1128,9 @@ class RequestDoc(RootDoc):
     __collection__ = REQUEST_COLLECTION
     # This regex was taken from the Python example at
     # https://emailregex.com/
-    __EmailAddressRegex = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+    __EmailAddressRegex = re.compile(
+        r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    )
     structure = {
         "agency": {
             "acronym": basestring,
@@ -1365,7 +1365,7 @@ class RequestDoc(RootDoc):
         self, as_lists=False, stakeholders_only=False, include_retired=False
     ):
         """returns a dict of types to owners.  The owners can be in a set or list depending on "as_lists" parameter.
-           "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
+        "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
         types = defaultdict(lambda: set())
 
         # No need to reinvent the wheel here- call get_owner_to_type_dict()
@@ -1691,7 +1691,7 @@ class CVEDoc(RootDoc):
         "_id": basestring,  # CVE string
         "cvss_score": float,
         "cvss_version": basestring,
-        "severity": int
+        "severity": int,
     }
     required_fields = ["_id", "cvss_score", "cvss_version", "severity"]
     default_values = {}

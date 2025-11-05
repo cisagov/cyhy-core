@@ -110,7 +110,9 @@ class TestStateManager:
     ):
         h["stage"] = i_stage
         h["status"] = STATUS.RUNNING
-        was_changed, finished_stage = state_manager.transition(h, has_open_ports=has_open_ports)
+        was_changed, finished_stage = state_manager.transition(
+            h, has_open_ports=has_open_ports
+        )
         assert was_changed == True, '"was_changed" should be True'
         assert finished_stage == True, '"finished_stage" should be True'
         assert h["stage"] == f_stage, "stage should be %s" % f_stage

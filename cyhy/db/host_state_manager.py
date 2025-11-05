@@ -12,7 +12,7 @@ class DefaultHostStateManager(object):
 
     def transition(self, host_doc, up=None, has_open_ports=None, was_failure=False):
         """applies a transition of state to a HostDoc.
-           returns: True if there was a change, False otherwise.
+        returns: True if there was a change, False otherwise.
         """
         new_stage, new_status, was_changed, finished_stage = self.new_state(
             host_doc, up, has_open_ports, was_failure
@@ -26,7 +26,7 @@ class DefaultHostStateManager(object):
 
     def new_state(self, host_doc, up=None, has_open_ports=None, was_failure=False):
         """calculates the new state for a host.
-           returns: stage, status, was_changed, finished_stage
+        returns: stage, status, was_changed, finished_stage
         """
         stage = host_doc["stage"]
         status = host_doc["status"]

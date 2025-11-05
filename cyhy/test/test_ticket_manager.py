@@ -178,6 +178,7 @@ VULN_6 = {
     "latest": True,
 }
 
+
 @pytest.fixture
 def vuln_ticket_manager1(database):
     vtm = VulnTicketManager(database, SOURCE_NESSUS)
@@ -288,6 +289,7 @@ def database_w_hostname_vulns(database):
     vtm.open_ticket(VULN_5, "test vuln detected")
     vtm.open_ticket(VULN_6, "test vuln detected")
     return database
+
 
 class TestVulnTickets:
     def test_clear_tickets(self, database):
@@ -758,50 +760,102 @@ class TestVulnsWithHostnames:
     """See https://github.com/cisagov/cyhy-system/issues/70"""
 
     def test_tickets_with_hostname(self, database_w_hostname_vulns):
-        assert database_w_hostname_vulns.tickets.count() == 3, "collection should have 3 tickets"
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "foo.gov"}).count() == 1, "collection should have 1 open ticket with hostname foo.gov"
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "bar.gov"}).count() == 1, "collection should have 1 open ticket with hostname bar.gov"
-    
+        assert (
+            database_w_hostname_vulns.tickets.count() == 3
+        ), "collection should have 3 tickets"
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "foo.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname foo.gov"
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "bar.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname bar.gov"
+
     def test_close_reopen_verify_tickets(self, database_w_hostname_vulns):
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 3, "collection should have 3 open tickets"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 3
+        ), "collection should have 3 open tickets"
         vtm = VulnTicketManager(database_w_hostname_vulns, SOURCE_NESSUS)
         vtm.ips = IPSet([IPS[0]])
         vtm.ports = PORTS
         vtm.source_ids = SOURCE_IDS
         vtm.close_tickets()
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 0, "collection should have 0 open tickets"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 0
+        ), "collection should have 0 open tickets"
 
         vtm.open_ticket(VULN_5, "test vuln re-detected")
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "foo.gov"}).count() == 1, "collection should have 1 open ticket with hostname foo.gov"
-        ticket = database_w_hostname_vulns.tickets.find_one({"open": True, "hostname": "foo.gov"})
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "foo.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname foo.gov"
+        ticket = database_w_hostname_vulns.tickets.find_one(
+            {"open": True, "hostname": "foo.gov"}
+        )
         assert (
             ticket["events"][-1]["action"] == TICKET_EVENT.REOPENED
         ), "last event of ticket should be reopened"
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 1, "collection should have 1 open ticket"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 1
+        ), "collection should have 1 open ticket"
 
         vtm.open_ticket(VULN_5, "test vuln re-detected")
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "foo.gov"}).count() == 1, "collection should have 1 open ticket with hostname foo.gov"
-        ticket = database_w_hostname_vulns.tickets.find_one({"open": True, "hostname": "foo.gov"})
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "foo.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname foo.gov"
+        ticket = database_w_hostname_vulns.tickets.find_one(
+            {"open": True, "hostname": "foo.gov"}
+        )
         assert (
             ticket["events"][-1]["action"] == TICKET_EVENT.VERIFIED
         ), "last event of ticket should be reopened"
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 1, "collection should have 1 open ticket"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 1
+        ), "collection should have 1 open ticket"
 
         vtm.open_ticket(VULN_6, "test vuln re-detected")
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "bar.gov"}).count() == 1, "collection should have 1 open ticket with hostname bar.gov"
-        ticket = database_w_hostname_vulns.tickets.find_one({"open": True, "hostname": "bar.gov"})
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "bar.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname bar.gov"
+        ticket = database_w_hostname_vulns.tickets.find_one(
+            {"open": True, "hostname": "bar.gov"}
+        )
         assert (
             ticket["events"][-1]["action"] == TICKET_EVENT.REOPENED
         ), "last event of ticket should be reopened"
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 2, "collection should have 2 open tickets"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 2
+        ), "collection should have 2 open tickets"
 
         vtm.open_ticket(VULN_6, "test vuln re-detected")
-        assert database_w_hostname_vulns.tickets.find({"open": True, "hostname": "bar.gov"}).count() == 1, "collection should have 1 open ticket with hostname bar.gov"
-        ticket = database_w_hostname_vulns.tickets.find_one({"open": True, "hostname": "bar.gov"})
+        assert (
+            database_w_hostname_vulns.tickets.find(
+                {"open": True, "hostname": "bar.gov"}
+            ).count()
+            == 1
+        ), "collection should have 1 open ticket with hostname bar.gov"
+        ticket = database_w_hostname_vulns.tickets.find_one(
+            {"open": True, "hostname": "bar.gov"}
+        )
         assert (
             ticket["events"][-1]["action"] == TICKET_EVENT.VERIFIED
         ), "last event of ticket should be reopened"
-        assert database_w_hostname_vulns.tickets.find({"open": True}).count() == 2, "collection should have 2 open tickets"
+        assert (
+            database_w_hostname_vulns.tickets.find({"open": True}).count() == 2
+        ), "collection should have 2 open tickets"
 
 
 class TestIPPortNonVulnScanTickets:

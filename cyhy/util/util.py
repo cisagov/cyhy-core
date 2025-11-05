@@ -282,10 +282,10 @@ def warn_and_confirm(message):
 
 def parse_domains(domains):
     """Parses a list of domains and determines which are valid and which are not.
-    
+
     Args:
         domains (list): A list of domain strings to parse.
-    
+
     Returns:
         valid_domains (set): A set of valid domain strings.
         invalid_domains (set): A set of invalid domain strings.
