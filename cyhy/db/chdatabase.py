@@ -82,14 +82,12 @@ class CHDatabase(object):
         changed_count = self.__db.HostDoc.increase_ready_hosts(owner, stage, count)
         tally = self.__db.TallyDoc.get_by_owner(owner)
         tally.transfer(stage, STATUS.WAITING, stage, STATUS.READY, changed_count)
-        tally.save()
         return changed_count
 
     def decrease_ready_hosts(self, owner, stage, count):
         changed_count = self.__db.HostDoc.decrease_ready_hosts(owner, stage, count)
         tally = self.__db.TallyDoc.get_by_owner(owner)
         tally.transfer(stage, STATUS.READY, stage, STATUS.WAITING, changed_count)
-        tally.save()
         return changed_count
 
     def balance_ready_hosts(self):
@@ -160,7 +158,6 @@ class CHDatabase(object):
             )
             return
         tally.transfer(prev_stage, prev_status, new_stage, new_status, 1)
-        tally.save()
 
     def update_host_priority_and_reschedule(self, ip):
         """Update host priority and reschedule host."""
