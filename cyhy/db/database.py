@@ -1485,8 +1485,14 @@ class TallyDoc(RootDoc):
         )
 
     def transfer(self, from_stage, from_status, to_stage, to_status, delta):
-        self["counts"][from_stage][from_status] -= delta
-        self["counts"][to_stage][to_status] += delta
+        from_field = "counts.{}.{}".format(from_stage, from_status)
+        to_field = "counts.{}.{}".format(to_stage, to_status)
+        self.collection.update_one(
+            {"_id": self["_id"]}, {"$inc": {from_field: -delta, to_field: delta}}
+        )
+
+        # ensure the local copy is up-to-date
+        self.reload()
 
     def get_by_owner(self, owner):
         return self.find_one({"_id": owner})
