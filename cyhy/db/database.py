@@ -1488,7 +1488,11 @@ class TallyDoc(RootDoc):
         from_field = "counts.{}.{}".format(from_stage, from_status)
         to_field = "counts.{}.{}".format(to_stage, to_status)
         self.collection.update_one(
-            {"_id": self["_id"]}, {"$inc": {from_field: -delta, to_field: delta}}
+            {"_id": self["_id"]},
+            {
+                "$inc": {from_field: -delta, to_field: delta},
+                "$set": {"last_change": util.utcnow()},
+            },
         )
 
         # ensure the local copy is up-to-date
