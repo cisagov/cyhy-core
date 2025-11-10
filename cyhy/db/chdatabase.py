@@ -81,6 +81,15 @@ class CHDatabase(object):
     def increase_ready_hosts(self, owner, stage, count):
         changed_count = self.__db.HostDoc.increase_ready_hosts(owner, stage, count)
         tally = self.__db.TallyDoc.get_by_owner(owner)
+        self.__logger.debug(
+            "Transitioning %d of %s's hosts from %s.%s to %s.%s",
+            changed_count,
+            owner,
+            stage,
+            STATUS.WAITING,
+            stage,
+            STATUS.READY,
+        )
         tally.transfer(stage, STATUS.WAITING, stage, STATUS.READY, changed_count)
 
         # Check that we don't go negative - we only need to check what's subtracted
@@ -98,6 +107,15 @@ class CHDatabase(object):
     def decrease_ready_hosts(self, owner, stage, count):
         changed_count = self.__db.HostDoc.decrease_ready_hosts(owner, stage, count)
         tally = self.__db.TallyDoc.get_by_owner(owner)
+        self.__logger.debug(
+            "Transitioning %d of %s's hosts from %s.%s to %s.%s",
+            changed_count,
+            owner,
+            stage,
+            STATUS.READY,
+            stage,
+            STATUS.WAITING,
+        )
         tally.transfer(stage, STATUS.READY, stage, STATUS.WAITING, changed_count)
 
         # Check that we don't go negative - we only need to check what's subtracted
@@ -179,6 +197,15 @@ class CHDatabase(object):
                 "Tally document not found for: %s ... skipping." % owner
             )
             return
+        self.__logger.debug(
+            "Transitioning %d of %s's hosts from %s.%s to %s.%s",
+            1,
+            owner,
+            prev_stage,
+            prev_status,
+            new_stage,
+            new_status,
+        )
         tally.transfer(prev_stage, prev_status, new_stage, new_status, 1)
 
         # Check that we don't go negative - we only need to check what's subtracted
