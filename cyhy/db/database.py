@@ -1518,6 +1518,8 @@ class TallyDoc(RootDoc):
                     },
                 )
 
+        # ensure the local copy is up-to-date
+        self.reload()
 
 class SnapshotDoc(RootDoc):
     __collection__ = SNAPSHOT_COLLECTION
