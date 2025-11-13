@@ -1509,9 +1509,17 @@ class TallyDoc(RootDoc):
     def sync(self, db):
         for stage in list(STAGE):
             for status in list(STATUS):
+                count_field = "counts.{}.{}".format(stage, status)
                 count = db.HostDoc.get_count(self["_id"], stage, status)
-                self["counts"][stage][status] = count
-        self.save_without_timestamp_change()
+                self.collection.update_one(
+                    {"_id": self["_id"]},
+                    {
+                        "$set": {count_field: count},
+                    },
+                )
+
+        # ensure the local copy is up-to-date
+        self.reload()
 
 
 class SnapshotDoc(RootDoc):
