@@ -10,6 +10,8 @@ Usage:
 Options:
   -f FILE --config-file=FILE      Configuration file to use.
   -h --help                       Show this screen.
+  -n --no-owned                   Skip resolved IP addresses that are owned by a
+                                  CyHy entity other than the default owner.
   -o OWNER --default-owner=OWNER  Default owner to use for new HostDocs [default: CYHY].
   -r IP --resolver=IP             IP address of DNS resolver to use.
   -s SECTION --section=SECTION    Configuration section to use.
@@ -173,6 +175,11 @@ def main():
                         print("Created HostDoc owned by: " + default_owner)
                         continue
                     else:
+                        # If the HostDoc exists and is owned by a non-default
+                        # CyHy entity, skip this IP address
+                        if args["--no-owned"] and host_doc["owner"] != default_owner:
+                            print("Skipping IP; --no-owned option enabled and found HostDoc owned by " + host_doc["owner"])
+                            continue
                         print("Found HostDoc owned by: " + host_doc["owner"])
 
                     # The HostDoc did exist, so add the request ID and domain to the list of owners
