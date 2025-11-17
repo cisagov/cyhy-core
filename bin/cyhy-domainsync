@@ -175,8 +175,9 @@ def main():
                         print("Created HostDoc owned by: " + default_owner)
                         continue
                     else:
-                        # If the HostDoc exists and is owned by a non-default
-                        # CyHy entity, skip this IP address
+                        # If the --no-owned option is set and a HostDoc exists
+                        # that is owned by a non-default CyHy entity, skip this
+                        # IP address
                         if args["--no-owned"] and host_doc["owner"] != default_owner:
                             print("Skipping IP; --no-owned option enabled and found HostDoc owned by " + host_doc["owner"])
                             continue
