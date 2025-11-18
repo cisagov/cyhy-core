@@ -206,9 +206,12 @@ def do_list_all(db):
 
 
 def add(db, owner, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
-        cidrs
-    )  # intersections from database
+    if owner == DEFAULT_OWNER:
+        print "Cannot continue!\nNot allowed to add addresses to the default owner (%s)." % DEFAULT_OWNER
+        sys.exit(-1)
+
+    # Intersections with IPs owned by any owner other than the default owner
+    intersections = db.RequestDoc.get_all_intersections(cidrs)
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda: IPSet())
     for ip in cidrs:
@@ -233,6 +236,10 @@ def add(db, owner, cidrs):
         print "Cannot continue!\nSome addresses already allocated or reserved:"
         print_intersections(intersections)
         sys.exit(-1)
+
+    # Get set of IPs owned by default owner
+    default_owner_ip_set = get_default_owner_ip_set(db)
+
     request = db.RequestDoc.find_one({"_id": owner})
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
@@ -240,17 +247,36 @@ def add(db, owner, cidrs):
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
     pbar.widgets[0] = "Adding %s: " % owner
     i = 0
+    default_owner_modified = False
     for ip in cidrs:
-        location = geo_loc_db.lookup(ip)
-        host = db.HostDoc()
-        host.init(ip, owner, location, stage)
-        host.save()
+        # Check if IP is owned by the default owner
+        if ip in default_owner_ip_set:
+            # Update existing host document from default owner to new owner
+            host = db.HostDoc.get_by_ip(ip)
+            if not host:
+                print "ERROR: Host document for %s not found, even though it is owned by %s!" % (str(ip), DEFAULT_OWNER)
+                sys.exit(-1)
+            host["owner"] = owner
+            host.save()
+            print "Warning: %s was owned by %s, now owned by %s." % (str(ip), DEFAULT_OWNER, owner)
+            default_owner_modified = True
+        else:
+            # Create new host document
+            location = geo_loc_db.lookup(ip)
+            host = db.HostDoc()
+            host.init(ip, owner, location, stage)
+            host.save()
         i += 1
         pbar.update(i)
     # update request with new networks
     request.add_networks(cidrs)
     request.save()
-    print "IPs added to request, and initialized.  Tally sync required to start scan of new IPs."
+    if default_owner_modified:
+        # Sync default owner tally if any of its IPs were modified
+        default_owner_tally = db.TallyDoc.get_by_owner(DEFAULT_OWNER)
+        default_owner_tally.sync(db)
+        print "Default owner (%s) IPs modified and tally synchronized." % DEFAULT_OWNER
+    print "IPs added to %s request and initialized.  Tally sync for %s required to start scan of new IPs." % (owner, owner)
     sys.exit(0)
 
 
