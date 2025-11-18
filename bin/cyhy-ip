@@ -148,10 +148,12 @@ def print_cidrs(cidrs, indent=0):
 
 
 def check(db, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
-        cidrs
-    )  # intersections from database
-    intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
+    # Intersections with IPs owned by any owner other than the default owner
+    intersections = db.RequestDoc.get_all_intersections(cidrs)
+    # Intersections with RFCs
+    intersections.update(get_special_intersections(cidrs))
+    # Intersections with IPs owned by the default owner
+    intersections.update(get_default_owner_intersections(db, cidrs))
     print_intersections(intersections)
     matched = IPSet()
     for request, intersecting_cidrs in intersections.iteritems():
