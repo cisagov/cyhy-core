@@ -29,7 +29,7 @@ import sys
 
 # Third-Party Libraries
 from docopt import docopt
-from netaddr import ip, IPNetwork, IPRange, IPSet
+from netaddr import ip, IPAddress, IPNetwork, IPRange, IPSet
 import progressbar as pb
 
 # cisagov Libraries
@@ -109,6 +109,17 @@ def read_file(filename):
     return parse_addresses(f.readlines())
 
 
+def get_default_owner_intersections(db, cidrs):
+    results = {}  # {request: IPSet of intersections}
+    default_owner_request = db.RequestDoc.get_by_owner(DEFAULT_OWNER)
+    if default_owner_request:
+        default_owner_cidrs = get_default_owner_ip_set(db)
+        intersection = default_owner_cidrs & cidrs
+        if intersection:
+            results[default_owner_request] = intersection
+    return results
+
+
 def get_special_intersections(cidrs):
     results = {}  # {request: IPSet of intersections}
     for description, special_set in SPECIAL_RANGES.items():
@@ -149,6 +160,16 @@ def check(db, cidrs):
     if unmatched:
         print "Unmatched: %s" % "{:,}".format(len(unmatched))
         print_cidrs(unmatched, indent=1)
+
+
+def get_default_owner_ip_set(db):
+    # Return IPSet of all IP addresses owned by default owner
+    default_owner_ips = [
+        IPAddress(h["_id"]) for h in db.HostDoc.find(
+            {"owner": DEFAULT_OWNER}, {"_id": 1}
+        )
+    ]
+    return IPSet(default_owner_ips)
 
 
 def do_list(db, owner):
