@@ -173,17 +173,34 @@ def get_default_owner_ip_set(db):
 
 
 def do_list(db, owner):
-    request = db.RequestDoc.find_one({"_id": owner})
-    if request:
-        for i in request["networks"]:
-            print i
+    if owner != DEFAULT_OWNER:
+        request = db.RequestDoc.find_one({"_id": owner})
+        if request:
+            for i in request["networks"]:
+                print i
+        else:
+            print "ERROR: Organization %s not found in DB" % owner
     else:
-        print "ERROR: Organization %s not found in DB" % owner
+        # List default owner CIDRs
+        for i in get_default_owner_ip_set(db).iter_cidrs():
+            print i
+
 
 
 def do_list_all(db):
+    # Intersections with IPs owned by any owner other than the default owner
     intersections = db.RequestDoc.get_all_intersections(IPSet(["0.0.0.0/0"]))
     print_intersections(intersections)
+
+    # List default owner CIDRs
+    default_owner_name = db.RequestDoc.find_one({"_id": DEFAULT_OWNER})["agency"]["name"]
+    default_owner_ip_set = get_default_owner_ip_set(db)
+    print "# %s (%s): %s" % (
+        default_owner_name,
+        DEFAULT_OWNER,
+        "{:,}".format(len(default_owner_ip_set)),
+    )
+    print_cidrs(default_owner_ip_set, indent=1)
 
 
 def add(db, owner, cidrs):
