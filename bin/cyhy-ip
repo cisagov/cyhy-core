@@ -314,7 +314,10 @@ def wrapped_remove(db, owner, cidrs):
 
 
 def compare(db, owner, new_net_set):
-    old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+    if owner != DEFAULT_OWNER:
+        old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+    else:
+        old_net_set = get_default_owner_ip_set(db)
 
     added = new_net_set - old_net_set
     removed = old_net_set - new_net_set
