@@ -255,6 +255,10 @@ def add(db, owner, cidrs):
 
 
 def remove(db, owner, cidrs):
+    if owner == DEFAULT_OWNER:
+        print "Cannot continue!\nNot allowed to remove addresses from the default owner (%s)." % DEFAULT_OWNER
+        sys.exit(-1)
+
     intersections = db.RequestDoc.get_all_intersections(cidrs)
     if len(intersections) == 0:
         print "Cannot continue!\nAddress is not allocated."
