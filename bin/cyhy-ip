@@ -355,6 +355,10 @@ def compare(db, owner, new_net_set):
 
 
 def move(db, orig_owner, new_owner, networks_to_move):
+    if orig_owner == DEFAULT_OWNER or new_owner == DEFAULT_OWNER:
+        print "ERROR: Not allowed to move addresses to or from the default owner (%s). EXITING without making any changes." % DEFAULT_OWNER
+        sys.exit(-1)
+
     if orig_owner == new_owner:
         print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
         sys.exit(-1)
