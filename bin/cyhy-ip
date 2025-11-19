@@ -29,7 +29,7 @@ import sys
 
 # Third-Party Libraries
 from docopt import docopt
-from netaddr import ip, IPNetwork, IPRange, IPSet
+from netaddr import ip, IPAddress, IPNetwork, IPRange, IPSet
 import progressbar as pb
 
 # cisagov Libraries
@@ -109,6 +109,17 @@ def read_file(filename):
     return parse_addresses(f.readlines())
 
 
+def get_default_owner_intersections(db, cidrs):
+    results = {}  # {request: IPSet of intersections}
+    default_owner_request = db.RequestDoc.get_by_owner(DEFAULT_OWNER)
+    if default_owner_request:
+        default_owner_cidrs = get_default_owner_ip_set(db)
+        intersection = default_owner_cidrs & cidrs
+        if intersection:
+            results[default_owner_request] = intersection
+    return results
+
+
 def get_special_intersections(cidrs):
     results = {}  # {request: IPSet of intersections}
     for description, special_set in SPECIAL_RANGES.items():
@@ -137,10 +148,12 @@ def print_cidrs(cidrs, indent=0):
 
 
 def check(db, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
-        cidrs
-    )  # intersections from database
-    intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
+    # Intersections with IPs owned by any owner other than the default owner
+    intersections = db.RequestDoc.get_all_intersections(cidrs)
+    # Intersections with RFCs
+    intersections.update(get_special_intersections(cidrs))
+    # Intersections with IPs owned by the default owner
+    intersections.update(get_default_owner_intersections(db, cidrs))
     print_intersections(intersections)
     matched = IPSet()
     for request, intersecting_cidrs in intersections.iteritems():
@@ -151,24 +164,54 @@ def check(db, cidrs):
         print_cidrs(unmatched, indent=1)
 
 
+def get_default_owner_ip_set(db):
+    # Return IPSet of all IP addresses owned by default owner
+    default_owner_ips = [
+        IPAddress(h["_id"]) for h in db.HostDoc.find(
+            {"owner": DEFAULT_OWNER}, {"_id": 1}
+        )
+    ]
+    return IPSet(default_owner_ips)
+
+
 def do_list(db, owner):
-    request = db.RequestDoc.find_one({"_id": owner})
-    if request:
-        for i in request["networks"]:
-            print i
+    if owner != DEFAULT_OWNER:
+        request = db.RequestDoc.find_one({"_id": owner})
+        if request:
+            for i in request["networks"]:
+                print i
+        else:
+            print "ERROR: Organization %s not found in DB" % owner
     else:
-        print "ERROR: Organization %s not found in DB" % owner
+        # List default owner CIDRs
+        for i in get_default_owner_ip_set(db).iter_cidrs():
+            print i
+
 
 
 def do_list_all(db):
+    # Intersections with IPs owned by any owner other than the default owner
     intersections = db.RequestDoc.get_all_intersections(IPSet(["0.0.0.0/0"]))
     print_intersections(intersections)
 
+    # List default owner CIDRs
+    default_owner_name = db.RequestDoc.find_one({"_id": DEFAULT_OWNER})["agency"]["name"]
+    default_owner_ip_set = get_default_owner_ip_set(db)
+    print "# %s (%s): %s" % (
+        default_owner_name,
+        DEFAULT_OWNER,
+        "{:,}".format(len(default_owner_ip_set)),
+    )
+    print_cidrs(default_owner_ip_set, indent=1)
+
 
 def add(db, owner, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
-        cidrs
-    )  # intersections from database
+    if owner == DEFAULT_OWNER:
+        print "Cannot continue!\nNot allowed to add addresses to the default owner (%s)." % DEFAULT_OWNER
+        sys.exit(-1)
+
+    # Intersections with IPs owned by any owner other than the default owner
+    intersections = db.RequestDoc.get_all_intersections(cidrs)
     geo_loc_db = GeoLocDB()
     restricted_dict = defaultdict(lambda: IPSet())
     for ip in cidrs:
@@ -193,6 +236,10 @@ def add(db, owner, cidrs):
         print "Cannot continue!\nSome addresses already allocated or reserved:"
         print_intersections(intersections)
         sys.exit(-1)
+
+    # Get set of IPs owned by default owner
+    default_owner_ip_set = get_default_owner_ip_set(db)
+
     request = db.RequestDoc.find_one({"_id": owner})
     # init new hosts documents
     # get the init_stage, if it doesn't have one assume NETSCAN1
@@ -200,21 +247,44 @@ def add(db, owner, cidrs):
     pbar = pb.ProgressBar(widgets=PB_INIT_WIDGETS, maxval=len(cidrs)).start()
     pbar.widgets[0] = "Adding %s: " % owner
     i = 0
+    default_owner_modified = False
     for ip in cidrs:
-        location = geo_loc_db.lookup(ip)
-        host = db.HostDoc()
-        host.init(ip, owner, location, stage)
-        host.save()
+        # Check if IP is owned by the default owner
+        if ip in default_owner_ip_set:
+            # Update existing host document from default owner to new owner
+            host = db.HostDoc.get_by_ip(ip)
+            if not host:
+                print "ERROR: Host document for %s not found, even though it is owned by %s!" % (str(ip), DEFAULT_OWNER)
+                sys.exit(-1)
+            host["owner"] = owner
+            host.save()
+            print "Warning: %s was owned by %s, now owned by %s." % (str(ip), DEFAULT_OWNER, owner)
+            default_owner_modified = True
+        else:
+            # Create new host document
+            location = geo_loc_db.lookup(ip)
+            host = db.HostDoc()
+            host.init(ip, owner, location, stage)
+            host.save()
         i += 1
         pbar.update(i)
     # update request with new networks
     request.add_networks(cidrs)
     request.save()
-    print "IPs added to request, and initialized.  Tally sync required to start scan of new IPs."
+    if default_owner_modified:
+        # Sync default owner tally if any of its IPs were modified
+        default_owner_tally = db.TallyDoc.get_by_owner(DEFAULT_OWNER)
+        default_owner_tally.sync(db)
+        print "Default owner (%s) IPs modified and tally synchronized." % DEFAULT_OWNER
+    print "IPs added to %s request and initialized.  Tally sync for %s required to start scan of new IPs." % (owner, owner)
     sys.exit(0)
 
 
 def remove(db, owner, cidrs):
+    if owner == DEFAULT_OWNER:
+        print "Cannot continue!\nNot allowed to remove addresses from the default owner (%s)." % DEFAULT_OWNER
+        sys.exit(-1)
+
     intersections = db.RequestDoc.get_all_intersections(cidrs)
     if len(intersections) == 0:
         print "Cannot continue!\nAddress is not allocated."
@@ -274,7 +344,10 @@ def wrapped_remove(db, owner, cidrs):
 
 
 def compare(db, owner, new_net_set):
-    old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+    if owner != DEFAULT_OWNER:
+        old_net_set = db.RequestDoc.find_one({"_id": owner}).networks
+    else:
+        old_net_set = get_default_owner_ip_set(db)
 
     added = new_net_set - old_net_set
     removed = old_net_set - new_net_set
@@ -312,6 +385,10 @@ def compare(db, owner, new_net_set):
 
 
 def move(db, orig_owner, new_owner, networks_to_move):
+    if orig_owner == DEFAULT_OWNER or new_owner == DEFAULT_OWNER:
+        print "ERROR: Not allowed to move addresses to or from the default owner (%s). EXITING without making any changes." % DEFAULT_OWNER
+        sys.exit(-1)
+
     if orig_owner == new_owner:
         print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
         sys.exit(-1)
@@ -392,9 +469,10 @@ def move(db, orig_owner, new_owner, networks_to_move):
 
 
 def setstage(db, stage, cidrs):
-    intersections = db.RequestDoc.get_all_intersections(
-        cidrs
-    )  # intersections from database
+    # intersections with IPs owned by any owner other than the default owner
+    intersections = db.RequestDoc.get_all_intersections(cidrs)  
+    # intersections with IPs owned by the default owner
+    intersections.update(get_default_owner_intersections(db, cidrs))
     matched = IPSet()
     for request, intersecting_cidrs in intersections.iteritems():
         matched.update(intersecting_cidrs)
@@ -456,7 +534,7 @@ def setstage(db, stage, cidrs):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
 
     db = database.db_from_config(args["--section"])
 
