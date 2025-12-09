@@ -74,7 +74,14 @@ def print_ticket_details(tickets):
         t["open_flag_str"] = str(t["open"])
         t["fp_flag_str"] = str(t["false_positive"])
         t["severity_str"] = SEVERITY_LEVELS[t["details"]["severity"]]
-        t["hostname"] = t.get("hostname", "")
+        # If hostname field is not present (i.e. tickets created before
+        # hostnames were supported), set hostname to None (as opposed to the ""
+        # empty string).  We don't want to set the hostname to "" in case this
+        # ticket is saved back to the DB (i.e. when modifying the false_positive
+        # flag) because the commander could potentially create a new ticket
+        # whose only difference would be the hostname set to None and we want to
+        # avoid that situation.
+        t["hostname"] = t.get("hostname", None)
         if t["false_positive"]:
             t["fp_effective_date"], t["fp_expiration_date"] = t.false_positive_dates
             print "{_id:<26}{open_flag_str:<7}{fp_flag_str:<7}{time_opened:%Y-%m-%d %H:%M}   {severity_str:<10}{fp_effective_date:%Y-%m-%d}    {fp_expiration_date:%Y-%m-%d}     {port:<7}{protocol:<10}{hostname:<48}  {details[name]}".format(
@@ -245,7 +252,7 @@ def set_false_positive(db, cidrs):
 
 
 def main():
-    args = docopt(__doc__, version="v1.0.0")
+    args = docopt(__doc__, version="v1.0.1")
     db = database.db_from_config(args["--section"])
 
     nets = parse_addresses(args["ADDRESSES"])
