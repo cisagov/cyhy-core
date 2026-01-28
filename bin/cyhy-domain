@@ -128,7 +128,7 @@ def add(db, owner, domains, disallow_owned_ips):
                     print "ERROR - %s resolves to IP %s owned by %s in CyHy" % (d, ip, existing_hostdoc["owner"])
                     resolves_to_owned_ip_domains.append(d)
                     break
-    
+
     if domain_problem:
         print "\n=== Summary of domain errors ==="
         if owned_domains:
@@ -217,7 +217,7 @@ def check(db, domains):
             matched_domains[domain_owners[d]] = matched_domains.get(domain_owners[d], []) + [d]
         else:
             unmatched_domains.append(d)
-    
+
     if matched_domains:
         for owner in sorted(matched_domains):
             domains = matched_domains[owner]
@@ -322,7 +322,7 @@ def main():
         if not db.RequestDoc.get_by_owner(args["OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["OWNER"]
             sys.exit(-1)
-    
+
     if args.get("NEW_OWNER"):
         if not db.RequestDoc.get_by_owner(args["NEW_OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["NEW_OWNER"]
@@ -341,7 +341,7 @@ def main():
         stdin_valid_domains, stdin_invalid_domains = util.parse_domains(sys.stdin.readlines())
         valid_domains.update(stdin_valid_domains)
         invalid_domains.update(stdin_invalid_domains)
-    
+
     if invalid_domains:
         print "ERROR - Invalid domain(s):"
         for d in sorted(invalid_domains):

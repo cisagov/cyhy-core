@@ -470,7 +470,7 @@ def move(db, orig_owner, new_owner, networks_to_move):
 
 def setstage(db, stage, cidrs):
     # intersections with IPs owned by any owner other than the default owner
-    intersections = db.RequestDoc.get_all_intersections(cidrs)  
+    intersections = db.RequestDoc.get_all_intersections(cidrs)
     # intersections with IPs owned by the default owner
     intersections.update(get_default_owner_intersections(db, cidrs))
     matched = IPSet()
