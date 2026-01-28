@@ -9,6 +9,7 @@ Usage:
 
 Options:
   -f FILE --config-file=FILE      Configuration file to use.
+  -g FILE --geoip2-file=FILE      MaxMind GeoIP2 database file to use.
   -h --help                       Show this screen.
   -n --no-owned                   Skip resolved IP addresses that are owned by a
                                   CyHy entity other than the default owner.
@@ -109,7 +110,7 @@ def main():
         print("Using default owner: " + default_owner)
 
         # Initialize the geo-location database
-        geo_loc_db = GeoLocDB()
+        geo_loc_db = GeoLocDB(database_path=args["--geoip2-file"])
 
         # Look up starting stage for default owner
         default_owner_req = db.RequestDoc.get_by_owner(default_owner)

@@ -12,6 +12,7 @@ Options:
 
   -i STAGE --init-stage STAGE    Override the init-stage specified in file
   -f --force                     Force import of existing request, destroying original
+  -g FILE --geoip2-file=FILE     MaxMind GeoIP2 database file to use.
   -s SECTION --section=SECTION   Configuration section to use.
 
 Notes:
@@ -75,8 +76,8 @@ def has_intersections(db, nets, filename, owner):
         return True
 
 
-def has_restricted_ips(nets):
-    geo_loc_db = GeoLocDB()
+def has_restricted_ips(nets, geoip2_database=None):
+    geo_loc_db = GeoLocDB(database_path=geoip2_database)
     restricted_dict = defaultdict(lambda: IPSet())
     for ip in nets:
         country = geo_loc_db.check_restricted_ip(ip)
@@ -116,7 +117,7 @@ def import_request(db, request, source, force=False, init_stage=None):
         request["init_stage"] = init_stage
     if has_intersections(db, nets, source, owner):
         return False
-    if has_restricted_ips(nets):
+    if has_restricted_ips(nets, geoip2_database=args["--geoip2-file"]):
         # This is not combined with the previous check so the output
         # from each function can be seen so the user can get all messages
         # without multiple runs
