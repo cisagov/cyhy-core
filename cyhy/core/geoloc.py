@@ -58,7 +58,7 @@ class GeoLocDB(object):
                     break
             else:
                 raise Exception(
-                    "No GeoIP databases found.  Search in:", GEODB_CITY_PATHS
+                    "No GeoIP databases found.  Search in:", GEODB_FILE_PATHS
                 )
         self.__reader = geoip2.database.Reader(database_path)
 
