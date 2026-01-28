@@ -166,7 +166,7 @@ def do_update(chdb, gidb, up_only=False, owner=None):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
 
     cyhy_db = database.db_from_config(args["--section"])
     geoip_db = GeoLocDB(args["--geoip2-file"])
