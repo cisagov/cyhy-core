@@ -535,7 +535,7 @@ def setstage(db, stage, cidrs):
 
 
 def main():
-    args = docopt(__doc__, version="v1.0.0")
+    args = docopt(__doc__, version="v1.0.1")
 
     db = database.db_from_config(args["--section"])
 
