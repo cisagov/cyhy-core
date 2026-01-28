@@ -204,7 +204,7 @@ def retire(db, owner):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
 
     config = Config(args["--section"])
     if config.config_created:
