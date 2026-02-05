@@ -121,7 +121,7 @@ def generate_urls():
 def main():
     # Since docopt can generate SystemExit and DocoptExit exceptions
     # in certain normal use cases, we exclude it from our try clause.
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
     try:
         db = database.db_from_config(args["--section"])
 
