@@ -1710,6 +1710,13 @@ class CVEDoc(RootDoc):
         "cvss_score": float,
         "cvss_version": basestring,
         "severity": int,
+        # https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc
+        "ssvc" : {
+            "automatable": basestring,
+            "exploitation": basestring,
+            "technical_impact": basestring,
+        },
+        "ssvc_version": basestring,
     }
     required_fields = ["_id", "cvss_score", "cvss_version", "severity"]
     default_values = {}
