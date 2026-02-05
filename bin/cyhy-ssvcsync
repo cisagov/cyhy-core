@@ -237,7 +237,7 @@ def main():
         zipped = None
         # TODO: Remove double-zipped logic when full SSVC data is no longer
         # being provided in double-zipped format. See 
-        # https://github.com/CVEProject/cvelistV5/issues/67 for more.
+        # https://github.com/cisagov/cyhy-core/issues/136 for more.
         if args["--double-zipped"]:
             zipped = "double"
         elif args["--zipped"]:
