@@ -1711,7 +1711,7 @@ class CVEDoc(RootDoc):
         "cvss_version": basestring,
         "severity": int,
         # https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc
-        "ssvc" : {
+        "ssvc": {
             "automatable": basestring,
             "exploitation": basestring,
             "technical_impact": basestring,
