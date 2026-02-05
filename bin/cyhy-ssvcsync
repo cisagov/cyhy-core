@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 
-"""Download SSVC data and insert it into the CyHy CVE collection.
+"""Upload SSVC data into the CyHy CVE collection.
 
-This utility expects a JSON file containing SSVC data for a single CVE, or a zip
-file containing multiple JSON files each containing SSVC data for a single CVE.
-It will attempt to match each CVE ID in the SSVC data with an existing CVE
-document in the CyHy database.  If a match is found, it will update the CVE
-document with the SSVC data.  If no match is found for a given CVE ID, it will
-print a warning and move on.
+This utility expects a JSON file containing SSVC (Stakeholder-Specific
+Vulnerability Categorization) data for a single CVE, or a zip file containing
+multiple JSON files each containing SSVC data for a single CVE.  It will attempt
+to match each CVE ID in the SSVC data with an existing CVE document in the CyHy
+database.  If a match is found, it will update the CVE document with the SSVC
+data.  If no match is found for a given CVE ID, it will print a warning and move
+on.
+
+For more information about SSVC, see:
+https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc
 
 Usage:
   cyhy-ssvcsync [--section SECTION] [--zipped | --double-zipped] [--file-regex REGEX] <url>
