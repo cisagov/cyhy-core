@@ -23,6 +23,7 @@ setup(
         "bin/cyhy-sched",
         "bin/cyhy-simple",
         "bin/cyhy-snapshot",
+        "bin/cyhy-ssvcsync",
         "bin/cyhy-suborg",
         "bin/cyhy-ticket",
         "bin/cyhy-tool",
