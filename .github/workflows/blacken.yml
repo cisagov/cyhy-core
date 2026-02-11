@@ -88,6 +88,7 @@ jobs:
           # Needed by stefanzweifel/git-auto-commit-action to support the pull_request
           # trigger.
           ref: ${{ github.head_ref }}
+          token: ${{ secrets.GHA_AUTO_COMMIT_TOKEN  }}
       - name: Blacken project
         uses: cisagov/action-blacken-python2@v1
       - name: Commit changes
