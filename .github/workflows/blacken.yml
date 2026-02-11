@@ -52,6 +52,8 @@ jobs:
           # this workflow.
           permissions_monitoring_config: ${{ vars.ACTIONS_PERMISSIONS_CONFIG }}
   blacken:
+    # Do not blacken if being run from a forked repository.
+    if: github.event.pull_request.head.repo.full_name != github.repository
     needs:
       - diagnostics
     permissions:
