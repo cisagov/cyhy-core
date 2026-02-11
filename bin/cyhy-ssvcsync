@@ -135,6 +135,8 @@ def unzip_file(zf_buf):
     # nothing else) or the final JSON file(s) to be processed.
     while True:
         namelist = zf.namelist()
+        if len(namelist) == 0:
+            raise ValueError("Zip file is empty")
         first_filename = namelist[0]
         if len(namelist) == 1 and zipfile.is_zipfile(StringIO(zf.read(first_filename))):
             print("Unzipping inner zip file: %s" % first_filename)
