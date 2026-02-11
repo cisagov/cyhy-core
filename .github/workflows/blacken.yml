@@ -3,6 +3,8 @@ name: Blacken repository
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
+    paths:
+      - '**.py'
 
 # Set a default shell for any run steps. The `-Eueo pipefail` sets errtrace,
 # nounset, errexit, and pipefail. The `-x` will print all commands as they are
