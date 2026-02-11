@@ -14,16 +14,12 @@ For more information about SSVC, see:
 https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc
 
 Usage:
-  cyhy-ssvcsync [--section SECTION] [--zipped | --double-zipped] [--file-regex REGEX] <url>
-  cyhy-ssvcsync [--section SECTION] [--zipped | --double-zipped] [--file-regex REGEX] --local-file <file>
+  cyhy-ssvcsync [--section SECTION] [--file-regex REGEX] <url>
+  cyhy-ssvcsync [--section SECTION] [--file-regex REGEX] --local-file <file>
   cyhy-ssvcsync (-h | --help)
   cyhy-ssvcsync --version
 
 Options:
-  -d --double-zipped             Input file is double-zipped (e.g foo.zip.zip).
-                                 NOTE: Assumes that there is only one file in
-                                 the outer zip, and that the inner zip contains
-                                 the JSON files containing SSVC data.
   -h --help                      Show this screen.
   -l --local-file                Import SSVC data from a local file instead of a
                                  URL.  File can be a single JSON file or a zip
@@ -34,7 +30,6 @@ Options:
                                  is ignored for single JSON file.
   -s SECTION --section=SECTION   CyHy database configuration section to use.
   -v --version                   Show version.
-  -z --zipped                    Input file is zipped.
 
 """
 
@@ -118,48 +113,50 @@ def parse_json(db, json_stream):
         # Print a warning and move on
         print("\nWARNING: CVE %s not found in database; cannot update SSVC data." % cve_id)
 
-def unzip_file(buf, zipped):
-    """Return a zipfile.ZipFile for a buffer that is either single- or double-zipped.
+def unzip_file(zf_buf):
+    """Return a zipfile.ZipFile for a buffer that contains zipped data.
 
     Args:
         buf: File-like object or buffer containing the zip data.
-        zipped: "single" for a single zip, "double" for an outer zip containing an inner zip.
 
     Returns:
-        zipfile.ZipFile: Open ZipFile for the (inner) zip archive.
+        zipfile.ZipFile: Open ZipFile for the zip archive.
 
     Raises:
         ValueError: If the zip structure is not as expected or cannot be processed.
     """
-    zf = None
-    if zipped == "single":
-            zf = zipfile.ZipFile(buf)
-    elif zipped == "double":
-        # Unzip outer layer
-        outer_zf = zipfile.ZipFile(buf)
+    zf = zipfile.ZipFile(zf_buf)
 
-        # Verify that there is only one file inside the outer zip
-        if len(outer_zf.namelist()) != 1:
-            raise ValueError("Expected exactly one file in outer zip, but found %d files." %
-                                len(outer_zf.namelist()))
+    # TODO: Remove logic to look for multiple levels of zip files when full SSVC
+    # data is no longer being provided in double-zipped format. See 
+    # https://github.com/cisagov/cyhy-core/issues/136 for more.
 
-        # Unzip inner layer
-        inner_buf = StringIO(outer_zf.read(outer_zf.namelist()[0]))
-        zf = zipfile.ZipFile(inner_buf)
+    # Keep unzipping layers until we reach the innermost zip file
+    # NOTE: Assumes that each zip layer contains either another zip file (and
+    # nothing else) or the final JSON file(s) to be processed.
+    while True:
+        namelist = zf.namelist()
+        first_filename = namelist[0]
+        if len(namelist) == 1 and zipfile.is_zipfile(StringIO(zf.read(first_filename))):
+            print("Unzipping inner zip file: %s" % first_filename)
+            # Unzip the next layer
+            zf = zipfile.ZipFile(StringIO(zf.read(first_filename)))
+        else:
+            # We have reached the innermost zip file
+            break
 
     # Verify that we have a valid zip file
     if type(zf) != zipfile.ZipFile:
-        raise ValueError("Error processing zip file from URL: %s" % url)
+        raise ValueError("Error processing zip file")
     
     return zf
 
-def process_file(db, filename, zipped, file_regex):
-    """Process a local file: either a JSON file or a single- or double-zipped archive of JSON files.
+def process_file(db, filename, file_regex):
+    """Process a local file: either a JSON file or a zip archive of JSON files.
 
     Args:
         db: Database connection/object.
         filename: Path to the local file to process.
-        zipped: None, "single", or "double" indicating zip handling.
         file_regex: Regex string to select JSON files inside a zip.
 
     Side effects:
@@ -168,13 +165,15 @@ def process_file(db, filename, zipped, file_regex):
     print("Processing local file: %s" % filename)
     buf = open(filename, "rb")
 
+    zipped = zipfile.is_zipfile(buf)
+    buf.seek(0)  # Reset buffer position to the beginning
     if not zipped:
         # Process as a single unzipped JSON file
         parse_json(db, buf)
         return
     
     # Unzip and process as a zip file
-    zf = unzip_file(buf, zipped)
+    zf = unzip_file(buf)
 
     # Process each file that matches the regex
     for f in zf.namelist():
@@ -183,13 +182,12 @@ def process_file(db, filename, zipped, file_regex):
             file_buf = StringIO(zf.read(f))
             parse_json(db, file_buf)
 
-def process_url(db, url, zipped, file_regex):
-    """Fetch and process a URL that points to a JSON file or a single- or double-zipped archive.
+def process_url(db, url, file_regex):
+    """Fetch and process a URL that points to a JSON file or zip archive of JSON files.
 
     Args:
         db: Database connection/object.
         url: URL to fetch.
-        zipped: None, "single", or "double" indicating zip handling.
         file_regex: Regex string to select JSON files inside a zip.
 
     Side effects:
@@ -200,13 +198,15 @@ def process_url(db, url, zipped, file_regex):
     socket = urllib.urlopen(url)
     buf = StringIO(socket.read())
 
+    zipped = zipfile.is_zipfile(buf)
+    buf.seek(0)  # Reset buffer position to the beginning
     if not zipped:
         # Process as a single unzipped JSON file
         parse_json(db, buf)
         return
 
     # Unzip and process as a zip file
-    zf = unzip_file(buf, zipped)
+    zf = unzip_file(buf)
 
     # Process each file that matches the regex
     for f in zf.namelist():
@@ -234,19 +234,10 @@ def main():
             raise ValueError("Invalid regular expression provided for --file-regex: %s" %
                              args["--file-regex"])
 
-        zipped = None
-        # TODO: Remove double-zipped logic when full SSVC data is no longer
-        # being provided in double-zipped format. See 
-        # https://github.com/cisagov/cyhy-core/issues/136 for more.
-        if args["--double-zipped"]:
-            zipped = "double"
-        elif args["--zipped"]:
-            zipped = "single"
-
         if args["--local-file"]:
-            process_file(db, args["<file>"], zipped, args["--file-regex"])
+            process_file(db, args["<file>"], args["--file-regex"])
         else:
-            process_url(db, args["<url>"], zipped, args["--file-regex"])
+            process_url(db, args["<url>"], args["--file-regex"])
 
         print("\nSummary:")
         print("CVEs updated with SSVC data: %d" % CVES_UPDATED)
