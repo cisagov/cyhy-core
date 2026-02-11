@@ -79,23 +79,22 @@ def parse_json(db, json_stream):
     ssvc_data = {}
     ssvc_version = None
     for adp_item in data.get("containers", {}).get("adp", []):
-        if adp_item.get("metrics", []):
-            for metrics_item in adp_item["metrics"]:
-                if metrics_item.get("other") and metrics_item["other"].get("type") == "ssvc":
-                    # We have found the SSVC data
-                    try:
-                        ssvc_version = metrics_item["other"]["content"].get("version")
-                        for options_item in metrics_item["other"]["content"].get("options", []):
-                            if options_item.get("Exploitation"):
-                                ssvc_data["exploitation"] = options_item["Exploitation"].lower()
-                            elif options_item.get("Automatable"):
-                                ssvc_data["automatable"] = options_item["Automatable"].lower()
-                            elif options_item.get("Technical Impact"):
-                                ssvc_data["technical_impact"] = options_item["Technical Impact"].lower()
-                    except KeyError:
-                        print("WARNING: SSVC data for %s does not look valid - missing expected fields." % cve_id)
-                        return
-                    break
+        for metrics_item in adp_item.get("metrics", []):
+            if metrics_item.get("other") and metrics_item["other"].get("type") == "ssvc":
+                # We have found the SSVC data
+                try:
+                    ssvc_version = metrics_item["other"]["content"].get("version")
+                    for options_item in metrics_item["other"]["content"].get("options", []):
+                        if options_item.get("Exploitation"):
+                            ssvc_data["exploitation"] = options_item["Exploitation"].lower()
+                        elif options_item.get("Automatable"):
+                            ssvc_data["automatable"] = options_item["Automatable"].lower()
+                        elif options_item.get("Technical Impact"):
+                            ssvc_data["technical_impact"] = options_item["Technical Impact"].lower()
+                except KeyError:
+                    print("WARNING: SSVC data for %s does not look valid - missing expected fields." % cve_id)
+                    return
+                break
 
     # Update CVE document if it exists in the database
     cve_doc = db.CVEDoc.find_one({"_id": cve_id})
