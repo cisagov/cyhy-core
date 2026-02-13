@@ -4,6 +4,8 @@ name: Blacken repository
 on:  # yamllint disable-line rule:truthy
   pull_request:
     paths:
+      # Ensure the workflow is run if it has been changed.
+      - .github/workflows/blacken.yml
       - '**.py'
 
 # Set a default shell for any run steps. The `-Eueo pipefail` sets errtrace,
