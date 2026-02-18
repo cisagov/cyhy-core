@@ -103,4 +103,3 @@ Nessus Port Doc
 	"exploit_framework_core" : "true",
 	"plugin_type" : "remote"
 }
-

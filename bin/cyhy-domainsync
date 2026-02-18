@@ -62,7 +62,7 @@ def get_ipv4_addresses(hostname):
 
 def close_tickets(db, ip, hostname, reason):
     """Close all open tickets for the given IP address and hostname.
-    
+
     Returns the number of tickets closed."""
     now = util.utcnow()
     close_event = {
@@ -74,9 +74,9 @@ def close_tickets(db, ip, hostname, reason):
     result = db.TicketDoc.collection.update(
         {"ip_int": int(ip), "hostname": hostname, "open": True},
         # Force false_positive to False since the ticket is being closed
-        {"$set": {"false_positive": False, 
-                  "open": False, 
-                  "time_closed": now}, 
+        {"$set": {"false_positive": False,
+                  "open": False,
+                  "time_closed": now},
         "$push": {"events": close_event}
         },
         multi=True,
@@ -184,7 +184,7 @@ def main():
                         print("Found HostDoc owned by: " + host_doc["owner"])
 
                     # The HostDoc did exist, so add the request ID and domain to the list of owners
-                    
+
                     # HostDoc.hostnames is a list of dictionaries with the following keys: hostname, owner
                     # An example looks like this:
                     # "hostnames": [
@@ -207,7 +207,7 @@ def main():
                     else:
                         # If the hostname isn't already in the list, add it
                         host_doc["hostnames"].append({"hostname": hostname, "owner": r["_id"]})
-                    
+
                     # Save the HostDoc
                     host_doc.save()
 
@@ -218,7 +218,7 @@ def main():
                         print("  Removing " + hostname + " from " + str(host.ip))
                         host["hostnames"] = [i for i in host["hostnames"] if i["hostname"] != hostname]
                         host.save()
- 
+
                         # Close all open tickets with this ip and hostname
                         closed_count = close_tickets(db, host.ip, hostname, "Hostname no longer resolves to this IP address")
                         print("  %d tickets documents closed for %s[%s]" % (
@@ -227,14 +227,14 @@ def main():
                             hostname
                         ))
 
-        # Find all the Default Owner HostDocs that don't have any hostnames, and 
+        # Find all the Default Owner HostDocs that don't have any hostnames, and
         # print out how many were deleted
         print("Deleting " + default_owner + " HostDocs that have no hostnames...")
         result = db.HostDoc.collection.delete_many({"owner": default_owner, "hostnames": {"$size": 0}})
 
         # Print out how many documents were deleted
         print("Deleted " + str(result.deleted_count) + " HostDocs")
-            
+
         # Synchronize the default owner's TallyDoc
         tally_doc = db.TallyDoc.get_by_owner(default_owner)
         if not tally_doc:

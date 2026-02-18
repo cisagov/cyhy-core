@@ -9,10 +9,10 @@ Usage:
 Options:
   -h --help                      Show this screen.
   --version                      Show version.
-  
+
   -f PATH --file-path PATH       Output to a path [default: .].
   -s SECTION --section=SECTION   Configuration section to use.
-  
+
 Notes:
   If no owners are specified, all request documents will be output.
 """
