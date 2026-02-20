@@ -84,12 +84,15 @@ def parse_json(db, json_stream):
                 print "Skipping; invalid JSON for CVE: " + cve
 
             print ".",
-            # Upsert CVE document in the database
-            entry_doc = db.CVEDoc({
-                "_id": cve_id,
-                "cvss_score": float(cvss_base_score),
-                "cvss_version": cvss_version
-            })
+
+            # If CVE document doesn't exist in DB, create it.  If it does exist,
+            # update it.
+            entry_doc = db.CVEDoc.find_one({"_id": cve_id})
+            if not entry_doc:
+                entry_doc = db.CVEDoc({"_id": cve_id})
+            
+            entry_doc["cvss_score"] = float(cvss_base_score)
+            entry_doc["cvss_version"] = cvss_version
             entry_doc.save(safe=False)
     print "\n\n"
 
@@ -118,7 +121,7 @@ def generate_urls():
 def main():
     # Since docopt can generate SystemExit and DocoptExit exceptions
     # in certain normal use cases, we exclude it from our try clause.
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
     try:
         db = database.db_from_config(args["--section"])
 

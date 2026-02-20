@@ -1,0 +1,251 @@
+#!/usr/bin/env python
+
+"""Upload SSVC data into the CyHy CVE collection.
+
+This utility expects a JSON file containing SSVC (Stakeholder-Specific
+Vulnerability Categorization) data for a single CVE, or a zip file containing
+multiple JSON files each containing SSVC data for a single CVE.  It will attempt
+to match each CVE ID in the SSVC data with an existing CVE document in the CyHy
+database.  If a match is found, it will update the CVE document with the SSVC
+data.  If no match is found for a given CVE ID, it will print a warning and move
+on.
+
+For more information about SSVC, see:
+https://www.cisa.gov/stakeholder-specific-vulnerability-categorization-ssvc
+
+Usage:
+  cyhy-ssvcsync [--section SECTION] [--file-regex REGEX] <url>
+  cyhy-ssvcsync [--section SECTION] [--file-regex REGEX] --local-file <file>
+  cyhy-ssvcsync (-h | --help)
+  cyhy-ssvcsync --version
+
+Options:
+  -h --help                      Show this screen.
+  -l --local-file                Import SSVC data from a local file instead of a
+                                 URL.  File can be a single JSON file or a zip
+                                 file containing multiple JSON files.
+  -r --file-regex=REGEX          Case-insensitive regex to match SSVC data
+                                 files. [default: ^(.*\/)?cve-.*\.json$]
+                                 NOTE: This is only used for zipped inputs; it
+                                 is ignored for single JSON file.
+  -s SECTION --section=SECTION   CyHy database configuration section to use.
+  -v --version                   Show version.
+
+"""
+
+# Standard Python Libraries
+from fileinput import filename
+import json
+import logging
+import re
+from StringIO import StringIO
+import urllib
+import zipfile
+
+# Third-Party Libraries
+from docopt import docopt
+
+# cisagov Libraries
+from cyhy.db import database
+
+# Global counters for summary
+CVES_NOT_FOUND = 0
+CVES_UPDATED = 0
+
+def parse_json(db, json_stream):
+    """Parse a CVE JSON stream, extract SSVC data, and update the DB.
+
+    Args:
+        db: Database connection/object providing CVEDoc access.
+        json_stream: File-like object yielding JSON for a single CVE.
+
+    Side effects:
+        Updates the matching CVE document in the database if found and
+        increments global counters for updated/not-found CVEs.
+    """
+    data = json.load(json_stream)
+
+    if data.get("dataType") != "CVE_RECORD":
+        print("WARNING: JSON does not look like valid CVE data - dataType is not CVE_RECORD.")
+        return
+    
+    try:
+        cve_id = data["cveMetadata"]["cveId"]
+    except KeyError:
+        print("WARNING: JSON does not look like valid CVE data - no cveId found.")
+        return
+
+    # Locate SSVC data in the JSON file
+    ssvc_data = {}
+    ssvc_version = None
+    for adp_item in data.get("containers", {}).get("adp", []):
+        for metrics_item in adp_item.get("metrics", []):
+            if metrics_item.get("other") and metrics_item["other"].get("type") == "ssvc":
+                # We have found the SSVC data
+                try:
+                    ssvc_version = metrics_item["other"]["content"].get("version")
+                    for options_item in metrics_item["other"]["content"].get("options", []):
+                        if options_item.get("Exploitation"):
+                            ssvc_data["exploitation"] = options_item["Exploitation"].lower()
+                        elif options_item.get("Automatable"):
+                            ssvc_data["automatable"] = options_item["Automatable"].lower()
+                        elif options_item.get("Technical Impact"):
+                            ssvc_data["technical_impact"] = options_item["Technical Impact"].lower()
+                except KeyError:
+                    print("WARNING: SSVC data for %s does not look valid - missing expected fields." % cve_id)
+                    return
+                break
+
+    # Update CVE document if it exists in the database
+    cve_doc = db.CVEDoc.find_one({"_id": cve_id})
+    if cve_doc:
+        # Update existing CVE document with SSVC data
+        cve_doc["ssvc"] = ssvc_data
+        cve_doc["ssvc_version"] = ssvc_version
+        cve_doc.save(safe=False)
+        global CVES_UPDATED
+        CVES_UPDATED += 1
+        print("Done")
+    else:
+        global CVES_NOT_FOUND
+        CVES_NOT_FOUND += 1
+        # Print a warning and move on
+        print("\nWARNING: CVE %s not found in database; cannot update SSVC data." % cve_id)
+
+def unzip_file(zf_buf):
+    """Return a zipfile.ZipFile for a buffer that contains zipped data.
+
+    Args:
+        buf: File-like object or buffer containing the zip data.
+
+    Returns:
+        zipfile.ZipFile: Open ZipFile for the zip archive.
+
+    Raises:
+        ValueError: If the zip structure is not as expected or cannot be processed.
+    """
+    zf = zipfile.ZipFile(zf_buf)
+
+    # TODO: Remove logic to look for multiple levels of zip files when full SSVC
+    # data is no longer being provided in double-zipped format. See 
+    # https://github.com/cisagov/cyhy-core/issues/136 for more.
+
+    # Keep unzipping layers until we reach the innermost zip file
+    # NOTE: Assumes that each zip layer contains either another zip file (and
+    # nothing else) or the final JSON file(s) to be processed.
+    while True:
+        namelist = zf.namelist()
+        if len(namelist) == 0:
+            raise ValueError("Zip file is empty")
+        first_filename = namelist[0]
+        if len(namelist) == 1 and zipfile.is_zipfile(StringIO(zf.read(first_filename))):
+            print("Unzipping inner zip file: %s" % first_filename)
+            # Unzip the next layer
+            zf = zipfile.ZipFile(StringIO(zf.read(first_filename)))
+        else:
+            # We have reached the innermost zip file
+            break
+
+    # Verify that we have a valid zip file
+    if type(zf) != zipfile.ZipFile:
+        raise ValueError("Error processing zip file")
+    
+    return zf
+
+def process_file(db, filename, file_regex):
+    """Process a local file: either a JSON file or a zip archive of JSON files.
+
+    Args:
+        db: Database connection/object.
+        filename: Path to the local file to process.
+        file_regex: Regex string to select JSON files inside a zip.
+
+    Side effects:
+        Calls parse_json for each relevant JSON input and prints progress.
+    """
+    print("Processing local file: %s" % filename)
+    buf = open(filename, "rb")
+
+    zipped = zipfile.is_zipfile(buf)
+    buf.seek(0)  # Reset buffer position to the beginning
+    if not zipped:
+        # Process as a single unzipped JSON file
+        parse_json(db, buf)
+        return
+    
+    # Unzip and process as a zip file
+    zf = unzip_file(buf)
+
+    # Process each file that matches the regex
+    for f in zf.namelist():
+        if re.match(file_regex, f, flags=re.IGNORECASE):
+            print "Processing file: %s -" % f,
+            file_buf = StringIO(zf.read(f))
+            parse_json(db, file_buf)
+
+def process_url(db, url, file_regex):
+    """Fetch and process a URL that points to a JSON file or zip archive of JSON files.
+
+    Args:
+        db: Database connection/object.
+        url: URL to fetch.
+        file_regex: Regex string to select JSON files inside a zip.
+
+    Side effects:
+        Downloads the URL, calls parse_json for each relevant JSON input and prints progress.
+    """
+    print("Processing URL: %s" % url)
+
+    socket = urllib.urlopen(url)
+    buf = StringIO(socket.read())
+
+    zipped = zipfile.is_zipfile(buf)
+    buf.seek(0)  # Reset buffer position to the beginning
+    if not zipped:
+        # Process as a single unzipped JSON file
+        parse_json(db, buf)
+        return
+
+    # Unzip and process as a zip file
+    zf = unzip_file(buf)
+
+    # Process each file that matches the regex
+    for f in zf.namelist():
+        if re.match(file_regex, f, flags=re.IGNORECASE):
+            print "Processing file: %s -" % f,
+            file_buf = StringIO(zf.read(f))
+            parse_json(db, file_buf)
+
+
+def main():
+    """Parse CLI args, configure DB, and run processing for file or URL input.
+
+    Uses docopt for CLI parsing and prints a summary of results.
+    """
+    # Since docopt can generate SystemExit and DocoptExit exceptions
+    # in certain normal use cases, we exclude it from our try clause.
+    args = docopt(__doc__, version="v1.0.0")
+    try:
+        db = database.db_from_config(args["--section"])
+
+        # Check if valid regex was provided
+        try:
+            re.compile(args["--file-regex"])
+        except re.error:
+            raise ValueError("Invalid regular expression provided for --file-regex: %s" %
+                             args["--file-regex"])
+
+        if args["--local-file"]:
+            process_file(db, args["<file>"], args["--file-regex"])
+        else:
+            process_url(db, args["<url>"], args["--file-regex"])
+
+        print("\nSummary:")
+        print("CVEs updated with SSVC data: %d" % CVES_UPDATED)
+        print("CVEs not found in database: %d" % CVES_NOT_FOUND)
+    except:
+        logging.exception("Unexpected exception")
+
+
+if __name__ == "__main__":
+    main()

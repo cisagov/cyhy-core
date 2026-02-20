@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cyhy-core",
-    version="1.2.0",
+    version="1.3.0",
     author="Mark Feldhousen Jr.",
     author_email="mark.feldhousen@cisa.dhs.gov",
     packages=find_packages(),
@@ -23,6 +23,7 @@ setup(
         "bin/cyhy-sched",
         "bin/cyhy-simple",
         "bin/cyhy-snapshot",
+        "bin/cyhy-ssvcsync",
         "bin/cyhy-suborg",
         "bin/cyhy-ticket",
         "bin/cyhy-tool",
