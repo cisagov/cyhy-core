@@ -41,27 +41,6 @@ from cyhy.util import util
 
 
 
-def munge(x):
-    """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
-
-    Args:
-        x: A Python tuple or list containing IPNetwork and IPRange objects
-
-    Returns:
-        An IPSet corresponding to the Python tuple or list that was passed
-        in.
-    """
-    ans = []
-    for i in x:
-        # IPSet doesn't like it when an IPRange appears in the tuple
-        # or list in its constructor.  It only likes IPNetworks.
-        if isinstance(i, IPRange):
-            ans.extend(i.cidrs())
-        else:
-            ans.append(i)
-    return IPSet(ans)
-
-
 PB_INIT_WIDGETS = [
     "Initializing: ",
     pb.SimpleProgress(),
@@ -70,17 +49,6 @@ PB_INIT_WIDGETS = [
     " ",
     pb.ETA(),
 ]
-
-# Only IPV4_LOOPBACK and IPV4_RESERVED need to be munged, since the
-# others are not lists or tuples
-SPECIAL_RANGES = {
-    "IPv4 Loopback": IPSet(ip.IPV4_LOOPBACK),
-    "IPv4 Private": munge(ip.IPV4_PRIVATE),
-    "IPv4 Link Local": IPSet(ip.IPV4_LINK_LOCAL),
-    "IPv4 Multicast": IPSet(ip.IPV4_MULTICAST),
-    "IPv4 6 to 4": IPSet(ip.IPV4_6TO4),
-    "IPv4 Reserved": munge(ip.IPV4_RESERVED),
-}
 
 
 def parse_addresses(addresses):
@@ -120,14 +88,6 @@ def get_default_owner_intersections(db, cidrs):
     return results
 
 
-def get_special_intersections(cidrs):
-    results = {}  # {request: IPSet of intersections}
-    for description, special_set in SPECIAL_RANGES.items():
-        intersection = special_set & cidrs
-        if intersection:
-            results[description] = intersection
-    return results
-
 def print_intersections(intersections):
     for request, intersecting_cidrs in intersections.iteritems():
         if type(request) == str:
@@ -151,7 +111,7 @@ def check(db, cidrs):
     # Intersections with IPs owned by any owner other than the default owner
     intersections = db.RequestDoc.get_all_intersections(cidrs)
     # Intersections with RFCs
-    intersections.update(get_special_intersections(cidrs))
+    intersections.update(util.get_special_intersections(cidrs))
     # Intersections with IPs owned by the default owner
     intersections.update(get_default_owner_intersections(db, cidrs))
     print_intersections(intersections)
@@ -231,7 +191,7 @@ def add(db, owner, cidrs):
         print "Cannot continue!\nSome addresses associated with restricted countries."
         sys.exit(-1)
 
-    intersections.update(get_special_intersections(cidrs))  # intersections with RFCs
+    intersections.update(util.get_special_intersections(cidrs))  # intersections with RFCs
     if intersections:
         print "Cannot continue!\nSome addresses already allocated or reserved:"
         print_intersections(intersections)
@@ -477,7 +437,7 @@ def setstage(db, stage, cidrs):
     for request, intersecting_cidrs in intersections.iteritems():
         matched.update(intersecting_cidrs)
 
-    special_intersections = get_special_intersections(cidrs)  # intersections with RFCs
+    special_intersections = util.get_special_intersections(cidrs)  # intersections with RFCs
     special = IPSet()
     for request, intersecting_cidrs in special_intersections.iteritems():
         special.update(intersecting_cidrs)
