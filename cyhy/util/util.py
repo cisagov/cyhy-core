@@ -19,6 +19,7 @@ __all__ = [
     "utcnow",
     "warn_and_confirm",
     "parse_domains",
+    "get_special_intersections",
 ]
 
 # Standard Python Libraries
@@ -303,3 +304,44 @@ def parse_domains(domains):
         else:
             valid_domains.add(d)
     return valid_domains, invalid_domains
+
+
+def munge(x):
+    """Munges a tuple or list of IPNetwork and IPRange objects into a single IPSet.
+
+    Args:
+        x: A Python tuple or list containing IPNetwork and IPRange objects
+
+    Returns:
+        An IPSet corresponding to the Python tuple or list that was passed
+        in.
+    """
+    ans = []
+    for i in x:
+        # IPSet doesn't like it when an IPRange appears in the tuple
+        # or list in its constructor.  It only likes IPNetworks.
+        if isinstance(i, netaddr.IPRange):
+            ans.extend(i.cidrs())
+        else:
+            ans.append(i)
+    return netaddr.IPSet(ans)
+
+
+def get_special_intersections(cidrs):
+    # Only IPV4_LOOPBACK and IPV4_RESERVED need to be munged, since the
+    # others are not lists or tuples
+    SPECIAL_RANGES = {
+        "IPv4 Loopback": netaddr.IPSet(netaddr.ip.IPV4_LOOPBACK),
+        "IPv4 Private": munge(netaddr.ip.IPV4_PRIVATE),
+        "IPv4 Link Local": netaddr.IPSet(netaddr.ip.IPV4_LINK_LOCAL),
+        "IPv4 Multicast": netaddr.IPSet(netaddr.ip.IPV4_MULTICAST),
+        "IPv4 6 to 4": netaddr.IPSet(netaddr.ip.IPV4_6TO4),
+        "IPv4 Reserved": munge(netaddr.ip.IPV4_RESERVED),
+    }
+
+    results = {}  # {request: IPSet of intersections}
+    for description, special_set in SPECIAL_RANGES.items():
+        intersection = special_set & cidrs
+        if intersection:
+            results[description] = intersection
+    return results
