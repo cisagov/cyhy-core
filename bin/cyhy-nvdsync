@@ -50,12 +50,14 @@ def parse_json(db, json_stream):
             continue
 
         # Reject CVEs that don't have V2 or V3 CVSS data
-        if not any(k in entry["cve"].get("metrics", {})
+        if not any(
+            k in entry["cve"].get("metrics", {})
             for k in [
                 "cvssMetricV2",
                 "cvssMetricV30",
                 "cvssMetricV31",
-            ]):
+            ]
+        ):
             # Make sure they are removed from our db.
             db.CVEDoc.collection.remove({"_id": cve_id}, safe=False)
             print "x",
@@ -85,11 +87,13 @@ def parse_json(db, json_stream):
 
             print ".",
             # Upsert CVE document in the database
-            entry_doc = db.CVEDoc({
-                "_id": cve_id,
-                "cvss_score": float(cvss_base_score),
-                "cvss_version": cvss_version
-            })
+            entry_doc = db.CVEDoc(
+                {
+                    "_id": cve_id,
+                    "cvss_score": float(cvss_base_score),
+                    "cvss_version": cvss_version,
+                }
+            )
             entry_doc.save(safe=False)
     print "\n\n"
 
