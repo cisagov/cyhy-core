@@ -47,19 +47,15 @@ def read_file(filename):
 def do_list(db, owner):
     request = db.RequestDoc.get_by_owner(owner)
     for h in request.get("hostnames", []):
-        print(h)
+        print (h)
 
 
 def do_list_all(db):
     requests = db.RequestDoc.find({"hostnames": {"$exists": True}}).sort("_id")
     for r in requests:
-        print "# %s (%s): %d" % (
-            r["agency"]["name"],
-            r["_id"],
-            len(r["hostnames"])
-        )
+        print "# %s (%s): %d" % (r["agency"]["name"], r["_id"], len(r["hostnames"]))
         for h in sorted(r["hostnames"]):
-            print("\t%s" % h)
+            print ("\t%s" % h)
         print
 
 
@@ -75,7 +71,7 @@ def get_ipv4_addresses(hostname):
     """Return a set of IPv4 addresses for the given hostname."""
     ip_set = set()
     try:
-        answers = resolver.query(hostname, 'A')
+        answers = resolver.query(hostname, "A")
     # Could not resolve domain name
     except resolver.NoNameservers as e:
         print "Warning: No nameservers available to resolve %s" % hostname
@@ -125,10 +121,14 @@ def add(db, owner, domains, disallow_owned_ips):
                 existing_hostdoc = db.HostDoc.get_by_ip(ip)
                 if existing_hostdoc and existing_hostdoc["owner"] != DEFAULT_OWNER:
                     domain_problem = True
-                    print "ERROR - %s resolves to IP %s owned by %s in CyHy" % (d, ip, existing_hostdoc["owner"])
+                    print "ERROR - %s resolves to IP %s owned by %s in CyHy" % (
+                        d,
+                        ip,
+                        existing_hostdoc["owner"],
+                    )
                     resolves_to_owned_ip_domains.append(d)
                     break
-    
+
     if domain_problem:
         print "\n=== Summary of domain errors ==="
         if owned_domains:
@@ -155,7 +155,7 @@ def add(db, owner, domains, disallow_owned_ips):
 
     print "Domains added to %s (%s):" % (request["agency"]["name"], owner)
     for d in domains:
-        print("\t%s" % d)
+        print ("\t%s" % d)
 
 
 def remove(db, owner, domains):
@@ -168,10 +168,11 @@ def remove(db, owner, domains):
 
     if unowned_domains:
         print "ERROR - %s (%s) does not own the following domains:" % (
-            request["agency"]["name"], owner
+            request["agency"]["name"],
+            owner,
         )
         for d in sorted(unowned_domains):
-            print("\t%s" % d)
+            print ("\t%s" % d)
         sys.exit(-1)
 
     for d in domains:
@@ -180,7 +181,7 @@ def remove(db, owner, domains):
 
     print "Domains removed from %s (%s):" % (request["agency"]["name"], owner)
     for d in domains:
-        print("\t%s" % d)
+        print ("\t%s" % d)
 
     # Remove domains from any HostDocs that have them
     for d in domains:
@@ -195,9 +196,7 @@ def remove(db, owner, domains):
     # Close open tickets referencing the removed domains
     ticket_closing_time = util.utcnow()
     count = 0
-    for t in db.TicketDoc.find(
-        {"hostname": {"$in": domains}, "open": True}
-    ):
+    for t in db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}):
         t["open"] = False
         t["time_closed"] = ticket_closing_time
         t.add_event(
@@ -207,6 +206,7 @@ def remove(db, owner, domains):
         count += 1
     print "Closed %d open tickets referencing removed domain(s)" % count
 
+
 def check(db, domains):
     domain_owners = get_existing_domains_and_owners(db)
     matched_domains = {}
@@ -214,22 +214,24 @@ def check(db, domains):
 
     for d in domains:
         if d in domain_owners:
-            matched_domains[domain_owners[d]] = matched_domains.get(domain_owners[d], []) + [d]
+            matched_domains[domain_owners[d]] = matched_domains.get(
+                domain_owners[d], []
+            ) + [d]
         else:
             unmatched_domains.append(d)
-    
+
     if matched_domains:
         for owner in sorted(matched_domains):
             domains = matched_domains[owner]
             print "# %s: %s" % (owner, len(domains))
             for d in sorted(domains):
-                print("\t%s" % d)
+                print ("\t%s" % d)
             print
 
     if unmatched_domains:
         print "# Unmatched: %s" % len(unmatched_domains)
         for d in sorted(unmatched_domains):
-            print("\t%s" % d)
+            print ("\t%s" % d)
 
 
 def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
@@ -251,7 +253,7 @@ def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
     print "%d tickets documents modified (%s -> %s)" % (
         result["nModified"],
         orig_owner,
-        new_owner
+        new_owner,
     )
 
 
@@ -274,10 +276,10 @@ def move(db, orig_owner, new_owner, domains_to_move):
     if domains_not_in_orig_owner:
         print "\nERROR - The following domains are NOT owned by %s (%s):" % (
             orig_owner,
-            orig_owner_request["agency"]["name"]
+            orig_owner_request["agency"]["name"],
         )
         for d in domains_not_in_orig_owner:
-            print("\t%s" % d)
+            print ("\t%s" % d)
         print "\nEXITING without making any changes."
         sys.exit(-1)
 
@@ -287,9 +289,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
     )
 
     # Remove the domains_to_move from orig_owner's request doc
-    orig_owner_request["hostnames"] = sorted(
-        orig_owner_domains - set(domains_to_move)
-    )
+    orig_owner_request["hostnames"] = sorted(orig_owner_domains - set(domains_to_move))
     # Add the domains_to_move to new_owner's request doc
     new_owner_request["hostnames"] = sorted(
         set(new_owner_request.get("hostnames")) | set(domains_to_move)
@@ -302,11 +302,13 @@ def move(db, orig_owner, new_owner, domains_to_move):
     print "%s request document updated\n" % new_owner
 
     print "Domains moved from %s (%s) to %s (%s):" % (
-        orig_owner_request["agency"]["name"], orig_owner,
-        new_owner_request["agency"]["name"], new_owner
-        )
+        orig_owner_request["agency"]["name"],
+        orig_owner,
+        new_owner_request["agency"]["name"],
+        new_owner,
+    )
     for d in sorted(domains_to_move):
-        print("\t%s" % d)
+        print ("\t%s" % d)
 
 
 def main():
@@ -322,7 +324,7 @@ def main():
         if not db.RequestDoc.get_by_owner(args["OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["OWNER"]
             sys.exit(-1)
-    
+
     if args.get("NEW_OWNER"):
         if not db.RequestDoc.get_by_owner(args["NEW_OWNER"]):
             print "ERROR: Organization %s not found in DB" % args["NEW_OWNER"]
@@ -338,14 +340,16 @@ def main():
         valid_domains.update(f_valid_domains)
         invalid_domains.update(f_invalid_domains)
     elif len(valid_domains) == 0:
-        stdin_valid_domains, stdin_invalid_domains = util.parse_domains(sys.stdin.readlines())
+        stdin_valid_domains, stdin_invalid_domains = util.parse_domains(
+            sys.stdin.readlines()
+        )
         valid_domains.update(stdin_valid_domains)
         invalid_domains.update(stdin_invalid_domains)
-    
+
     if invalid_domains:
         print "ERROR - Invalid domain(s):"
         for d in sorted(invalid_domains):
-            print(d)
+            print (d)
         sys.exit(-1)
 
     domains = list(valid_domains)
@@ -359,6 +363,7 @@ def main():
     elif args["remove"]:
         remove(db, args["OWNER"], domains)
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
