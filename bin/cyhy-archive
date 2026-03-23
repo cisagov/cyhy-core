@@ -171,7 +171,9 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
                 mongodump_command += ["--authenticationDatabase={}".format(auth_db)]
 
             p = subprocess.Popen(
-                mongodump_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                mongodump_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
             logger.info(
                 "{}: exporting documents older than {} to {}".format(
@@ -245,13 +247,15 @@ def archive_and_delete(db, curr_date, archive_dir, parsed_db_uri):
             ).count()
             logger.info(
                 "{}: {:,} documents exist after archiving".format(
-                    collection_name, doc_counts["post-archiving"][collection_name],
+                    collection_name,
+                    doc_counts["post-archiving"][collection_name],
                 )
             )
         else:  # no documents to archive
             logger.warning(
                 "{}: no documents are old enough to be archived (cutoff date: {})".format(
-                    collection_name, cutoff_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    collection_name,
+                    cutoff_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                 )
             )
             results["exported_counts"][collection_name] = results["deleted_counts"][
@@ -307,7 +311,8 @@ def main():
             collection_name = db[collection_info["name"]].collection.name
             logger.fatal(
                 "  {}: exported {:,} documents".format(
-                    collection_name, results["exported_counts"].get(collection_name, 0),
+                    collection_name,
+                    results["exported_counts"].get(collection_name, 0),
                 )
             )
         if not args["--no-commander-pause"]:
@@ -323,12 +328,14 @@ def main():
             collection_name = db[collection_info["name"]].collection.name
             logger.fatal(
                 "  {}: exported {:,} documents".format(
-                    collection_name, results["exported_counts"].get(collection_name, 0),
+                    collection_name,
+                    results["exported_counts"].get(collection_name, 0),
                 )
             )
             logger.fatal(
                 "  {}: deleted {:,} documents".format(
-                    collection_name, results["deleted_counts"].get(collection_name, 0),
+                    collection_name,
+                    results["deleted_counts"].get(collection_name, 0),
                 )
             )
 

@@ -262,9 +262,7 @@ def main():
 
         for orgId in orgIds:
             retire(db, orgId)
-        print str(
-            orgIds
-        ) + " have been successfully retired."
+        print str(orgIds) + " have been successfully retired."
 
 
 if __name__ == "__main__":
