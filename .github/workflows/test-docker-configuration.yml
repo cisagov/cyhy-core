@@ -87,7 +87,7 @@ jobs:
           # this workflow.
           permissions_monitoring_config: ${{ vars.ACTIONS_PERMISSIONS_CONFIG }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Check out the repository
         uses: actions/checkout@v6
       - name: Build the Docker configuration
