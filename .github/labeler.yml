@@ -50,8 +50,8 @@ shell script:
           # If this project has any shell scripts that do not end in the ".sh"
           # extension, add them below.
           - "**/*.sh"
-          - bump-version
-          - setup-env
+          - var/getenv
+          - var/getopsenv
 terraform:
   - changed-files:
       - any-glob-to-any-file:
