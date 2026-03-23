@@ -8,7 +8,7 @@ on:  # yamllint disable-line rule:truthy
     paths:
       # Ensure the workflow is run if it has been changed.
       - .github/workflows/blacken.yml
-      - '**.py'
+      - "**.py"
 
 # Set a default shell for any run steps. The `-Eueo pipefail` sets errtrace,
 # nounset, errexit, and pipefail. The `-x` will print all commands as they are
