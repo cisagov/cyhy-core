@@ -1,7 +1,12 @@
-import dateutil
-from dateutil.relativedelta import *
-from dateutil import parser
+# Standard Python Libraries
 from datetime import *
+
+# Third-Party Libraries
+import dateutil
+from dateutil import parser
+from dateutil.relativedelta import *
+
+# cisagov Libraries
 from cyhy.util import util
 
 # windows look like this:

@@ -16,13 +16,17 @@ Options:
   --version                      Show version.
   -s SECTION --section=SECTION   Configuration section to use.
 """
-import sys
+# Standard Python Libraries
 import os
+import sys
+
+# Third-Party Libraries
+from bson import ObjectId
 from docopt import docopt
 
+# cisagov Libraries
 from cyhy.core import Config
 from cyhy.db import CHDatabase, database
-from bson import ObjectId
 
 
 def parse_owners(db, args):

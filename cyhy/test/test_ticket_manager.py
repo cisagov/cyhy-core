@@ -2,15 +2,19 @@
 
 # built-in python libraries
 
+# Third-Party Libraries
 # third-party libraries (install with pip)
 from bson.objectid import ObjectId
-from netaddr import IPSet, IPAddress as ip
-import pytest
 
 # local libraries
 from common_fixtures import database
+from netaddr import IPAddress as ip
+from netaddr import IPSet
+import pytest
+
+# cisagov Libraries
 from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
-from cyhy.db import VulnTicketManager, IPPortTicketManager, IPTicketManager
+from cyhy.db import IPPortTicketManager, IPTicketManager, VulnTicketManager
 from cyhy.util import util
 
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]

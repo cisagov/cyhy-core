@@ -14,8 +14,13 @@ Options:
 
 """
 
+# Standard Python Libraries
 import sys
+
+# Third-Party Libraries
 from docopt import docopt
+
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.util import util
 

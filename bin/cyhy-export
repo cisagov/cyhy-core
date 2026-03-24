@@ -16,13 +16,17 @@ Options:
 Notes:
   If no owners are specified, all request documents will be output.
 """
-import sys
+# Standard Python Libraries
+import json
 import os
+import sys
+
+# Third-Party Libraries
 from docopt import docopt
 import progressbar as pb
-import json
 
-from cyhy.core import Config, STATUS, STAGE
+# cisagov Libraries
+from cyhy.core import STAGE, STATUS, Config
 from cyhy.db import database
 from cyhy.util import util
 

@@ -1,14 +1,17 @@
 __all__ = ["VulnTicketManager", "IPPortTicketManager", "IPTicketManager"]
 
+# Standard Python Libraries
 from collections import defaultdict
+
+# Third-Party Libraries
 from dateutil import relativedelta, tz
-
-from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
-from cyhy.db.queries import close_tickets_pl, clear_latest_vulns_pl
-from cyhy.db import database
-from cyhy.util import util
-
 from netaddr import IPSet
+
+# cisagov Libraries
+from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
+from cyhy.db import database
+from cyhy.db.queries import clear_latest_vulns_pl, close_tickets_pl
+from cyhy.util import util
 
 MAX_PORTS_COUNT = 65535
 

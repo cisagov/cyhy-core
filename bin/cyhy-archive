@@ -14,6 +14,7 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
+# Standard Python Libraries
 import datetime
 import logging
 import os
@@ -23,11 +24,13 @@ import sys
 import time
 from urlparse import urlparse
 
+# Third-Party Libraries
 from bson import ObjectId
 from docopt import docopt
 
+# cisagov Libraries
 from cyhy.core.config import Config
-from cyhy.db import database, CHDatabase
+from cyhy.db import CHDatabase, database
 from cyhy.util import util
 
 logger = logging.getLogger("cyhy-archive")

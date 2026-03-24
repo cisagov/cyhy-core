@@ -17,17 +17,20 @@ Options:
   -s SECTION --section=SECTION   Configuration section to use.
 """
 
-import sys
+# Standard Python Libraries
+import datetime
 import os
-from docopt import docopt
+import sys
+
+# Third-Party Libraries
 import dateutil.parser
 import dateutil.tz as tz
-import datetime
+from docopt import docopt
 
-from cyhy.core import Config, STATUS, STAGE
+# cisagov Libraries
+from cyhy.core import STAGE, STATUS, Config
 from cyhy.db import database
 from cyhy.util import time_to_utc, utcnow
-
 
 THE_ONLY_SCHEDULER = "PERSISTENT1"
 THE_DISTANT_FUTURE = dateutil.parser.parse("9999-01-01")
@@ -46,6 +49,7 @@ def set_start_date(db, request, start_time, clear_scheduler=False):
 
 def reset_state(db, request, start_time):
     # crazy hack to import cyhy-tool
+    # Standard Python Libraries
     import imp
 
     me = os.path.realpath(__file__)

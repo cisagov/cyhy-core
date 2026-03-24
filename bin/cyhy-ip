@@ -29,14 +29,14 @@ import sys
 
 # Third-Party Libraries
 from docopt import docopt
-from netaddr import ip, IPAddress, IPNetwork, IPRange, IPSet
+from netaddr import IPAddress, IPNetwork, IPRange, IPSet, ip
 import progressbar as pb
 
 # cisagov Libraries
-from cyhy.core import Config, STATUS, STAGE
+from cyhy.core import STAGE, STATUS, Config
 from cyhy.core.common import *
 from cyhy.core.geoloc import GeoLocDB
-from cyhy.db import database, CHDatabase
+from cyhy.db import CHDatabase, database
 from cyhy.util import util
 
 

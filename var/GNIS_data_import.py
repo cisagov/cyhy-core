@@ -14,14 +14,17 @@ Options:
 """
 from __future__ import print_function
 
+# Standard Python Libraries
 import csv
 import io
 import re
 import sys
 
+# Third-Party Libraries
 from docopt import docopt
 from unidecode import unidecode
 
+# cisagov Libraries
 from cyhy.db import database
 
 # Data file source: https://www.usgs.gov/core-science-systems/ngp/board-on-geographic-names/download-gnis-data

@@ -31,7 +31,7 @@ from netaddr import IPSet
 import progressbar as pb
 
 # cisagov Libraries
-from cyhy.core import Config, STATUS, STAGE
+from cyhy.core import STAGE, STATUS, Config
 from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util

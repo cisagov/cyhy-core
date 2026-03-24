@@ -1,8 +1,10 @@
 # https://www.python.org/dev/peps/pep-0420/
+# Standard Python Libraries
 from pkgutil import extend_path
 
 __path__ = extend_path(__path__, __name__)
 
+# Standard Python Libraries
 import sys as _sys
 
 #: Version info (major, minor, maintenance, status)

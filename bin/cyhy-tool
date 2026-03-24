@@ -23,16 +23,21 @@ Options:
   -d --debug                     Output debug messages
 """
 
+# Standard Python Libraries
+import datetime
 import os
 import sys
-from docopt import docopt
-import datetime
+
+# Third-Party Libraries
 import dateutil
+from docopt import docopt
 import progressbar as pb
-from cyhy.core import Config, STATUS, STAGE, SCAN_TYPE
-from cyhy.db import CHDatabase, database
+
+# cisagov Libraries
+from cyhy.core import SCAN_TYPE, STAGE, STATUS, Config
 from cyhy.core.geoloc import GeoLocDB
-from cyhy.util import util, time_to_utc
+from cyhy.db import CHDatabase, database
+from cyhy.util import time_to_utc, util
 
 PB_UPDATING_WIDGETS = [
     "Updating: ",
@@ -157,6 +162,7 @@ def status(db, owners, sync=False):
 
 def retire(db, owner):
     # crazy hack to import cyhy-sched, cyhy-ip, and sub-org-manage
+    # Standard Python Libraries
     import imp
 
     me = os.path.realpath(__file__)
@@ -213,6 +219,7 @@ def main():
     ch_db = CHDatabase(db)
 
     if args["--debug"]:
+        # Standard Python Libraries
         import logging
 
         root = util.setup_logging(logging.DEBUG, console=True)

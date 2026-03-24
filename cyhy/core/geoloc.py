@@ -1,8 +1,10 @@
 __all__ = ["GeoLocDB"]
 
+# Standard Python Libraries
 import os
 import sys
 
+# Third-Party Libraries
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
 

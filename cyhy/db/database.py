@@ -1,6 +1,7 @@
 __all__ = ["db_from_connection", "db_from_config", "id_expand", "ensure_indices"]
 
-from collections import defaultdict, Iterable, OrderedDict
+# Standard Python Libraries
+from collections import Iterable, OrderedDict, defaultdict
 import copy
 import datetime
 import random
@@ -8,12 +9,14 @@ import re
 import sys
 import time
 
+# Third-Party Libraries
 from bson import ObjectId
 from bson.binary import Binary
-from mongokit import Document, MongoClient, CustomType
+from mongokit import CustomType, Document, MongoClient
 import netaddr
 from pymongo.errors import OperationFailure
 
+# cisagov Libraries
 from cyhy.core.common import *
 from cyhy.core.config import Config
 from cyhy.core.yaml_config import YamlConfig

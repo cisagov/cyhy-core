@@ -1,4 +1,5 @@
-from setuptools import setup, find_packages
+# Third-Party Libraries
+from setuptools import find_packages, setup
 
 setup(
     name="cyhy-core",
