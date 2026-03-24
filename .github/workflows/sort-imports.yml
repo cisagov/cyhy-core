@@ -130,7 +130,7 @@ jobs:
       - name: Install isort
         run: |
           python -m pip install --upgrade pip setuptools
-          pip install --upgrade isort==8.0.1
+          python -m pip install --upgrade isort==8.0.1
       # isort will automatically discover the .isort.cfg file
       - name: Sort imports with isort
         run: isort .
