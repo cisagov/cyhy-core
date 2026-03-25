@@ -2,7 +2,6 @@
 
 # Third-Party Libraries
 from bson.objectid import ObjectId
-from common_fixtures import database
 from netaddr import IPAddress as ip
 from netaddr import IPSet
 import pytest
@@ -11,6 +10,9 @@ import pytest
 from cyhy.core.common import TICKET_EVENT, UNKNOWN_OWNER
 from cyhy.db import IPPortTicketManager, IPTicketManager, VulnTicketManager
 from cyhy.util import util
+
+# Local import
+from common_fixtures import database
 
 # IPS = [ip('10.0.0.1'), ip('192.168.1.1'), ip('fe80::8BAD:F00D'), ip('fe80::dead:beef')]
 IPS = [ip("10.0.0.1"), ip("192.168.1.1"), ip("172.20.20.20"), ip("10.0.0.2")]

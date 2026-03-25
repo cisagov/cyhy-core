@@ -10,13 +10,15 @@ import sys
 # Third-Party Libraries
 import Crypto.Random.random as random
 from bson.binary import Binary
-from common_fixtures import *
 import netaddr
 import netaddr.strategy
 import pytest
 
 # cisagov Libraries
 from cyhy.db import CryptoKey, IPCoder
+
+# Local import
+from common_fixtures import *
 
 CORRECT_PASSWORD = "foobar"
 INCORRECT_PASSWORD = "fubar"
