@@ -3,12 +3,6 @@
 # Standard Python Libraries
 import os
 import sys
-
-me = os.path.realpath(__file__)
-myDir = os.path.dirname(me)
-sys.path.append(os.path.join(myDir, ".."))
-
-# Standard Python Libraries
 from xml.sax import parse
 
 # Third-Party Libraries
@@ -17,6 +11,11 @@ import pytest
 
 # cisagov Libraries
 import cyhy.util as util
+
+me = os.path.realpath(__file__)
+myDir = os.path.dirname(me)
+sys.path.append(os.path.join(myDir, ".."))
+
 
 TEST_NMAP_FILENAME = "inputs/test-fullscan.xml"
 

@@ -1,12 +1,7 @@
 #!/usr/bin/env py.test -v
 
-# built-in python libraries
-
 # Third-Party Libraries
-# third-party libraries (install with pip)
 from bson.objectid import ObjectId
-
-# local libraries
 from common_fixtures import database
 from netaddr import IPAddress as ip
 from netaddr import IPSet
