@@ -730,6 +730,15 @@ class PortScanDoc(ScanDoc):
     def get_indices(self):
         super_indices = super(PortScanDoc, self).get_indices()
         return super_indices + (
+            # This query is added with the intent of speeding up this
+            # query:
+            # https://github.com/cisagov/gatherer/blob/12357f594e534a2d02432e8255c4a7e5cb58dd1c/src/fed_hostnames.py#L125-L137
+            (
+                "latest_owner_port",
+                [("latest", 1), ("owner", 1), ("port", 1)],
+                False,
+                False,
+            ),
             (
                 "latest_owner_state",
                 [("latest", 1), ("owner", 1), ("state", 1)],
