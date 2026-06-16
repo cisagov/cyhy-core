@@ -30,7 +30,7 @@ from docopt import docopt
 
 # cisagov Libraries
 from cyhy.db import database
-from cyhy.util import util
+from cyhy.util import util, validate_email
 from ConfigParser import SafeConfigParser
 from cyhy.core.common import *
 
@@ -194,8 +194,15 @@ def fill_in(db, file_pointer, force=False):
             sys.exit(-1)
 
         email = contact[EMAIL]
+        email_problem = False
         if email is None or email == "":
             print >> sys.stderr, "All POCs must have an associated email"
+            email_problem = True
+        elif not validate_email(email):
+            print >> sys.stderr, "Invalid email address provided"
+            email_problem = True
+
+        if email_problem:
             if not force:
                 sys.exit(-1)
             else:
