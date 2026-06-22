@@ -92,7 +92,7 @@ jobs:
           # monitoring configuration *does not* require you to modify
           # this workflow.
           permissions_monitoring_config: ${{ vars.ACTIONS_PERMISSIONS_CONFIG }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Needed by stefanzweifel/git-auto-commit-action to support the pull_request
           # trigger.
