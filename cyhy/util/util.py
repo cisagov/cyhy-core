@@ -288,7 +288,7 @@ def parse_domains(domains):
 
     Returns:
         valid_domains (set): A set of valid domain strings, converted to
-        lowercase for consistency.
+            lowercase for consistency.
         invalid_domains (set): A set of invalid domain strings.
     """
     valid_domains = set()
