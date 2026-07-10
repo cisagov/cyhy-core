@@ -6,7 +6,7 @@ __path__ = extend_path(__path__, __name__)
 import sys as _sys
 
 #: Version info (major, minor, maintenance, status)
-VERSION = (0, 0, 2)
+VERSION = (1, 3, 0)
 STATUS = ""
 __version__ = "%d.%d.%d" % VERSION[0:3] + STATUS
 
