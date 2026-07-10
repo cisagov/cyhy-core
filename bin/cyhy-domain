@@ -359,7 +359,9 @@ def main():
     domains = list(valid_domains)
 
     if args["add"]:
-        add(db, args["OWNER"], domains, args["--no-owned"], args["--allow-non-resolved"])
+        add(
+            db, args["OWNER"], domains, args["--no-owned"], args["--allow-non-resolved"]
+        )
     elif args["check"]:
         check(db, domains)
     elif args["move"]:
