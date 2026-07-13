@@ -47,7 +47,10 @@ function cleanup() {
 	# Remove temporary places directory and exit with the provided exit code.
 	local exit_code="${1-0}"
 	if [ -d "${TMP_PLACES_DIR}" ]; then
-		rm --recursive "${TMP_PLACES_DIR}" || true
+		# Use the short -R option rather than the long --recursive option
+		# because the long option is not supported on all platforms (e.g.
+		# macOS).
+		rm -R "${TMP_PLACES_DIR}" || true
 	fi
 	return "${exit_code}"
 }
