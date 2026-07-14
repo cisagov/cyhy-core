@@ -2,7 +2,7 @@
 """Manage domain assignments to owners.
 
 Usage:
-  cyhy-domain [options] (add | remove) OWNER [DOMAINS ...]
+  cyhy-domain [options] (add | compare | remove) OWNER [DOMAINS ...]
   cyhy-domain [options] check [DOMAINS ...]
   cyhy-domain [options] list OWNER
   cyhy-domain [options] list-all
@@ -234,6 +234,45 @@ def check(db, domains):
             print ("\t%s" % d)
 
 
+def compare(db, owner, new_domains):
+    request = db.RequestDoc.get_by_owner(owner)
+    old_domain_set = set(request.get("hostnames", []))
+    new_domain_set = set(new_domains)
+
+    added = new_domain_set - old_domain_set
+    removed = old_domain_set - new_domain_set
+    unchanged = old_domain_set & new_domain_set
+
+    print "New Domains (%s domains)" % ("{:,}".format(len(new_domain_set)))
+    for d in sorted(new_domain_set):
+        print d
+
+    print
+    print "Previous Domains (%s domains)" % ("{:,}".format(len(old_domain_set)))
+    for d in sorted(old_domain_set):
+        print d
+
+    print
+    print "Unchanged Domains (%s domains)" % ("{:,}".format(len(unchanged)))
+    for d in sorted(unchanged):
+        print d
+
+    print
+    print "Added Domains (%s domains)" % ("{:,}".format(len(added)))
+    for d in sorted(added):
+        print d
+
+    print
+    print "Removed Domains (%s domains)" % ("{:,}".format(len(removed)))
+    for d in sorted(removed):
+        print d
+
+    print
+    print "Net domain count change: %s" % (
+        "{:,}".format(len(new_domain_set) - len(old_domain_set))
+    )
+
+
 def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
     change_event = {
         "time": util.utcnow(),
@@ -312,7 +351,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 
 
 def main():
-    args = docopt(__doc__, version="v1.2.1")
+    args = docopt(__doc__, version="v1.3.0")
 
     db = database.db_from_config(args["--section"], args["--config-file"])
 
@@ -358,6 +397,8 @@ def main():
         add(db, args["OWNER"], domains, args["--no-owned"])
     elif args["check"]:
         check(db, domains)
+    elif args["compare"]:
+        compare(db, args["OWNER"], domains)
     elif args["move"]:
         move(db, args["OWNER"], args["NEW_OWNER"], domains)
     elif args["remove"]:
