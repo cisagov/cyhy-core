@@ -43,6 +43,21 @@ DATA_BASE_URL="https://prd-tnm.s3.amazonaws.com/StagedProducts/GeographicNames/A
 TMP_PLACES_DIR="/tmp/places"
 ADDL_PLACES_FILE="../extras/ADDL_CYHY_PLACES.txt"
 
+function cleanup() {
+	# Remove temporary places directory and exit with the provided exit code.
+	local exit_code="${1-0}"
+	if [ -d "${TMP_PLACES_DIR}" ]; then
+		# Use the short -R option rather than the long --recursive option
+		# because the long option is not supported on all platforms (e.g.
+		# macOS).
+		rm -R "${TMP_PLACES_DIR}" || true
+	fi
+	return "${exit_code}"
+}
+
+# Set up a trap to clean things up on exit, regardless of success or failure.
+trap 'cleanup "$?"' EXIT
+
 # Create and change to temporary working directory.
 mkdir -p ${TMP_PLACES_DIR}
 cd ${TMP_PLACES_DIR}
@@ -73,6 +88,3 @@ else
 	"${SCRIPT_DIR}/GNIS_data_import.py" -s "${DB_SECTION}" \
 		"${SCRIPT_DIR}/${ADDL_PLACES_FILE}"
 fi
-
-# clean up
-rm -R ${TMP_PLACES_DIR}

@@ -1,7 +1,20 @@
+# This file specifies intentionally untracked files that Git should ignore.
+# Files already tracked by Git are not affected.
+# See: https://git-scm.com/docs/gitignore
+
+## MacOS ##
+.DS_Store
+
+# Project Specific
+.dbshell
+.mongorc.js
+*.tgz
+test-data
+
+## Python ##
+__pycache__
+.ipynb_checkpoints
+.pytest_cache
+.python-version
 *.egg-info
 *.pyc
-*.tgz
-._*
-.DS_Store
-.ipynb_checkpoints
-.python-version
