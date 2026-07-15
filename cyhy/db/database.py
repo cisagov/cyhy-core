@@ -1294,52 +1294,81 @@ class RequestDoc(RootDoc):
         self["children"] = list(set(self["children"]) - set(child_ids))
         return True
 
+    def _load_org_info(self):
+        """Load relevant fields for every org into a dict keyed by _id.
+
+        Only the three fields needed for hierarchy traversal are fetched, and
+        the raw documents are read straight from the collection, which avoids
+        transferring large fields (e.g. networks, hostnames) and skips the
+        overhead of instantiating a full document per org.
+        """
+        org_info = dict()
+        for org in self.collection.find(
+            {}, {"children": 1, "stakeholder": 1, "retired": 1}
+        ):
+            org_info[org["_id"]] = org
+        return org_info
+
+    @staticmethod
+    def _descendants(org_info, owner, stakeholders_only=False, include_retired=False):
+        """Return the descendants of owner using a prebuilt org_info dict.
+
+        This is the pure in-memory traversal used by get_all_descendants().  It
+        is separated out so that callers which need descendants for many owners
+        (e.g. get_owner_to_type_dict) can build org_info once and reuse it.
+        """
+        if owner not in org_info:
+            raise ValueError(owner + " has no request document")
+
+        # Walk the hierarchy iteratively.  The "visited" set ensures every org
+        # is processed at most once, which prevents infinite loops on any
+        # cyclic data and avoids re-walking shared subtrees when an org is a
+        # child of more than one parent.  Note: retired orgs are pruned along
+        # with their entire subtree, while the stakeholder filter only affects
+        # membership (their children are still traversed).
+        descendants = set()
+        visited = set()
+        stack = list(org_info[owner].get("children", []))
+        while stack:
+            child = stack.pop()
+            if child in visited:
+                continue
+            visited.add(child)
+            info = org_info.get(child)
+            if info is None:
+                # Child references an org with no request document; skip it.
+                continue
+            if not include_retired and info.get("retired"):
+                continue
+            if not stakeholders_only or info.get("stakeholder"):
+                descendants.add(child)
+            stack.extend(info.get("children", []))
+        return list(descendants)
+
     def get_all_descendants(
         self, owner, stakeholders_only=False, include_retired=False
     ):
-        # Build dict of every org and its children (if any)
-        org_info = dict()
-        for org in self.find():
-            org_info[org["_id"]] = {
-                "children": org.get("children", []),
-                "stakeholder": org.get("stakeholder", False),
-                "retired": org.get("retired", False),
-            }
-
-        if not org_info.get(owner):
-            raise ValueError(owner + " has no request document")
-
-        def get_descendants(org_info, current_org, stakeholders_only, include_retired):
-            # Recursive function to get descendants of current_org
-            descendants = set()
-            for child_org in org_info.get(current_org, {}).get("children", []):
-                if include_retired or not org_info[child_org].get("retired"):
-                    if not stakeholders_only or org_info[child_org].get("stakeholder"):
-                        descendants.add(child_org)
-                    descendants = descendants.union(
-                        get_descendants(
-                            org_info, child_org, stakeholders_only, include_retired
-                        )
-                    )
-            return descendants
-
-        # Build descendants set
-        descendants = set()
-        descendants = descendants.union(
-            get_descendants(org_info, owner, stakeholders_only, include_retired)
+        return self._descendants(
+            self._load_org_info(), owner, stakeholders_only, include_retired
         )
-        return list(descendants)
 
     def get_owner_to_type_dict(self, stakeholders_only=False, include_retired=False):
-        """returns a dict of owner_id:type. "stakeholders_only" parameter eliminates non-stakeholders from the dict."""
+        """Return a dict of owner_id:type. 
+        
+        "stakeholders_only" determines whether non-stakeholders should be included.
+        "include_retired" determines whether retired owners should be included.
+        """
+        # Load org_info once and reuse it for every AGENCY_TYPE traversal
+        # instead of reloading the entire collection on each iteration.
+        org_info = self._load_org_info()
         types = defaultdict(lambda: list())
         for agency_type in AGENCY_TYPE:
-            all_agency_type_descendants = self.get_all_descendants(
-                agency_type, include_retired=include_retired
+            all_agency_type_descendants = self._descendants(
+                org_info, agency_type, include_retired=include_retired
             )
-            for org in self.find({"_id": {"$in": all_agency_type_descendants}}):
-                if not stakeholders_only or org["stakeholder"]:
-                    types[org["_id"]].append(agency_type)
+            for org_id in all_agency_type_descendants:
+                if not stakeholders_only or org_info[org_id].get("stakeholder"):
+                    types[org_id].append(agency_type)
 
         # Check for any orgs that fall into multiple types.  This can occur
         # under normal circumstances when using the CYHY_THIRD_PARTY report
