@@ -1353,8 +1353,8 @@ class RequestDoc(RootDoc):
         )
 
     def get_owner_to_type_dict(self, stakeholders_only=False, include_retired=False):
-        """Return a dict of owner_id:type. 
-        
+        """Return a dict of owner_id:type.
+
         "stakeholders_only" determines whether non-stakeholders should be included.
         "include_retired" determines whether retired owners should be included.
         """

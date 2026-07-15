@@ -120,16 +120,36 @@ _HIERARCHY_IDS = [
 
 _HIERARCHY_DOCS = [
     # ROOT -> A, B
-    {"_id": "TEST_ROOT", "children": ["TEST_A", "TEST_B"], "stakeholder": True, "retired": False},
+    {
+        "_id": "TEST_ROOT",
+        "children": ["TEST_A", "TEST_B"],
+        "stakeholder": True,
+        "retired": False,
+    },
     # A -> C
     {"_id": "TEST_A", "children": ["TEST_C"], "stakeholder": True, "retired": False},
     # B -> C (shared with A), B -> RETIRED (non-stakeholder parent)
-    {"_id": "TEST_B", "children": ["TEST_C", "TEST_RETIRED"], "stakeholder": False, "retired": False},
+    {
+        "_id": "TEST_B",
+        "children": ["TEST_C", "TEST_RETIRED"],
+        "stakeholder": False,
+        "retired": False,
+    },
     # C is a shared leaf
     {"_id": "TEST_C", "children": [], "stakeholder": True, "retired": False},
     # RETIRED prunes its subtree unless include_retired=True
-    {"_id": "TEST_RETIRED", "children": ["TEST_UNDER_RETIRED"], "stakeholder": True, "retired": True},
-    {"_id": "TEST_UNDER_RETIRED", "children": [], "stakeholder": True, "retired": False},
+    {
+        "_id": "TEST_RETIRED",
+        "children": ["TEST_UNDER_RETIRED"],
+        "stakeholder": True,
+        "retired": True,
+    },
+    {
+        "_id": "TEST_UNDER_RETIRED",
+        "children": [],
+        "stakeholder": True,
+        "retired": False,
+    },
 ]
 
 
