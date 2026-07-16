@@ -91,14 +91,27 @@ class TestDescendantsTraversal:
         assert sorted(result) == ["P1", "P2", "SHARED"]
         assert len(result) == len(set(result))  # no dupes
 
-    def test_cycle_terminates(self):
-        # A -> B -> A ; must not infinite loop.
+    def test_cycle_terminates_and_excludes_owner(self):
+        # A -> B -> A ; must not infinite loop, and the cycle back to the owner
+        # must not add the owner to its own descendants.
         org_info = make_org_info(
             make_org("A", ["B"]),
             make_org("B", ["A"]),
         )
         result = RequestDoc._descendants(org_info, "A")
-        assert sorted(result) == ["A", "B"]
+        assert sorted(result) == ["B"]
+        assert "A" not in result  # owner is never a descendant, even via a cycle
+
+    def test_self_referential_owner_excluded(self):
+        # A lists itself as a child; owner must still be excluded.
+        org_info = make_org_info(make_org("A", ["A", "B"]), make_org("B"))
+        result = RequestDoc._descendants(org_info, "A")
+        assert sorted(result) == ["B"]
+
+    def test_null_children_field_is_handled(self):
+        # children stored as None (rather than missing) must not raise.
+        org_info = make_org_info({"_id": "A", "children": None, "stakeholder": False, "retired": False})
+        assert RequestDoc._descendants(org_info, "A") == []
 
     def test_dangling_child_reference_is_skipped(self):
         # ROOT references GHOST which has no org document.
