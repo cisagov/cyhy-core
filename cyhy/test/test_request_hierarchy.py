@@ -110,7 +110,9 @@ class TestDescendantsTraversal:
 
     def test_null_children_field_is_handled(self):
         # children stored as None (rather than missing) must not raise.
-        org_info = make_org_info({"_id": "A", "children": None, "stakeholder": False, "retired": False})
+        org_info = make_org_info(
+            {"_id": "A", "children": None, "stakeholder": False, "retired": False}
+        )
         assert RequestDoc._descendants(org_info, "A") == []
 
     def test_dangling_child_reference_is_skipped(self):
