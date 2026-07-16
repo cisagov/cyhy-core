@@ -1323,12 +1323,14 @@ class RequestDoc(RootDoc):
         # Walk the hierarchy iteratively.  The "visited" set ensures every org
         # is processed at most once, which prevents infinite loops on any
         # cyclic data and avoids re-walking shared subtrees when an org is a
-        # child of more than one parent.  Note: retired orgs are pruned along
+        # child of more than one parent.  It is seeded with the owner so that a
+        # cycle pointing back at the owner (e.g. A -> B -> A) can never add the
+        # owner to its own descendants.  Note: retired orgs are pruned along
         # with their entire subtree, while the stakeholder filter only affects
         # membership (their children are still traversed).
         descendants = set()
-        visited = set()
-        stack = list(org_info[owner].get("children", []))
+        visited = set([owner])
+        stack = list(org_info[owner].get("children") or [])
         while stack:
             child = stack.pop()
             if child in visited:
@@ -1342,7 +1344,7 @@ class RequestDoc(RootDoc):
                 continue
             if not stakeholders_only or info.get("stakeholder"):
                 descendants.add(child)
-            stack.extend(info.get("children", []))
+            stack.extend(info.get("children") or [])
         return list(descendants)
 
     def get_all_descendants(
