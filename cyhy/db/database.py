@@ -1137,8 +1137,13 @@ class RequestDoc(RootDoc):
     __collection__ = REQUEST_COLLECTION
     # This regex was taken from the Python example at
     # https://emailregex.com/
+    #
+    # We have modified the example to allow an ampersand before the @
+    # symbol in email addresses.  This is technically allowed by RFC
+    # 5322 but is generally regarded as a bad idea; and yet, we have a
+    # customer who is doing this.  See #161 for more details.
     __EmailAddressRegex = re.compile(
-        r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+        r"(^[a-zA-Z0-9&_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
     )
     structure = {
         "agency": {
