@@ -90,8 +90,41 @@ def close_tickets(db, ip, hostname, reason):
     return result["nModified"]
 
 
+def clear_latest_flags(db, ip, hostname):
+    """Clear the latest flag on scans for the given IP address and hostname.
+
+    When a hostname no longer resolves to an IP address, the host_scans,
+    port_scans, and vuln_scans that were generated for that IP/hostname
+    combination are no longer current.  If their latest flag is left set to
+    True, the removed domain continues to appear on customer reports (e.g. the
+    services.csv attachment).
+
+    Each of these scan documents carries an optional hostname field (see
+    cyhy-commander's nmap_importer, which creates one scan document per
+    hostname/owner combination), so the update is scoped to the specific
+    hostname and does not affect scan documents for other hostnames on the same IP.
+
+    Returns a dictionary mapping each scan collection name to the number of
+    documents modified, e.g. {"host_scans": 1, "port_scans": 3, "vuln_scans":
+    0}."""
+    modified = {}
+    for doc_class in (db.HostScanDoc, db.PortScanDoc, db.VulnScanDoc):
+        result = doc_class.collection.update(
+            {"latest": True, "ip_int": int(ip), "hostname": hostname},
+            {"$set": {"latest": False}},
+            multi=True,
+            upsert=False,
+        )
+        # An acknowledged update returns a response document with nModified;
+        # guard in case of an unacknowledged write concern.
+        modified[doc_class.__collection__] = (
+            result.get("nModified", 0) if result else 0
+        )
+    return modified
+
+
 def main():
-    args = docopt(__doc__, version="v1.0.4")
+    args = docopt(__doc__, version="v1.0.5")
 
     # Dictionary to track certain DNS exceptions encountered during processing
     dns_exceptions = {
@@ -243,6 +276,24 @@ def main():
                             i for i in host["hostnames"] if i["hostname"] != hostname
                         ]
                         host.save()
+
+                        # Clear the latest flag on now-defunct scan docs for this
+                        # ip and hostname so the removed domain no longer shows
+                        # up in customer reports
+                        cleared_counts = clear_latest_flags(db, host.ip, hostname)
+                        print(
+                            "  latest flag cleared for %s[%s]: %s"
+                            % (
+                                host.ip,
+                                hostname,
+                                ", ".join(
+                                    "%d %s" % (count, collection)
+                                    for collection, count in sorted(
+                                        cleared_counts.items()
+                                    )
+                                ),
+                            )
+                        )
 
                         # Close all open tickets with this ip and hostname
                         closed_count = close_tickets(
