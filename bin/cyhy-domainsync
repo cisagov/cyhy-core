@@ -117,9 +117,7 @@ def clear_latest_flags(db, ip, hostname):
         )
         # An acknowledged update returns a response document with nModified;
         # guard in case of an unacknowledged write concern.
-        modified[doc_class.__collection__] = (
-            result.get("nModified", 0) if result else 0
-        )
+        modified[doc_class.__collection__] = result.get("nModified", 0) if result else 0
     return modified
 
 
