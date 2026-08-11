@@ -375,7 +375,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 
 
 def main():
-    args = docopt(__doc__, version="v1.3.0")
+    args = docopt(__doc__, version="v1.3.1")
 
     db = database.db_from_config(args["--section"], args["--config-file"])
 
