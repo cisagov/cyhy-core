@@ -210,6 +210,26 @@ def remove(db, owner, domains):
         count += 1
     print "Closed %d open tickets referencing removed domain(s)" % count
 
+    # Clear the latest flag on scans referencing the removed domains so the
+    # removed domains no longer appear on customer reports (see
+    # cisagov/cyhy-core#164).  The update is scoped by owner so that host_scans
+    # and vuln_scans stamped with an nmap- or Nessus-discovered hostname on some
+    # other owner's IP (which can coincidentally match a removed domain) are
+    # left untouched.
+    for doc_class in (db.HostScanDoc, db.PortScanDoc, db.VulnScanDoc):
+        result = doc_class.collection.update(
+            {"latest": True, "owner": owner, "hostname": {"$in": domains}},
+            {"$set": {"latest": False}},
+            multi=True,
+            upsert=False,
+            safe=True,
+        )
+        modified = result.get("nModified", 0) if result else 0
+        print "Cleared latest flag on %d %s documents" % (
+            modified,
+            doc_class.collection.name,
+        )
+
 
 def check(db, domains):
     domain_owners = get_existing_domains_and_owners(db)
