@@ -690,6 +690,22 @@ class ScanDoc(RootDoc):
     def get_indices(self):  # used by all subclasses
         return (
             ("latest_ip", [("latest", 1), ("ip_int", 1)], False, False),
+            # Supports the cyhy-domainsync query that clears the latest flag for
+            # a specific ip/hostname when a hostname stops resolving to an IP.
+            (
+                "latest_ip_int_hostname",
+                [("latest", 1), ("ip_int", 1), ("hostname", 1)],
+                False,
+                False,
+            ),
+            # Supports the cyhy-domain query that clears the latest flag for a
+            # removed owner/hostname combination.
+            (
+                "latest_owner_hostname",
+                [("latest", 1), ("owner", 1), ("hostname", 1)],
+                False,
+                False,
+            ),
             ("time_owner", [("time", 1), ("owner", 1)], False, False),
             ("ip_int", [("ip_int", 1)], False, False),
             ("snapshots", [("snapshots", 1)], False, True),
