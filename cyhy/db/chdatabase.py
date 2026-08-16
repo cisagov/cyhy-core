@@ -1,22 +1,25 @@
 __all__ = ["CHDatabase"]
 
-import sys
-import datetime
+# Standard Python Libraries
 import copy
-import progressbar as pb
+import datetime
 import logging
-
-from cyhy.core import Config, STATUS, STAGE
-from cyhy.db import database, queries, DefaultHostStateManager, DefaultScheduler
-
-from cyhy.util import util
-from cyhy.core.common import *
-import time_calc
+import sys
 import time
-import netaddr
+
+# Third-Party Libraries
 from bson import ObjectId
-import pandas as pd
+import netaddr
 import numpy as np
+import pandas as pd
+import progressbar as pb
+import time_calc
+
+# cisagov Libraries
+from cyhy.core import STAGE, STATUS, Config
+from cyhy.core.common import *
+from cyhy.db import DefaultHostStateManager, DefaultScheduler, database, queries
+from cyhy.util import util
 
 
 class CHDatabase(object):

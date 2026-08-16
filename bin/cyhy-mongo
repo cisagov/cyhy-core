@@ -12,12 +12,17 @@ Options:
   --version                      Show version.
 """
 
-import sys
+# Standard Python Libraries
 import os
-from docopt import docopt
-from cyhy.core.config import Config
-import subprocess
 import re
+import subprocess
+import sys
+
+# Third-Party Libraries
+from docopt import docopt
+
+# cisagov Libraries
+from cyhy.core.config import Config
 
 """Start the mongo command using the parameters from the .cyhy config file"""
 

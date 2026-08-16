@@ -18,13 +18,16 @@ Options:
   --version                      Show version.
 """
 
+# Standard Python Libraries
 import sys
 import time
 
+# Third-Party Libraries
 from bson import ObjectId
 from docopt import docopt
 
-from cyhy.db import database, CHDatabase
+# cisagov Libraries
+from cyhy.db import CHDatabase, database
 
 
 def pause_commander(db, sender, reason, wait=False, timeout=None, quiet=False):

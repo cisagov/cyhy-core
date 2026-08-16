@@ -1,5 +1,6 @@
 #!/usr/bin/env py.test -v
 
+# Standard Python Libraries
 import os
 import sys
 
@@ -7,8 +8,10 @@ me = os.path.realpath(__file__)
 myDir = os.path.dirname(me)
 sys.path.append(os.path.join(myDir, ".."))
 
+# Third-Party Libraries
 import pytest
 
+# cisagov Libraries
 import cyhy.util as util
 
 IO_PAIRS = (

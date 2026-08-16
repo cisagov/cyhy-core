@@ -1,8 +1,13 @@
 #!/usr/bin/env py.test -v
 
+# Third-Party Libraries
 import pytest
-from cyhy.db import DefaultHostStateManager
+
+# cisagov Libraries
 from cyhy.core.common import *
+from cyhy.db import DefaultHostStateManager
+
+# Local import
 from common_fixtures import database
 
 

@@ -1,20 +1,23 @@
 #!/usr/bin/env py.test -v
 
+# Standard Python Libraries
+from base64 import b64decode, b64encode
+import hashlib
 import os
+import struct
 import sys
 
-import pytest
-
-import struct
-import hashlib
+# Third-Party Libraries
 import Crypto.Random.random as random
-from base64 import b64encode, b64decode
-
 from bson.binary import Binary
 import netaddr
 import netaddr.strategy
+import pytest
 
+# cisagov Libraries
 from cyhy.db import CryptoKey, IPCoder
+
+# Local import
 from common_fixtures import *
 
 CORRECT_PASSWORD = "foobar"

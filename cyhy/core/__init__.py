@@ -1,10 +1,10 @@
-from config import *
-from common import *
-from geoloc import *
-
-import config
+# Third-Party Libraries
 import common
+from common import *
+import config
+from config import *
 import geoloc
+from geoloc import *
 
 __all__ = config.__all__
 __all__ += common.__all__

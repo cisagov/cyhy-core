@@ -18,13 +18,16 @@ Options:
 
 """
 
+# Standard Python Libraries
 import logging
 
+# Third-Party Libraries
 from docopt import docopt
-from netaddr import ip, IPAddress, IPNetwork, IPRange, IPSet
+from netaddr import IPAddress, IPNetwork, IPRange, IPSet, ip
 from netaddr.core import AddrFormatError
 import pymongo
 
+# cisagov Libraries
 from cyhy.core.geoloc import GeoLocDB
 from cyhy.db import database
 from cyhy.util import util

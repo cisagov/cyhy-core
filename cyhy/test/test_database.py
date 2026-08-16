@@ -1,9 +1,12 @@
 #!/usr/bin/env py.test -v
 
-import pytest
-import cyhy.db.database as db
-from cyhy.core.yaml_config import YamlConfig
+# Third-Party Libraries
 import mock
+import pytest
+
+# cisagov Libraries
+from cyhy.core.yaml_config import YamlConfig
+import cyhy.db.database as db
 
 
 class TestDatabase:

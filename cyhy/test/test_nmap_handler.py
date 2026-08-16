@@ -1,17 +1,21 @@
 #!/usr/bin/env py.test -vs
 
+# Standard Python Libraries
 import os
 import sys
+from xml.sax import parse
+
+# Third-Party Libraries
+import pytest
+
+# cisagov Libraries
+import cyhy.util as util
+from cyhy_commander.nmap.nmap_handler import NmapContentHandler
 
 me = os.path.realpath(__file__)
 myDir = os.path.dirname(me)
 sys.path.append(os.path.join(myDir, ".."))
 
-import pytest
-
-import cyhy.util as util
-from cyhy_commander.nmap.nmap_handler import NmapContentHandler
-from xml.sax import parse
 
 TEST_NMAP_FILENAME = "inputs/test-fullscan.xml"
 

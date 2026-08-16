@@ -1,7 +1,10 @@
 __all__ = ["DefaultHostStateManager"]
 
-from cyhy.core.common import *
+# Standard Python Libraries
 import logging
+
+# cisagov Libraries
+from cyhy.core.common import *
 
 
 class DefaultHostStateManager(object):

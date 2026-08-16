@@ -1,7 +1,8 @@
 __all__ = ["Config"]
 
-import os
+# Standard Python Libraries
 from ConfigParser import SafeConfigParser
+import os
 
 DEFAULT_CONFIG_FILENAME = os.path.expanduser("/etc/cyhy/cyhy.conf")
 DEFAULT = "DEFAULT"

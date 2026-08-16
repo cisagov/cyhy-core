@@ -19,14 +19,18 @@ Options:
 
 """
 
-import sys
-from docopt import docopt
+# Standard Python Libraries
 import json
+import sys
+
+# Third-Party Libraries
 import dateutil
+from docopt import docopt
 from netaddr import IPNetwork, IPRange, IPSet
 
-from cyhy.core import Config, STATUS, STAGE
-from cyhy.db import database, CHDatabase
+# cisagov Libraries
+from cyhy.core import STAGE, STATUS, Config
+from cyhy.db import CHDatabase, database
 from cyhy.util import util
 
 

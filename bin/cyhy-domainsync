@@ -22,14 +22,14 @@ Options:
 import logging
 
 # Third-Party Libraries
-from dns import resolver, exception
+from dns import exception, resolver
 from docopt import docopt
-from netaddr import IPAddress, AddrFormatError
+from netaddr import AddrFormatError, IPAddress
 
 # cisagov Libraries
-from cyhy.db import database
 from cyhy.core.common import STAGE, TICKET_EVENT
 from cyhy.core.geoloc import GeoLocDB
+from cyhy.db import database
 from cyhy.util import util
 
 

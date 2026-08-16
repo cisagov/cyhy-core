@@ -1,7 +1,10 @@
 __all__ = ["CryptoKey", "IPCoder"]
 
-import time
+# Standard Python Libraries
 import hashlib
+import time
+
+# Third-Party Libraries
 import Crypto.Random.random as random  # pip install pycrypto
 
 
@@ -59,10 +62,13 @@ class CryptoKey(object):
         return True
 
 
+# Standard Python Libraries
+import struct
+
+# Third-Party Libraries
+from Crypto.Cipher import AES
 import netaddr
 import netaddr.strategy
-import struct
-from Crypto.Cipher import AES
 
 
 class IPCoder(object):

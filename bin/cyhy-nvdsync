@@ -17,17 +17,17 @@ Options:
 
 """
 
-# standard python libraries
+# Standard Python Libraries
+from StringIO import StringIO
 import gzip
 import json
 import logging
 import urllib
-from StringIO import StringIO
 
-# third-party libraries (install with pip)
+# Third-Party Libraries
 from docopt import docopt
 
-# intra-project modules
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.util import util
 

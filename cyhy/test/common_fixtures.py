@@ -1,6 +1,9 @@
+# Third-Party Libraries
 import pytest
-from cyhy.db import database as pcsdb
+
+# cisagov Libraries
 from cyhy.db import CHDatabase
+from cyhy.db import database as pcsdb
 
 
 @pytest.fixture

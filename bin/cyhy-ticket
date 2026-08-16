@@ -16,14 +16,19 @@ Options:
 NOTE: set-false-positive can be used to set the false_positive flag to True or False
 """
 
-import sys
+# Standard Python Libraries
+import datetime
 import os
+import sys
+
+# Third-Party Libraries
+from bson import ObjectId
 from docopt import docopt
 from netaddr import IPNetwork, IPRange, IPSet
-import datetime
+
+# cisagov Libraries
 from cyhy.db import database
 from cyhy.util import util
-from bson import ObjectId
 
 FP_EXPIRATION_DAYS_DEFAULT = 365  # Days a false-positive ticket is effective for
 SEVERITY_LEVELS = ["Info", "Low", "Medium", "High", "Critical"]

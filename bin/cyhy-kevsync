@@ -15,16 +15,16 @@ Options:
 
 """
 
-# standard python libraries
+# Standard Python Libraries
+from StringIO import StringIO
 import json
 import logging
-from StringIO import StringIO
 import urllib
 
-# third-party libraries (install with pip)
+# Third-Party Libraries
 from docopt import docopt
 
-# intra-project modules
+# cisagov Libraries
 from cyhy.db import database
 
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
