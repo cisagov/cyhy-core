@@ -7,7 +7,7 @@ import geoip2.database
 from geoip2.errors import AddressNotFoundError
 
 GEODB_FILES = ["GeoIP2-City.mmdb", "GeoLite2-City.mmdb"]
-GEODB_CITY_PATHS = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
+GEODB_DIRECTORIES = ["/usr/share/GeoIP/", "/usr/local/share/GeoIP/"]
 GEODB_FILE_PATHS = []
 
 # The list of restricted countries was provided by CISA International Affairs
@@ -45,7 +45,7 @@ RESTRICTED_COUNTRIES = [
 
 # Ensure that the order in GEODB_FILES is used for searching
 for file in GEODB_FILES:
-    for path in GEODB_CITY_PATHS:
+    for path in GEODB_DIRECTORIES:
         GEODB_FILE_PATHS.append(path + file)
 
 
@@ -58,7 +58,7 @@ class GeoLocDB(object):
                     break
             else:
                 raise Exception(
-                    "No GeoIP databases found.  Search in:", GEODB_CITY_PATHS
+                    "No GeoIP databases found.  Search in:", GEODB_FILE_PATHS
                 )
         self.__reader = geoip2.database.Reader(database_path)
 
