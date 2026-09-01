@@ -3,6 +3,7 @@
 import pytest
 import cyhy.db.database as db
 from cyhy.core.yaml_config import YamlConfig
+from paths import input_path
 import mock
 
 
@@ -21,24 +22,24 @@ class TestDatabase:
 
     @mock.patch("cyhy.db.database.db_from_connection")
     def test_from_config_conf(self, mock_db_from_connection):
-        db.db_from_config("testconf", "inputs/test-conf.conf")
+        db.db_from_config("testconf", input_path("test-conf.conf"))
         mock_db_from_connection.assert_called_with(
             "mongodb://test:test@localhost:27017/test-conf", "test-name"
         )
 
-        db.db_from_config(config_filename="inputs/test-conf.conf")
+        db.db_from_config(config_filename=input_path("test-conf.conf"))
         mock_db_from_connection.assert_called_with(
             "mongodb://test:test@localhost:27017/test-conf", "test-name"
         )
 
     @mock.patch("cyhy.db.database.db_from_connection")
     def test_from_config_yml(self, mock_db_from_connection):
-        db.db_from_config("default", "inputs/test_all.yml", True)
+        db.db_from_config("default", input_path("test_all.yml"), True)
         mock_db_from_connection.assert_called_with(
             "mongodb://dbuser:dbpass@localhost:27017/local", "localuser"
         )
 
-        db.db_from_config(config_filename="inputs/test_all.yml", yaml=True)
+        db.db_from_config(config_filename=input_path("test_all.yml"), yaml=True)
         mock_db_from_connection.assert_called_with(
             "mongodb://dbuser:dbpass@localhost:27017/local", "localuser"
         )

@@ -3,12 +3,13 @@
 import pytest
 from yaml import YAMLError
 from cyhy.core.yaml_config import YamlConfig
+from paths import input_path
 
 
 class TestYamlConfig:
     @pytest.fixture
     def yc(self):
-        return YamlConfig("inputs/test_all.yml")
+        return YamlConfig(input_path("test_all.yml"))
 
     @pytest.fixture
     def sample_config(self):
@@ -50,22 +51,22 @@ class TestYamlConfig:
 
     def test_load_config_non_yaml_file(self):
         with pytest.raises(YAMLError):
-            yc = YamlConfig("inputs/test-fullscan.xml")
+            yc = YamlConfig(input_path("test-fullscan.xml"))
 
     def test_load_config_corrupt_yaml_file(self):
         with pytest.raises(YAMLError):
-            yc = YamlConfig("inputs/corrupt_yaml.yml")
+            yc = YamlConfig(input_path("corrupt_yaml.yml"))
 
     def test_load_config_no_cyhy_version(self):
         with pytest.raises(KeyError):
-            yc = YamlConfig("inputs/no_version.yml")
+            yc = YamlConfig(input_path("no_version.yml"))
 
     def test_load_config_wrong_cyhy_version(self):
         with pytest.raises(ValueError):
-            yc = YamlConfig("inputs/bad_version.yml")
+            yc = YamlConfig(input_path("bad_version.yml"))
 
     def test_load_proper_config(self, sample_config):
-        yc = YamlConfig("inputs/test_all.yml")
+        yc = YamlConfig(input_path("test_all.yml"))
         assert isinstance(yc, YamlConfig)
         assert yc.config == sample_config
 
