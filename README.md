@@ -187,3 +187,66 @@ sudo pip install numpy
 sudo pip install geos
 sudo pip install --requirement requirements.txt
 ```
+
+## Testing ##
+
+### Installing the test dependencies ###
+
+```console
+pip install --requirement requirements-test.txt
+```
+
+This installs the project along with everything needed to run the test suite:
+`pytest`, `mock`, `pyfakefs`, and
+[`cyhy-commander`](https://github.com/cisagov/cyhy-commander) (which is not
+published to PyPI and is therefore installed directly from GitHub, so `git`
+must be available).
+
+### Running the tests ###
+
+The test suite can be run from any directory:
+
+```console
+pytest
+```
+
+To run a single test file, or a single test:
+
+```console
+pytest cyhy/test/test_yaml_config.py
+pytest cyhy/test/test_yaml_config.py::TestYamlConfig::test_load_proper_config
+```
+
+### Tests that require MongoDB ###
+
+Most tests run without any additional setup, but the tests that exercise the
+database layer (for example `test_database.py`, `test_ticket_manager.py`, and
+`test_request_hierarchy.py`) need a running MongoDB instance.
+
+Start one with Docker:
+
+```console
+docker run --rm --publish 27037:27017 mongo:3.6
+```
+
+Port 27037 is used to avoid colliding with a MongoDB instance -- or an SSH
+tunnel to a production database -- already listening on the default port of
+27017.
+
+These tests read their connection information from the `testing` section of
+your CyHy configuration file, so that section must point at the MongoDB
+instance above:
+
+```ini
+[DEFAULT]
+default-section = testing
+report-key = test-report-key
+
+[testing]
+database-uri = mongodb://localhost:27037/test-cyhy
+database-name = test-cyhy
+```
+
+**WARNING: The database-backed tests add, modify, and remove documents in the
+configured database.  Never point the `testing` section at a database that
+contains data you care about.**
