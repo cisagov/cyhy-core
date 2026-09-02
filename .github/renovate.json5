@@ -1,0 +1,21 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Dependabot keeps handling github-actions + pip; Renovate only manages the
+  // cyhy-commander pin, so restrict it to the custom manager to avoid overlap.
+  customManagers: [
+    {
+      customType: "regex",
+      datasourceTemplate: "github-releases",
+      depNameTemplate: "cisagov/cyhy-commander",
+      managerFilePatterns: ["/^setup\\.py$/"],
+      matchStrings: [
+        "cisagov/cyhy-commander.git@(?<currentValue>\\S+)\",",
+      ],
+      versioningTemplate: "semver-coerced", // handles the leading `v`
+    },
+  ],
+  dependencyDashboard: true,
+  enabledManagers: ["custom.regex"],
+  extends: ["config:recommended"],
+  labels: ["dependencies"],
+}
