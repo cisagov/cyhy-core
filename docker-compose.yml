@@ -11,6 +11,18 @@
 # cyhy/test/common_fixtures.py.
 services:
   mongodb:
+    # Allows "docker compose up --wait" to block until MongoDB is ready to
+    # accept connections, so a test run cannot race container startup.
+    healthcheck:
+      interval: 5s
+      retries: 12
+      test:
+        - CMD
+        - mongo
+        - --quiet
+        - --eval
+        - db.adminCommand('ping')
+      timeout: 5s
     # MongoDB 3.6 is used because this project depends on the pymongo 2.x
     # client (see setup.py), which predates newer MongoDB releases.
     image: docker.io/library/mongo:3.6
@@ -21,15 +33,3 @@ services:
       # SSH tunnel to a production database -- already listening on the
       # default port of 27017.
       - "27037:27017"
-    healthcheck:
-      # Allows "docker compose up --wait" to block until MongoDB is ready to
-      # accept connections, so a test run cannot race container startup.
-      test:
-        - CMD
-        - mongo
-        - --quiet
-        - --eval
-        - db.adminCommand('ping')
-      interval: 5s
-      timeout: 5s
-      retries: 12
