@@ -11,9 +11,10 @@ import pytest
 
 import cyhy.util as util
 from cyhy_commander.nmap.nmap_handler import NmapContentHandler
+from paths import input_path
 from xml.sax import parse
 
-TEST_NMAP_FILENAME = "inputs/test-fullscan.xml"
+TEST_NMAP_FILENAME = input_path("test-fullscan.xml")
 
 
 def pytest_runtest_makereport(item, call):
