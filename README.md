@@ -221,32 +221,33 @@ pytest cyhy/test/test_yaml_config.py::TestYamlConfig::test_load_proper_config
 
 Most tests run without any additional setup, but the tests that exercise the
 database layer (for example `test_database.py`, `test_ticket_manager.py`, and
-`test_request_hierarchy.py`) need a running MongoDB instance.
-
-Start one with Docker:
+`test_request_hierarchy.py`) need a running MongoDB instance.  A Docker
+composition is included for this purpose:
 
 ```console
-docker run --rm --publish 27037:27017 mongo:3.6
+docker compose up --detach --wait
 ```
 
-Port 27037 is used to avoid colliding with a MongoDB instance -- or an SSH
+The tests connect to that instance by default, so no configuration is required.
+Port 27037 is published to avoid colliding with a MongoDB instance -- or an SSH
 tunnel to a production database -- already listening on the default port of
 27017.
 
-These tests read their connection information from the `testing` section of
-your CyHy configuration file, so that section must point at the MongoDB
-instance above:
+When you are finished, stop the instance and discard its data:
 
-```ini
-[DEFAULT]
-default-section = testing
-report-key = test-report-key
+```console
+docker compose down
+```
 
-[testing]
-database-uri = mongodb://localhost:27037/test-cyhy
-database-name = test-cyhy
+To run the tests against some other MongoDB instance instead, set
+`CYHY_TEST_DB_URI` and, if the database name differs, `CYHY_TEST_DB_NAME`:
+
+```console
+CYHY_TEST_DB_URI=mongodb://localhost:27017/my-test-db \
+  CYHY_TEST_DB_NAME=my-test-db \
+  pytest
 ```
 
 **WARNING: The database-backed tests add, modify, and remove documents in the
-configured database.  Never point the `testing` section at a database that
-contains data you care about.**
+database they are pointed at.  Never point them at a database that contains
+data you care about.**
