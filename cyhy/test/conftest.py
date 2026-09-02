@@ -11,19 +11,28 @@ import subprocess
 import pytest
 
 # cisagov Libraries
-from paths import COMPOSE_FILE
+from paths import COMPOSE_FILE, REPO_ROOT
 from testenv import DB_URI_VAR, SKIP_COMPOSE_VAR
 
 
 def compose(*args):
     """Run a docker compose command against our composition.
 
-    Returns the output of the command.  Note that the composition is identified
-    by its file rather than by an explicit project name, so that this matches the
-    project name Docker Compose derives when the composition is brought up by
-    hand from the root of the repository.
+    Returns the output of the command.  The project directory is specified
+    explicitly rather than left to Docker Compose to infer, so that the project
+    name is derived from the root of the repository no matter which directory
+    pytest was invoked from.  That keeps this in agreement with the project name
+    used when the composition is brought up by hand from the repository root, so
+    the two cannot end up managing separate sets of containers.
     """
-    command = ["docker", "compose", "--file", COMPOSE_FILE] + list(args)
+    command = [
+        "docker",
+        "compose",
+        "--project-directory",
+        REPO_ROOT,
+        "--file",
+        COMPOSE_FILE,
+    ] + list(args)
     try:
         return subprocess.check_output(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as err:
@@ -33,10 +42,10 @@ def compose(*args):
         )
     except OSError as err:
         raise RuntimeError(
-            'Unable to run "%s": %s.\n\nDocker is required to run the tests that '
-            "use MongoDB.  Alternatively, set %s to point at an existing MongoDB "
-            "instance and set %s to keep the test suite from managing the "
-            "composition itself."
+            'Unable to run "%s": %s.\n\nDocker, including the Docker Compose '
+            "plugin, is required to run the tests that use MongoDB. "
+            "Alternatively, set %s to point at an existing MongoDB instance and "
+            "set %s to keep the test suite from managing the composition itself."
             % (" ".join(command), err, DB_URI_VAR, SKIP_COMPOSE_VAR)
         )
 
