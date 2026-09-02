@@ -1,0 +1,129 @@
+---
+name: Test
+
+on:  # yamllint disable-line rule:truthy
+  merge_group:
+    types:
+      - checks_requested
+  # We use the default activity types for the pull_request event as specified here:
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request
+  pull_request:
+
+# Set a default shell for any run steps. The `-Eueo pipefail` sets errtrace,
+# nounset, errexit, and pipefail. The `-x` will print all commands as they are
+# run. Please see the GitHub Actions documentation for more information:
+# https://docs.github.com/en/actions/using-jobs/setting-default-values-for-jobs
+defaults:
+  run:
+    shell: bash -Eueo pipefail -x {0}
+
+jobs:
+  diagnostics:
+    name: Run diagnostics
+    # This job does not need any permissions
+    permissions: {}
+    runs-on: ubuntu-latest
+    steps:
+      # Note that a duplicate of this step must be added at the top of
+      # each job.
+      - name: Apply standard cisagov job preamble
+        uses: cisagov/action-job-preamble@v1
+        with:
+          check_github_status: "true"
+          # This functionality is poorly implemented and has been
+          # causing problems due to the MITM implementation hogging or
+          # leaking memory.  As a result we disable it by default.  If
+          # you want to temporarily enable it, simply set
+          # monitor_permissions equal to "true".
+          #
+          # TODO: Re-enable this functionality when practical.  See
+          # cisagov/skeleton-generic#207 for more details.
+          monitor_permissions: "false"
+          output_workflow_context: "true"
+          # Use a variable to specify the permissions monitoring
+          # configuration. By default this will yield the
+          # configuration stored in the cisagov organization-level
+          # variable, but if you want to use a different configuration
+          # then simply:
+          # 1. Create a repository-level variable with the name
+          # ACTIONS_PERMISSIONS_CONFIG.
+          # 2. Set this new variable's value to the configuration you
+          # want to use for this repository.
+          #
+          # Note in particular that changing the permissions
+          # monitoring configuration *does not* require you to modify
+          # this workflow.
+          permissions_monitoring_config: ${{ vars.ACTIONS_PERMISSIONS_CONFIG }}
+  test:
+    needs:
+      - diagnostics
+    permissions:
+      # actions/checkout needs this to fetch code
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply standard cisagov job preamble
+        uses: cisagov/action-job-preamble@v1
+        with:
+          # This functionality is poorly implemented and has been
+          # causing problems due to the MITM implementation hogging or
+          # leaking memory.  As a result we disable it by default.  If
+          # you want to temporarily enable it, simply set
+          # monitor_permissions equal to "true".
+          #
+          # TODO: Re-enable this functionality when practical.  See
+          # cisagov/cyhy-core#104 for more details.
+          monitor_permissions: "false"
+          # Use a variable to specify the permissions monitoring
+          # configuration. By default this will yield the
+          # configuration stored in the cisagov organization-level
+          # variable, but if you want to use a different configuration
+          # then simply:
+          # 1. Create a repository-level variable with the name
+          # ACTIONS_PERMISSIONS_CONFIG.
+          # 2. Set this new variable's value to the configuration you
+          # want to use for this repository.
+          #
+          # Note in particular that changing the permissions
+          # monitoring configuration *does not* require you to modify
+          # this workflow.
+          permissions_monitoring_config: ${{ vars.ACTIONS_PERMISSIONS_CONFIG }}
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      # The test suite normally starts this composition itself, but it cannot do
+      # so from inside the container used to run the tests, since that container
+      # has no Docker client.  Start it here instead.
+      - name: Start MongoDB
+        run: docker compose up --detach --wait
+      # This project targets Python 2.7, which actions/setup-python no longer
+      # offers on current runners, so the tests are run in a container.
+      #
+      # The image is pinned by digest so that a run is not affected by the tag
+      # being moved or removed.  Python 2.7 is end of life and 2.7.18 is its
+      # final release, so this pin is not expected to need routine updates.
+      # Note that the Renovate configuration only enables the custom manager for
+      # the cyhy-commander dependency, so this pin is not updated automatically.
+      #
+      # CYHY_TEST_SKIP_COMPOSE keeps the test suite from trying to manage the
+      # composition started above.  The host network makes that composition's
+      # published port reachable at the address the tests use by default, so no
+      # connection information has to be supplied here.
+      - name: Run the tests
+        run: |
+          docker run \
+            --env CYHY_TEST_SKIP_COMPOSE=1 \
+            --network host \
+            --rm \
+            --volume "$PWD:/src" \
+            --workdir /src \
+            docker.io/library/python:2.7.18@sha256:cfa62318c459b1fde9e0841c619906d15ada5910d625176e24bf692cf8a2601d \
+            bash -Eueo pipefail -x -c \
+              "pip install --requirement requirements-test.txt && pytest --verbose"
+      # Tearing the composition down is housekeeping, so a failure here must not
+      # turn an otherwise passing run red, nor add noise to a failing one.  Note
+      # that GitHub-hosted runners are discarded after the job regardless; this
+      # matters for self-hosted runners.
+      - continue-on-error: true
+        if: always()
+        name: Stop MongoDB
+        run: docker compose down
