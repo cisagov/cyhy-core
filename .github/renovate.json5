@@ -9,7 +9,7 @@
       depNameTemplate: "cisagov/cyhy-commander",
       managerFilePatterns: ["/^setup\\.py$/"],
       matchStrings: [
-        "cisagov/cyhy-commander.git@(?<currentValue>\\S+)\",",
+        "cisagov/cyhy-commander\\.git@(?<currentValue>\\S+)\\\",","
       ],
       versioningTemplate: "semver-coerced", // handles the leading `v`
     },
