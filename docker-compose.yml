@@ -2,7 +2,7 @@
 # Docker composition providing the MongoDB instance used by the test suite.
 #
 # Bring it up with:
-#   docker compose up --detach
+#   docker compose up --detach --wait
 #
 # ...and tear it down, discarding its data, with:
 #   docker compose down
