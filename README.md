@@ -221,32 +221,48 @@ pytest cyhy/test/test_yaml_config.py::TestYamlConfig::test_load_proper_config
 
 Most tests run without any additional setup, but the tests that exercise the
 database layer (for example `test_database.py`, `test_ticket_manager.py`, and
-`test_request_hierarchy.py`) need a running MongoDB instance.
-
-Start one with Docker:
+`test_request_hierarchy.py`) need a running MongoDB instance.  The test suite
+starts one automatically using the Docker composition included in this
+repository, waits for it to become healthy, and shuts it down when the run
+finishes.  No additional steps are required:
 
 ```console
-docker run --rm --publish 27037:27017 mongo:3.6
+pytest
 ```
 
-Port 27037 is used to avoid colliding with a MongoDB instance -- or an SSH
-tunnel to a production database -- already listening on the default port of
-27017.
+Docker must therefore be available to run those tests, including the Docker
+Compose plugin, since the composition is driven with `docker compose`.  Docker
+Desktop bundles the plugin, but on some Linux distributions it is packaged
+separately as `docker-compose-plugin`.  The tests that do not use MongoDB run
+without any of this.
 
-These tests read their connection information from the `testing` section of
-your CyHy configuration file, so that section must point at the MongoDB
-instance above:
+The MongoDB instance is published on port 27037 to avoid colliding with an
+instance -- or an SSH tunnel to a production database -- already listening on
+the default port of 27017.  No volumes are configured for the composition, so
+its data is discarded when it is shut down.
 
-```ini
-[DEFAULT]
-default-section = testing
-report-key = test-report-key
+#### Managing MongoDB yourself ####
 
-[testing]
-database-uri = mongodb://localhost:27037/test-cyhy
-database-name = test-cyhy
+Set `CYHY_TEST_SKIP_COMPOSE` to keep the test suite from starting and stopping
+the composition.  This is useful for leaving an instance running between test
+runs while debugging, or when a suitable instance is provided some other way:
+
+```console
+docker compose up --detach --wait
+CYHY_TEST_SKIP_COMPOSE=1 pytest
+docker compose down
+```
+
+To run the tests against a different MongoDB instance, set `CYHY_TEST_DB_URI`
+and, if the database name differs, `CYHY_TEST_DB_NAME`:
+
+```console
+CYHY_TEST_SKIP_COMPOSE=1 \
+  CYHY_TEST_DB_URI=mongodb://localhost:27017/my-test-db \
+  CYHY_TEST_DB_NAME=my-test-db \
+  pytest
 ```
 
 **WARNING: The database-backed tests add, modify, and remove documents in the
-configured database.  Never point the `testing` section at a database that
-contains data you care about.**
+database they are pointed at.  Never point them at a database that contains
+data you care about.**

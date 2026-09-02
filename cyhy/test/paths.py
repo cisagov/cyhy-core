@@ -13,6 +13,12 @@ TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 # Absolute path to the directory holding the test input files.
 INPUTS_DIR = os.path.join(TEST_DIR, "inputs")
 
+# Absolute path to the root of the repository.
+REPO_ROOT = os.path.dirname(os.path.dirname(TEST_DIR))
+
+# Absolute path to the Docker composition that provides MongoDB for the tests.
+COMPOSE_FILE = os.path.join(REPO_ROOT, "docker-compose.yml")
+
 
 def input_path(*parts):
     """Return the absolute path to a test input file.
