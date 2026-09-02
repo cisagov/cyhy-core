@@ -98,6 +98,12 @@ jobs:
       # This project targets Python 2.7, which actions/setup-python no longer
       # offers on current runners, so the tests are run in a container.
       #
+      # The image is pinned by digest so that a run is not affected by the tag
+      # being moved or removed.  Python 2.7 is end of life and 2.7.18 is its
+      # final release, so this pin is not expected to need routine updates.
+      # Note that the Renovate configuration only enables the custom manager for
+      # the cyhy-commander dependency, so this pin is not updated automatically.
+      #
       # CYHY_TEST_SKIP_COMPOSE keeps the test suite from trying to manage the
       # composition started above.  The host network makes that composition's
       # published port reachable at the address the tests use by default, so no
@@ -110,9 +116,14 @@ jobs:
             --rm \
             --volume "$PWD:/src" \
             --workdir /src \
-            docker.io/library/python:2.7 \
+            docker.io/library/python:2.7.18@sha256:cfa62318c459b1fde9e0841c619906d15ada5910d625176e24bf692cf8a2601d \
             bash -Eueo pipefail -x -c \
               "pip install --requirement requirements-test.txt && pytest --verbose"
-      - name: Stop MongoDB
+      # Tearing the composition down is housekeeping, so a failure here must not
+      # turn an otherwise passing run red, nor add noise to a failing one.  Note
+      # that GitHub-hosted runners are discarded after the job regardless; this
+      # matters for self-hosted runners.
+      - continue-on-error: true
         if: always()
+        name: Stop MongoDB
         run: docker compose down
