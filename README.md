@@ -230,8 +230,11 @@ finishes.  No additional steps are required:
 pytest
 ```
 
-Docker must therefore be available to run those tests.  The tests that do not
-use MongoDB run without it.
+Docker must therefore be available to run those tests, including the Docker
+Compose plugin, since the composition is driven with `docker compose`.  Docker
+Desktop bundles the plugin, but on some Linux distributions it is packaged
+separately as `docker-compose-plugin`.  The tests that do not use MongoDB run
+without any of this.
 
 The MongoDB instance is published on port 27037 to avoid colliding with an
 instance -- or an SSH tunnel to a production database -- already listening on
