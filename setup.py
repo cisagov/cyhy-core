@@ -1,21 +1,20 @@
 from setuptools import setup, find_packages
 
 # Packages required to run the test suite.  Note that several upper bounds are
-# necessary because this project still targets Python 2.7:
-#   * pytest 5.0 dropped Python 2.7 support.
-#   * pyfakefs 4.0 dropped Python 2.7 support.
-#
-# cyhy-commander is not published to PyPI, so it is referenced directly from
-# GitHub.  It is required by cyhy/test/test_nmap_handler.py, which exercises
-# cyhy_commander.nmap.nmap_handler.
+# necessary because this project still targets Python 2.7.
 #
 # These are deliberately *not* added to the "dev" extra: the Dockerfile runs
 # "pip install .[dev]" and the image does not include git, so a VCS requirement
 # there would break the Docker build.
 TEST_REQUIREMENTS = [
+    # cyhy-commander is not published to PyPI, so it is referenced directly from
+    # GitHub.  It is required by cyhy/test/test_nmap_handler.py, which exercises
+    # cyhy_commander.nmap.nmap_handler.
     "cyhy-commander @ git+https://github.com/cisagov/cyhy-commander.git@develop",
     "mock >= 2.0.0",
+    # pyfakefs 4.0 dropped Python 2.7 support.
     "pyfakefs >= 3.7, < 4.0",
+    # pytest 5.0 dropped Python 2.7 support.
     "pytest >= 4.6, < 5.0",
 ]
 
