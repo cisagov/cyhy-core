@@ -57,7 +57,7 @@ setup(
             # directly from GitHub.  It is required by
             # cyhy/test/test_nmap_handler.py, which exercises
             # cyhy_commander.nmap.nmap_handler.
-            "cyhy-commander @ git+https://github.com/cisagov/cyhy-commander.git@develop",
+            "cyhy-commander @ git+https://github.com/cisagov/cyhy-commander.git@v1.2.0",
             "mock >= 2.0.0",
             # pyfakefs 4.0 dropped Python 2.7 support.
             "pyfakefs >= 3.7, < 4.0",
