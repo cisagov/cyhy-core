@@ -1,0 +1,36 @@
+---
+# Docker composition providing the MongoDB instance used by the test suite.
+#
+# The test suite brings this composition up and down on its own, so running the
+# tests requires no manual steps; see cyhy/test/conftest.py.
+#
+# To manage it by hand instead -- see the testing section of the README -- bring
+# it up with:
+#   docker compose up --detach --wait
+#
+# ...and tear it down, discarding its data, with:
+#   docker compose down
+services:
+  mongodb:
+    # Allows "docker compose up --wait" to block until MongoDB is ready to
+    # accept connections, so a test run cannot race container startup.
+    healthcheck:
+      interval: 5s
+      retries: 12
+      test:
+        - CMD
+        - mongo
+        - --quiet
+        - --eval
+        - db.adminCommand('ping')
+      timeout: 5s
+    # MongoDB 3.6 is used because this project depends on the pymongo 2.x
+    # client (see setup.py), which predates newer MongoDB releases.
+    image: docker.io/library/mongo:3.6
+    # No volume is configured, so the database is discarded when the container
+    # is removed.  The test suite creates whatever documents it needs.
+    ports:
+      # Publishing on 27037 avoids colliding with a MongoDB instance -- or an
+      # SSH tunnel to a production database -- already listening on the
+      # default port of 27017.
+      - "27037:27017"
