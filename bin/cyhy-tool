@@ -17,6 +17,7 @@ Options:
   --version                      Show version.
   
   -f --foreground                Build indices in the foreground
+  -g FILE --geoip2-file=FILE     MaxMind GeoIP2 database file to use.
   -q --quiet                     Do not display progress bars
   -S --sync                      Update tally counts by scanning database
   -s SECTION --section=SECTION   Configuration section to use.
@@ -68,7 +69,7 @@ PB_RESET_WIDGETS = [
 ]
 
 
-def init_scan(db, owner, quiet=False):
+def init_scan(db, owner, quiet=False, geoip2_database=None):
     request = db.RequestDoc.get_by_owner(owner)
     if not request:
         print >> sys.stderr, 'No request with "%s" found.' % owner
@@ -94,7 +95,7 @@ def init_scan(db, owner, quiet=False):
     tally["_id"] = owner_id
     tally.save()
 
-    geo_loc_db = GeoLocDB()
+    geo_loc_db = GeoLocDB(database_path=geoip2_database)
     nets = request.networks
     pbar = pb.ProgressBar(
         widgets=PB_INIT_WIDGETS if not quiet else [], maxval=len(nets)
@@ -203,7 +204,7 @@ def retire(db, owner):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
 
     config = Config(args["--section"])
     if config.config_created:
@@ -221,7 +222,7 @@ def main():
         database.ensure_indices(db, args["--foreground"])
     elif args["init"]:
         for i in args["OWNER"]:
-            init_scan(db, i, quiet=args["--quiet"])
+            init_scan(db, i, quiet=args["--quiet"], geoip2_database=args["--geoip2-file"])
     elif args["purge-running"]:
         if not util.warn_and_confirm(
             "Make sure ALL running jobs on scanners were stopped and processed by commander before continuing! See CYHY-287 for details."

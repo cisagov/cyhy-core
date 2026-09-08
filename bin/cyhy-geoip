@@ -12,6 +12,7 @@ Arguments:
 Options:
   -h, --help                     Show this screen.
   --version                      Show version.
+  -g FILE --geoip2-file=FILE     MaxMind GeoIP2 database file to use.
   -s SECTION, --section=SECTION  Configuration section to use.
   -d, --debug                    Output debug messages.
   --live-only                    Update only hosts that are up.
@@ -165,10 +166,10 @@ def do_update(chdb, gidb, up_only=False, owner=None):
 
 
 def main():
-    args = docopt(__doc__, version="v0.0.1")
+    args = docopt(__doc__, version="v1.0.0")
 
     cyhy_db = database.db_from_config(args["--section"])
-    geoip_db = GeoLocDB()
+    geoip_db = GeoLocDB(args["--geoip2-file"])
 
     # Set up logging
     logging_setup(args["--debug"])
