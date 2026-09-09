@@ -179,6 +179,26 @@ def remove(db, owner, domains):
             print ("\t%s" % d)
         sys.exit(-1)
 
+    # Remove domains from any HostDocs that have them.  This is done before the
+    # request document is saved so that a failure here cannot leave the domains
+    # removed from the request document but still attached to host documents,
+    # which would require manual recovery (the check above would reject a
+    # re-run).
+    for d in domains:
+        count = 0
+        for h in db.HostDoc.get_by_hostname(d):
+            # Filter on hostname alone, which is what get_by_hostname selected
+            # on.  The owner recorded in a HostDoc hostnames entry can lag the
+            # request documents, since 'cyhy-domain move' does not touch HostDocs
+            # and cyhy-domainsync reconciles them on its next run.  Removing an
+            # exact {hostname, owner} dict would raise ValueError in that
+            # window, and would also break if the entry ever grows a field.
+            h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
+            h.save()
+            count += 1
+        if count:
+            print "Removed %s from %d hosts documents" % (d, count)
+
     for d in domains:
         request["hostnames"].remove(d)
     request.save()
@@ -186,16 +206,6 @@ def remove(db, owner, domains):
     print "Domains removed from %s (%s):" % (request["agency"]["name"], owner)
     for d in domains:
         print ("\t%s" % d)
-
-    # Remove domains from any HostDocs that have them
-    for d in domains:
-        count = 0
-        for h in db.HostDoc.get_by_hostname(d):
-            h["hostnames"].remove({"hostname": d, "owner": owner})
-            h.save()
-            count += 1
-        if count:
-            print "Removed %s from %d hosts documents" % (d, count)
 
     # Close open tickets referencing the removed domains
     ticket_closing_time = util.utcnow()
