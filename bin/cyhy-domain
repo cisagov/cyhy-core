@@ -167,7 +167,7 @@ def remove(db, owner, domains):
 
     unowned_domains = []
     for d in domains:
-        if d not in request.get("hostnames"):
+        if d not in request.get("hostnames", []):
             unowned_domains.append(d)
 
     if unowned_domains:
@@ -334,7 +334,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
             print "ERROR: Organization %s not found in DB" % org
             sys.exit(-1)
 
-    orig_owner_domains = set(orig_owner_request.get("hostnames"))
+    orig_owner_domains = set(orig_owner_request.get("hostnames", []))
     domains_not_in_orig_owner = set(domains_to_move) - orig_owner_domains
     if domains_not_in_orig_owner:
         print "\nERROR - The following domains are NOT owned by %s (%s):" % (
@@ -355,7 +355,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
     orig_owner_request["hostnames"] = sorted(orig_owner_domains - set(domains_to_move))
     # Add the domains_to_move to new_owner's request doc
     new_owner_request["hostnames"] = sorted(
-        set(new_owner_request.get("hostnames")) | set(domains_to_move)
+        set(new_owner_request.get("hostnames", [])) | set(domains_to_move)
     )
 
     # Save both request docs
