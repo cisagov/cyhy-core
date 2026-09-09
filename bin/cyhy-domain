@@ -323,8 +323,9 @@ def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
         safe=True,
         upsert=False,
     )
+    modified = result.get("nModified", 0) if result else 0
     print "%d tickets documents modified (%s -> %s)" % (
-        result["nModified"],
+        modified,
         orig_owner,
         new_owner,
     )
