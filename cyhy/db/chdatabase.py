@@ -764,6 +764,98 @@ class CHDatabase(object):
                 result["collection"] = collection.name
                 print "  {nModified} {collection} documents modified".format(**result)
 
+    def change_hostname_ownership(self, orig_owner, new_owner, hostnames, reason):
+        # Change owner on all relevant documents for a given list of hostnames.
+        # This is the hostname analog of change_ownership above, which does
+        # the same job for a set of networks.
+        #
+        # Hostname ownership is recorded in more places than the request
+        # documents.  Each HostDoc carries a {hostname, owner} entry for every
+        # hostname that resolves to its IP address, cyhy-commander stamps that
+        # entry's owner onto every scan document it creates for the hostname,
+        # and tickets inherit their owner from the scan document that opened
+        # them.
+        #
+        # The HostDoc entry has to be updated along with the scan documents.
+        # Without it the next scan of these IP addresses would stamp the old
+        # owner onto the documents it creates, undoing the updates below until
+        # cyhy-domainsync next reconciled the entry.
+        #
+        # Special case for the tickets collection; add a CHANGED event to the
+        # events list of each ticket.
+        change_event = {
+            "time": util.utcnow(),
+            "action": TICKET_EVENT.CHANGED,
+            "reason": reason,
+            "reference": None,
+            "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
+        }
+
+        for hostname in sorted(hostnames):
+            print "Changing owner of hostname %s to %s" % (hostname, new_owner)
+
+            # Collect the IP addresses whose HostDoc currently carries this
+            # hostname, before the entries themselves are rewritten below.
+            ip_ints = [
+                int(host_doc.ip)
+                for host_doc in self.__db.HostDoc.get_by_hostname(hostname)
+            ]
+
+            updates = [
+                (
+                    self.__db.hosts,
+                    {
+                        "hostnames": {
+                            "$elemMatch": {"hostname": hostname, "owner": orig_owner}
+                        }
+                    },
+                    {"$set": {"hostnames.$.owner": new_owner}},
+                )
+            ]
+            # The scan document updates are restricted to the IP addresses
+            # gathered above.  Matching on owner and hostname alone would also
+            # catch host_scans stamped with an nmap-discovered reverse DNS name,
+            # and vuln_scans stamped with a Nessus-reported FQDN, that happen to
+            # equal one of these hostnames without ever having been customer
+            # provided.  Those names only appear on IP addresses whose HostDoc
+            # does not carry the hostname, so scoping by IP excludes them.
+            for collection in (
+                self.__db.host_scans,
+                self.__db.port_scans,
+                self.__db.vuln_scans,
+            ):
+                updates.append(
+                    (
+                        collection,
+                        {
+                            "ip_int": {"$in": ip_ints},
+                            "owner": orig_owner,
+                            "hostname": hostname,
+                        },
+                        {"$set": {"owner": new_owner}},
+                    )
+                )
+            # The ticket update keeps the owner/hostname scoping it has always
+            # used rather than adopting the IP restriction above, so that the
+            # set of tickets which follow a hostname to its new owner does not
+            # change here.  Narrowing it would leave closed tickets behind on IP
+            # addresses the hostname no longer resolves to, which would alter
+            # historical customer metrics.
+            updates.append(
+                (
+                    self.__db.tickets,
+                    {"owner": orig_owner, "hostname": hostname},
+                    {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
+                )
+            )
+
+            for collection, spec, update_cmd in updates:
+                result = collection.update(
+                    spec, update_cmd, upsert=False, multi=True, safe=True
+                )
+                modified = result.get("nModified", 0) if result else 0
+                print "  %d %s documents modified" % (modified, collection.name)
+
     def pause_commander(self, sender, reason):
         """Request that the commander pause processing.
         Returns a document that will contain the status of the request.  This
