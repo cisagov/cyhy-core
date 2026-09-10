@@ -200,7 +200,9 @@ def remove(db, owner, domains):
     # Close open tickets referencing the removed domains
     ticket_closing_time = util.utcnow()
     count = 0
-    for t in db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}):
+    for t in db.TicketDoc.find(
+        {"owner": owner, "hostname": {"$in": domains}, "open": True}
+    ):
         t["open"] = False
         t["time_closed"] = ticket_closing_time
         t.add_event(
