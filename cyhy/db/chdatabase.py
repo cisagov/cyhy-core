@@ -778,24 +778,9 @@ class CHDatabase(object):
             )
 
     def change_hostname_ownership(self, orig_owner, new_owner, hostnames, reason):
-        # Change owner on all relevant documents for a given list of hostnames.
-        # This is the hostname analog of change_ownership above, which does
-        # the same job for a set of networks.
-        #
-        # Hostname ownership is recorded in more places than the request
-        # documents.  Each HostDoc carries a {hostname, owner} entry for every
-        # hostname that resolves to its IP address, cyhy-commander stamps that
-        # entry's owner onto every scan document it creates for the hostname,
-        # and tickets inherit their owner from the scan document that opened
-        # them.
-        #
-        # The HostDoc entry has to be updated along with the scan documents.
-        # Without it the next scan of these IP addresses would stamp the old
-        # owner onto the documents it creates, undoing the updates below until
-        # cyhy-domainsync next reconciled the entry.
-        #
-        # Special case for the tickets collection; add a CHANGED event to the
-        # events list of each ticket.
+        # Change owner on all relevant documents for a given list of hostnames,
+        # the hostname analog of change_ownership above.  Ownership lives on the
+        # HostDoc hostnames entry, the scans stamped from it, and their tickets.
         change_event = self.__owner_change_event(orig_owner, new_owner, reason)
 
         for hostname in sorted(hostnames):
@@ -818,10 +803,9 @@ class CHDatabase(object):
                     {"$set": {"hostnames.$.owner": new_owner}},
                 )
             ]
-            # Restricted to the IP addresses above so that nmap-discovered
-            # reverse DNS names and Nessus-reported FQDNs coincidentally equal to
-            # this hostname, which appear only on IP addresses whose HostDoc does
-            # not carry it, are left alone.
+            # Restricted to the IP addresses above, which leaves alone discovered
+            # reverse DNS names and Nessus FQDNs coincidentally equal to this
+            # hostname; those appear only where the HostDoc does not carry it.
             for collection in (
                 self.__db.host_scans,
                 self.__db.port_scans,
@@ -834,10 +818,9 @@ class CHDatabase(object):
                         {"$set": {"owner": new_owner}},
                     )
                 )
-            # Tickets keep the owner predicate, and are not restricted by IP.
-            # Dropping owner would sweep up coincidental FQDN matches on other
-            # owners' IP addresses; adding the IP restriction would strand closed
-            # tickets on IP addresses the hostname no longer resolves to.
+            # Tickets keep the owner predicate and no IP restriction: dropping
+            # owner would sweep up coincidental FQDN matches elsewhere, and
+            # restricting by IP would strand closed tickets on former addresses.
             updates.append(
                 (
                     self.__db.tickets,
