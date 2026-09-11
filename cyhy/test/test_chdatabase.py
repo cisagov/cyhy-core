@@ -1,4 +1,3 @@
-
 # third-party libraries (install with pip)
 from netaddr import IPAddress as ip, IPSet
 import pytest
@@ -128,9 +127,7 @@ def assert_change_event(ticket):
     events = change_events(ticket)
     assert len(events) == 1
     assert events[0]["reason"] == REASON
-    assert events[0]["delta"] == [
-        {"from": ORIG_OWNER, "to": NEW_OWNER, "key": "owner"}
-    ]
+    assert events[0]["delta"] == [{"from": ORIG_OWNER, "to": NEW_OWNER, "key": "owner"}]
 
 
 @pytest.fixture
@@ -178,9 +175,7 @@ def database_w_hostname_docs(clean_database):
     for collection in SCAN_COLLECTIONS:
         save_scan(clean_database, collection, IP_CARRIED, ORIG_OWNER, HOSTNAME)
     save_scan(clean_database, "host_scans", IP_OUTSIDE, ORIG_OWNER, HOSTNAME)
-    save_scan(
-        clean_database, "port_scans", IP_CARRIED, OTHER_OWNER, OTHER_HOSTNAME
-    )
+    save_scan(clean_database, "port_scans", IP_CARRIED, OTHER_OWNER, OTHER_HOSTNAME)
     # An IP-only scan document on the carried IP address: no hostname at all,
     # which is what cyhy-commander writes when the host document carries no
     # customer-provided hostnames.  It is owned by ORIG_OWNER here so that the
