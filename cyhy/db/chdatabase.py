@@ -731,38 +731,51 @@ class CHDatabase(object):
 
         return owners_that_need_snapshot
 
-    def change_ownership(self, orig_owner, new_owner, networks, reason):
-        # Change owner on all relevant documents for a given list of networks.
-        # Special case for tickets collection; add a CHANGED event to the events list of each ticket
-        change_event = {
+    def __owner_change_event(self, orig_owner, new_owner, reason):
+        # The CHANGED event pushed onto the events list of each ticket whose
+        # owner is reassigned.
+        return {
             "time": util.utcnow(),
             "action": TICKET_EVENT.CHANGED,
             "reason": reason,
             "reference": None,
             "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
         }
+
+    def __apply_owner_updates(self, updates):
+        # Apply a list of (collection, spec, update_cmd) triples, reporting how
+        # many documents each one modified.
+        for collection, spec, update_cmd in updates:
+            result = collection.update(
+                spec, update_cmd, upsert=False, multi=True, safe=True
+            )
+            modified = result.get("nModified", 0) if result else 0
+            print "  %d %s documents modified" % (modified, collection.name)
+
+    def change_ownership(self, orig_owner, new_owner, networks, reason):
+        # Change owner on all relevant documents for a given list of networks.
+        # Special case for tickets collection; add a CHANGED event to the events list of each ticket
+        change_event = self.__owner_change_event(orig_owner, new_owner, reason)
+        set_owner = {"$set": {"owner": new_owner}}
         for net in networks.iter_cidrs():
             print "Changing owner of network %s to %s" % (net, new_owner)
-            for collection, ip_key, update_cmd in (
-                (self.__db.hosts, "_id", {"$set": {"owner": new_owner}}),
-                (self.__db.host_scans, "ip_int", {"$set": {"owner": new_owner}}),
-                (self.__db.port_scans, "ip_int", {"$set": {"owner": new_owner}}),
-                (self.__db.vuln_scans, "ip_int", {"$set": {"owner": new_owner}}),
-                (
-                    self.__db.tickets,
-                    "ip_int",
-                    {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
-                ),
-            ):
-                result = collection.update(
-                    {ip_key: {"$gte": net.first, "$lte": net.last}},
-                    update_cmd,
-                    upsert=False,
-                    multi=True,
-                    safe=True,
-                )
-                result["collection"] = collection.name
-                print "  {nModified} {collection} documents modified".format(**result)
+            net_range = {"$gte": net.first, "$lte": net.last}
+            self.__apply_owner_updates(
+                [
+                    (self.__db.hosts, {"_id": net_range}, set_owner),
+                    (self.__db.host_scans, {"ip_int": net_range}, set_owner),
+                    (self.__db.port_scans, {"ip_int": net_range}, set_owner),
+                    (self.__db.vuln_scans, {"ip_int": net_range}, set_owner),
+                    (
+                        self.__db.tickets,
+                        {"ip_int": net_range},
+                        {
+                            "$set": {"owner": new_owner},
+                            "$push": {"events": change_event},
+                        },
+                    ),
+                ]
+            )
 
     def change_hostname_ownership(self, orig_owner, new_owner, hostnames, reason):
         # Change owner on all relevant documents for a given list of hostnames.
@@ -783,13 +796,7 @@ class CHDatabase(object):
         #
         # Special case for the tickets collection; add a CHANGED event to the
         # events list of each ticket.
-        change_event = {
-            "time": util.utcnow(),
-            "action": TICKET_EVENT.CHANGED,
-            "reason": reason,
-            "reference": None,
-            "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
-        }
+        change_event = self.__owner_change_event(orig_owner, new_owner, reason)
 
         for hostname in sorted(hostnames):
             print "Changing owner of hostname %s to %s" % (hostname, new_owner)
@@ -849,12 +856,7 @@ class CHDatabase(object):
                 )
             )
 
-            for collection, spec, update_cmd in updates:
-                result = collection.update(
-                    spec, update_cmd, upsert=False, multi=True, safe=True
-                )
-                modified = result.get("nModified", 0) if result else 0
-                print "  %d %s documents modified" % (modified, collection.name)
+            self.__apply_owner_updates(updates)
 
     def pause_commander(self, sender, reason):
         """Request that the commander pause processing.
