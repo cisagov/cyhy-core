@@ -731,38 +731,105 @@ class CHDatabase(object):
 
         return owners_that_need_snapshot
 
-    def change_ownership(self, orig_owner, new_owner, networks, reason):
-        # Change owner on all relevant documents for a given list of networks.
-        # Special case for tickets collection; add a CHANGED event to the events list of each ticket
-        change_event = {
+    def __owner_change_event(self, orig_owner, new_owner, reason):
+        # The CHANGED event pushed onto the events list of each ticket whose
+        # owner is reassigned.
+        return {
             "time": util.utcnow(),
             "action": TICKET_EVENT.CHANGED,
             "reason": reason,
             "reference": None,
             "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
         }
+
+    def __apply_owner_updates(self, updates):
+        # Apply a list of (collection, spec, update_cmd) triples, reporting how
+        # many documents each one modified.
+        for collection, spec, update_cmd in updates:
+            result = collection.update(
+                spec, update_cmd, upsert=False, multi=True, safe=True
+            )
+            modified = result.get("nModified", 0) if result else 0
+            print "  %d %s documents modified" % (modified, collection.name)
+
+    def change_ownership(self, orig_owner, new_owner, networks, reason):
+        # Change owner on all relevant documents for a given list of networks.
+        # Special case for tickets collection; add a CHANGED event to the events list of each ticket
+        change_event = self.__owner_change_event(orig_owner, new_owner, reason)
+        set_owner = {"$set": {"owner": new_owner}}
         for net in networks.iter_cidrs():
             print "Changing owner of network %s to %s" % (net, new_owner)
-            for collection, ip_key, update_cmd in (
-                (self.__db.hosts, "_id", {"$set": {"owner": new_owner}}),
-                (self.__db.host_scans, "ip_int", {"$set": {"owner": new_owner}}),
-                (self.__db.port_scans, "ip_int", {"$set": {"owner": new_owner}}),
-                (self.__db.vuln_scans, "ip_int", {"$set": {"owner": new_owner}}),
+            net_range = {"$gte": net.first, "$lte": net.last}
+            self.__apply_owner_updates(
+                [
+                    (self.__db.hosts, {"_id": net_range}, set_owner),
+                    (self.__db.host_scans, {"ip_int": net_range}, set_owner),
+                    (self.__db.port_scans, {"ip_int": net_range}, set_owner),
+                    (self.__db.vuln_scans, {"ip_int": net_range}, set_owner),
+                    (
+                        self.__db.tickets,
+                        {"ip_int": net_range},
+                        {
+                            "$set": {"owner": new_owner},
+                            "$push": {"events": change_event},
+                        },
+                    ),
+                ]
+            )
+
+    def change_hostname_ownership(self, orig_owner, new_owner, hostnames, reason):
+        # Change owner on all relevant documents for a given list of hostnames,
+        # the hostname analog of change_ownership above.  Ownership lives on the
+        # HostDoc hostnames entry, the scans stamped from it, and their tickets.
+        change_event = self.__owner_change_event(orig_owner, new_owner, reason)
+
+        for hostname in sorted(hostnames):
+            print "Changing owner of hostname %s to %s" % (hostname, new_owner)
+
+            # Collect the IP addresses whose HostDoc currently carries this
+            # hostname, before the entries themselves are rewritten below.
+            ip_ints = [
+                int(host_doc.ip)
+                for host_doc in self.__db.HostDoc.get_by_hostname(hostname)
+            ]
+
+            # Matched on hostname without owner, as cyhy-domainsync does, so the
+            # move makes new_owner canonical even where the recorded owner has
+            # gone stale (#177).
+            updates = [
+                (
+                    self.__db.hosts,
+                    {"hostnames.hostname": hostname},
+                    {"$set": {"hostnames.$.owner": new_owner}},
+                )
+            ]
+            # Restricted to the IP addresses above, which leaves alone discovered
+            # reverse DNS names and Nessus FQDNs coincidentally equal to this
+            # hostname; those appear only where the HostDoc does not carry it.
+            for collection in (
+                self.__db.host_scans,
+                self.__db.port_scans,
+                self.__db.vuln_scans,
+            ):
+                updates.append(
+                    (
+                        collection,
+                        {"ip_int": {"$in": ip_ints}, "hostname": hostname},
+                        {"$set": {"owner": new_owner}},
+                    )
+                )
+            # Tickets keep the owner predicate and no IP restriction: dropping
+            # owner would sweep up coincidental FQDN matches elsewhere, and
+            # restricting by IP would strand closed tickets on former addresses.
+            updates.append(
                 (
                     self.__db.tickets,
-                    "ip_int",
+                    {"owner": orig_owner, "hostname": hostname},
                     {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
-                ),
-            ):
-                result = collection.update(
-                    {ip_key: {"$gte": net.first, "$lte": net.last}},
-                    update_cmd,
-                    upsert=False,
-                    multi=True,
-                    safe=True,
                 )
-                result["collection"] = collection.name
-                print "  {nModified} {collection} documents modified".format(**result)
+            )
+
+            self.__apply_owner_updates(updates)
 
     def pause_commander(self, sender, reason):
         """Request that the commander pause processing.
