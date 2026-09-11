@@ -9,6 +9,10 @@ from cyhy.core.common import TICKET_EVENT
 ORIG_OWNER = "ORIG"
 NEW_OWNER = "NEW"
 OTHER_OWNER = "OTHER"
+# An owner recorded on documents that predates the current request document
+# owner, which happens because moving a domain has not until now updated host
+# documents.
+STALE_OWNER = "STALE"
 IP_OWNER = "GLOBAL"
 REASON = "test owner change"
 # In production host_scans and port_scans come from nmap while vuln_scans come
@@ -20,6 +24,8 @@ SOURCE = "test_source"
 # hostname that resolves to IP_CARRIED, which sits inside it.
 NETWORK = IPSet(["10.0.0.0/24"])
 IP_CARRIED = ip("10.0.0.1")
+# Also carries HOSTNAME, but its entry and documents still record STALE_OWNER.
+IP_STALE = ip("10.0.0.2")
 # Outside NETWORK, and its host document does not carry HOSTNAME.
 IP_OUTSIDE = ip("10.1.0.1")
 
@@ -181,6 +187,16 @@ def database_w_hostname_docs(clean_database):
     # customer-provided hostnames.  It is owned by ORIG_OWNER here so that the
     # hostname predicate is the only thing keeping it out of the update.
     save_scan(clean_database, "port_scans", IP_CARRIED, ORIG_OWNER, None)
+    # A second IP address carrying the hostname whose entry and documents still
+    # record an owner that predates the request documents.
+    save_host(
+        clean_database,
+        IP_STALE,
+        IP_OWNER,
+        [{"hostname": HOSTNAME, "owner": STALE_OWNER}],
+    )
+    for collection in SCAN_COLLECTIONS:
+        save_scan(clean_database, collection, IP_STALE, STALE_OWNER, HOSTNAME)
     # Tickets mirroring the scan documents above, so that a ticket update which
     # reaches too far shows up as a count mismatch.  The second one is a ticket
     # left over from when the hostname still resolved to IP_OUTSIDE.
@@ -188,6 +204,7 @@ def database_w_hostname_docs(clean_database):
     save_ticket(clean_database, IP_OUTSIDE, ORIG_OWNER, HOSTNAME)
     save_ticket(clean_database, IP_CARRIED, ORIG_OWNER, None)
     save_ticket(clean_database, IP_CARRIED, OTHER_OWNER, OTHER_HOSTNAME)
+    save_ticket(clean_database, IP_STALE, STALE_OWNER, HOSTNAME)
     return clean_database
 
 
@@ -288,17 +305,34 @@ class TestChangeHostnameOwnership:
         spec = {"ip_int": long(IP_CARRIED), "hostname": None}
         assert owner_of(hostname_owner_changed, "tickets", spec) == ORIG_OWNER
 
-    def test_ownership_counts_after_move(self, hostname_owner_changed):
-        # One scan document per collection carries the moved hostname on an IP
-        # address that resolves to it, so exactly one per collection moves.
+    def test_stale_hostnames_entry_reowned(self, hostname_owner_changed):
+        # The move is authoritative, so an entry recording an owner that predates
+        # the request documents is reconciled rather than skipped (#177).
+        host = hostname_owner_changed.hosts.find_one({"_id": long(IP_STALE)})
+        assert host["hostnames"] == [{"hostname": HOSTNAME, "owner": NEW_OWNER}]
+
+    def test_stale_scans_reowned(self, hostname_owner_changed):
         for collection in SCAN_COLLECTIONS:
-            assert count(hostname_owner_changed, collection, {"owner": NEW_OWNER}) == 1
-        # Both tickets carrying the hostname move, regardless of IP address.  The
-        # IP-only ticket stays with the original owner and the other
-        # organization's ticket is untouched.
+            spec = {"ip_int": long(IP_STALE), "hostname": HOSTNAME}
+            assert owner_of(hostname_owner_changed, collection, spec) == NEW_OWNER
+
+    def test_stale_ticket_not_reowned(self, hostname_owner_changed):
+        # Tickets keep the owner predicate, so a stale one is left behind.  It is
+        # corrected by the next move from its recorded owner.
+        spec = {"ip_int": long(IP_STALE), "hostname": HOSTNAME}
+        assert owner_of(hostname_owner_changed, "tickets", spec) == STALE_OWNER
+
+    def test_ownership_counts_after_move(self, hostname_owner_changed):
+        # Both IP addresses carrying the hostname move, whatever owner they
+        # recorded beforehand.
+        for collection in SCAN_COLLECTIONS:
+            assert count(hostname_owner_changed, collection, {"owner": NEW_OWNER}) == 2
+        # Both tickets carrying the hostname under ORIG_OWNER move, regardless of
+        # IP address.  The IP-only, other-owner, and stale tickets stay put.
         assert count(hostname_owner_changed, "tickets", {"owner": NEW_OWNER}) == 2
         assert count(hostname_owner_changed, "tickets", {"owner": ORIG_OWNER}) == 1
         assert count(hostname_owner_changed, "tickets", {"owner": OTHER_OWNER}) == 1
+        assert count(hostname_owner_changed, "tickets", {"owner": STALE_OWNER}) == 1
 
     def test_removal_by_new_owner_finds_the_scans(self, hostname_owner_changed):
         # Guards cisagov/cyhy-core#177: cyhy-domain remove() clears the latest
@@ -315,5 +349,5 @@ class TestChangeHostnameOwnership:
                     }
                 )
                 .count()
-                == 1
+                == 2
             )

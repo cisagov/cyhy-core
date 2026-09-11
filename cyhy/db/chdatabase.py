@@ -808,24 +808,20 @@ class CHDatabase(object):
                 for host_doc in self.__db.HostDoc.get_by_hostname(hostname)
             ]
 
+            # Matched on hostname without owner, as cyhy-domainsync does, so the
+            # move makes new_owner canonical even where the recorded owner has
+            # gone stale (#177).
             updates = [
                 (
                     self.__db.hosts,
-                    {
-                        "hostnames": {
-                            "$elemMatch": {"hostname": hostname, "owner": orig_owner}
-                        }
-                    },
+                    {"hostnames.hostname": hostname},
                     {"$set": {"hostnames.$.owner": new_owner}},
                 )
             ]
-            # The scan document updates are restricted to the IP addresses
-            # gathered above.  Matching on owner and hostname alone would also
-            # catch host_scans stamped with an nmap-discovered reverse DNS name,
-            # and vuln_scans stamped with a Nessus-reported FQDN, that happen to
-            # equal one of these hostnames without ever having been customer
-            # provided.  Those names only appear on IP addresses whose HostDoc
-            # does not carry the hostname, so scoping by IP excludes them.
+            # Restricted to the IP addresses above so that nmap-discovered
+            # reverse DNS names and Nessus-reported FQDNs coincidentally equal to
+            # this hostname, which appear only on IP addresses whose HostDoc does
+            # not carry it, are left alone.
             for collection in (
                 self.__db.host_scans,
                 self.__db.port_scans,
@@ -834,20 +830,14 @@ class CHDatabase(object):
                 updates.append(
                     (
                         collection,
-                        {
-                            "ip_int": {"$in": ip_ints},
-                            "owner": orig_owner,
-                            "hostname": hostname,
-                        },
+                        {"ip_int": {"$in": ip_ints}, "hostname": hostname},
                         {"$set": {"owner": new_owner}},
                     )
                 )
-            # The ticket update keeps the owner/hostname scoping it has always
-            # used rather than adopting the IP restriction above, so that the
-            # set of tickets which follow a hostname to its new owner does not
-            # change here.  Narrowing it would leave closed tickets behind on IP
-            # addresses the hostname no longer resolves to, which would alter
-            # historical customer metrics.
+            # Tickets keep the owner predicate, and are not restricted by IP.
+            # Dropping owner would sweep up coincidental FQDN matches on other
+            # owners' IP addresses; adding the IP restriction would strand closed
+            # tickets on IP addresses the hostname no longer resolves to.
             updates.append(
                 (
                     self.__db.tickets,
