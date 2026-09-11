@@ -182,10 +182,8 @@ def database_w_hostname_docs(clean_database):
         save_scan(clean_database, collection, IP_CARRIED, ORIG_OWNER, HOSTNAME)
     save_scan(clean_database, "host_scans", IP_OUTSIDE, ORIG_OWNER, HOSTNAME)
     save_scan(clean_database, "port_scans", IP_CARRIED, OTHER_OWNER, OTHER_HOSTNAME)
-    # An IP-only scan document on the carried IP address: no hostname at all,
-    # which is what cyhy-commander writes when the host document carries no
-    # customer-provided hostnames.  It is owned by ORIG_OWNER here so that the
-    # hostname predicate is the only thing keeping it out of the update.
+    # An IP-only scan document on the carried IP address, owned by ORIG_OWNER so
+    # that the hostname predicate is the only thing keeping it out of the update.
     save_scan(clean_database, "port_scans", IP_CARRIED, ORIG_OWNER, None)
     # A second IP address carrying the hostname whose entry and documents still
     # record an owner that predates the request documents.

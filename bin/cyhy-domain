@@ -179,20 +179,14 @@ def remove(db, owner, domains):
             print ("\t%s" % d)
         sys.exit(-1)
 
-    # Remove domains from any HostDocs that have them.  This is done before the
-    # request document is saved so that a failure here cannot leave the domains
-    # removed from the request document but still attached to host documents,
-    # which would require manual recovery (the check above would reject a
-    # re-run).
+    # Remove domains from any HostDocs that have them, before saving the request
+    # document, so a failure here leaves nothing committed to re-run against.
     for d in domains:
         count = 0
         for h in db.HostDoc.get_by_hostname(d):
-            # Filter on hostname alone, which is what get_by_hostname selected
-            # on.  The owner recorded in a HostDoc hostnames entry can lag the
-            # request documents, since 'cyhy-domain move' does not touch HostDocs
-            # and cyhy-domainsync reconciles them on its next run.  Removing an
-            # exact {hostname, owner} dict would raise ValueError in that
-            # window, and would also break if the entry ever grows a field.
+            # Filter on hostname alone, as get_by_hostname selected on.  The
+            # recorded owner can disagree with the request documents, and an
+            # exact dict match would break if the entry ever grew a field.
             h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
             h.save()
             count += 1
@@ -220,12 +214,9 @@ def remove(db, owner, domains):
         count += 1
     print "Closed %d open tickets referencing removed domain(s)" % count
 
-    # Clear the latest flag on scans referencing the removed domains so the
-    # removed domains no longer appear on customer reports (see
-    # cisagov/cyhy-core#164).  The update is scoped by owner so that host_scans
-    # and vuln_scans stamped with an nmap- or Nessus-discovered hostname on some
-    # other owner's IP (which can coincidentally match a removed domain) are
-    # left untouched.
+    # Clear the latest flag so removed domains no longer appear on customer
+    # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
+    # or Nessus-discovered hostname on another owner's IP.
     for doc_class in (db.HostScanDoc, db.PortScanDoc, db.VulnScanDoc):
         result = doc_class.collection.update(
             {"latest": True, "owner": owner, "hostname": {"$in": domains}},
