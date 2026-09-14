@@ -231,9 +231,20 @@ def remove(db, owner, domains):
             remaining
         )
         for t in sorted(
-            remaining, key=lambda t: (t["hostname"], t["ip_int"], t["owner"], t["_id"])
+            remaining,
+            key=lambda t: (
+                t["hostname"],
+                t["ip_int"],
+                t["port"],
+                t["protocol"],
+                t["owner"],
+                t["_id"],
+            ),
         ):
-            print ("\t%s\t%s\t%s\t%s" % (t["hostname"], t.ip, t["owner"], t["_id"]))
+            print (
+                "\t%s\t%s\t%s\t%s\t%s\t%s"
+                % (t["hostname"], t.ip, t["port"], t["protocol"], t["owner"], t["_id"])
+            )
 
     # Clear the latest flag so removed domains no longer appear on customer
     # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-

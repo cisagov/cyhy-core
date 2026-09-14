@@ -60,7 +60,16 @@ def save_request(database, owner, hostnames):
     return request
 
 
-def save_ticket(database, ip_address, owner, hostname, is_open=True, port=80, id=None):
+def save_ticket(
+    database,
+    ip_address,
+    owner,
+    hostname,
+    is_open=True,
+    port=80,
+    protocol="tcp",
+    id=None,
+):
     ticket = database.TicketDoc()
     if id is not None:
         ticket["_id"] = id
@@ -68,7 +77,7 @@ def save_ticket(database, ip_address, owner, hostname, is_open=True, port=80, id
     ticket["hostname"] = hostname
     ticket["owner"] = owner
     ticket["port"] = port
-    ticket["protocol"] = "tcp"
+    ticket["protocol"] = protocol
     ticket["source"] = "test_source"
     ticket["source_id"] = 1
     ticket.ip = ip_address
@@ -103,9 +112,16 @@ class Removal(object):
             "hostname moved out of scope"
         ]
 
-    def report_line(self, hostname, ip_address, owner, name):
+    def report_line(self, hostname, ip_address, owner, name, port=80, protocol="tcp"):
         """The line the remaining-ticket report is expected to print."""
-        return "\t%s\t%s\t%s\t%s" % (hostname, ip_address, owner, self.tickets[name])
+        return "\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            hostname,
+            ip_address,
+            port,
+            protocol,
+            owner,
+            self.tickets[name],
+        )
 
 
 def run_remove(database, owner, domains, tickets):
@@ -167,23 +183,35 @@ def removal(database):
 def removal_with_duplicate_shapes(database):
     """Run remove() where remaining tickets share hostname, IP address and owner.
 
-    Tickets are per port, so this is the ordinary case of one host with two open
-    findings rather than a contrived one.
+    Tickets are per port and protocol, so this is the ordinary case of one host
+    with several open findings rather than a contrived one.
+
+    The ids ascend in an order that disagrees with the expected report order, and
+    the tickets are inserted in yet another order, so that dropping either the
+    port and protocol or the id from the sort key changes the output.  Without
+    that these assertions would pass whatever the sort key was.
     """
     reset(database)
     save_host(database, IP_CARRIED, [{"hostname": DOMAIN, "owner": OWNER}])
     save_request(database, OWNER, [DOMAIN])
-    lower_id, higher_id = ObjectId(), ObjectId()
-    # Inserted with the higher id first, so the collection's natural order is the
-    # reverse of ascending id order.  Without that this test cannot fail.
-    tickets = {
-        "second": save_ticket(
-            database, IP_UNRELATED, OWNER, DOMAIN, port=443, id=higher_id
-        ),
-        "first": save_ticket(
-            database, IP_UNRELATED, OWNER, DOMAIN, port=80, id=lower_id
-        ),
-    }
+    ids = [ObjectId() for _ in range(4)]
+    tickets = {}
+    # Insertion order, which becomes the collection's natural order.
+    for name, port, protocol, id in (
+        ("https_udp", 443, "udp", ids[0]),
+        ("https_tcp", 443, "tcp", ids[1]),
+        ("http_b", 80, "tcp", ids[3]),
+        ("http_a", 80, "tcp", ids[2]),
+    ):
+        tickets[name] = save_ticket(
+            database,
+            IP_UNRELATED,
+            OWNER,
+            DOMAIN,
+            port=port,
+            protocol=protocol,
+            id=id,
+        )
     return run_remove(database, OWNER, [DOMAIN], tickets)
 
 
@@ -272,13 +300,20 @@ class TestRemoveRemainingTicketReport:
         )
         assert expected in removal.output
 
-    def test_orders_tickets_sharing_a_shape_by_id(self, removal_with_duplicate_shapes):
-        # Hostname, IP address and owner do not distinguish two findings on
-        # different ports, so the ticket id breaks the tie.
+    def test_orders_tickets_sharing_a_shape(self, removal_with_duplicate_shapes):
+        # Hostname, IP address and owner do not identify a ticket, so port and
+        # protocol order them and the ticket id breaks the remaining tie.
         report = removal_with_duplicate_shapes
         expected = "\n".join(
-            report.report_line(DOMAIN, IP_UNRELATED, OWNER, name)
-            for name in ("first", "second")
+            report.report_line(
+                DOMAIN, IP_UNRELATED, OWNER, name, port=port, protocol=protocol
+            )
+            for name, port, protocol in (
+                ("http_a", 80, "tcp"),
+                ("http_b", 80, "tcp"),
+                ("https_tcp", 443, "tcp"),
+                ("https_udp", 443, "udp"),
+            )
         )
         assert expected in report.output
 
