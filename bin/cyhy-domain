@@ -195,6 +195,10 @@ def remove(db, owner, domains):
         for t in db.TicketDoc.find(
             {"ip_int": {"$in": ips_by_domain[d]}, "hostname": d, "open": True}
         ):
+            # Force false_positive to False since the ticket is being closed, as
+            # cyhy-domainsync does; TicketDoc.save refuses to close a ticket that
+            # is still flagged, and such tickets are always open.
+            t["false_positive"] = False
             t["open"] = False
             t["time_closed"] = ticket_closing_time
             t.add_event(

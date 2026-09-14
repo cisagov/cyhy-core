@@ -72,10 +72,12 @@ def save_ticket(
     port=80,
     protocol="tcp",
     id=None,
+    false_positive=False,
 ):
     ticket = database.TicketDoc()
     if id is not None:
         ticket["_id"] = id
+    ticket["false_positive"] = false_positive
     ticket["details"] = {"name": "test finding"}
     ticket["hostname"] = hostname
     ticket["owner"] = owner
@@ -325,6 +327,44 @@ class TestRemoveRemainingTicketReport:
 
     def test_silent_when_nothing_remains(self, removal_with_nothing_left):
         assert "WARNING" not in removal_with_nothing_left.output
+
+
+@pytest.fixture
+def removal_with_false_positive(database):
+    """Run remove() where a ticket to be closed is marked as a false positive.
+
+    TicketDoc.save refuses to close a ticket still flagged as a false positive,
+    and set_false_positive keeps such tickets open, so they match the closure
+    query.  The flag has to be cleared as cyhy-domainsync's close_tickets does.
+    """
+    reset(database)
+    save_host(database, IP_CARRIED, [{"hostname": DOMAIN, "owner": OWNER}])
+    save_request(database, OWNER, [DOMAIN, KEPT_DOMAIN])
+    tickets = {
+        "false_positive": save_ticket(
+            database, IP_CARRIED, OWNER, DOMAIN, false_positive=True
+        ),
+        "ordinary": save_ticket(database, IP_CARRIED, OWNER, DOMAIN, port=443),
+    }
+    return run_remove(database, OWNER, [DOMAIN], tickets)
+
+
+class TestRemoveClosesFalsePositiveTickets:
+    def test_false_positive_ticket_closed(self, removal_with_false_positive):
+        assert removal_with_false_positive.closed_for_scope_change("false_positive")
+
+    def test_false_positive_flag_cleared(self, removal_with_false_positive):
+        report = removal_with_false_positive
+        ticket = report.db.tickets.find_one({"_id": report.tickets["false_positive"]})
+        assert ticket["false_positive"] is False
+
+    def test_other_tickets_are_still_closed(self, removal_with_false_positive):
+        # A raise part way through the closure would take this one with it.
+        assert removal_with_false_positive.closed_for_scope_change("ordinary")
+
+    def test_the_domain_is_still_removed(self, removal_with_false_positive):
+        report = removal_with_false_positive
+        assert report.db.requests.find_one({"_id": OWNER})["hostnames"] == [KEPT_DOMAIN]
 
 
 class TestRemoveSurvivesAPartialHostFailure:
