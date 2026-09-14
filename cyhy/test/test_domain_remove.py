@@ -1,4 +1,5 @@
 # built-in python libraries
+import contextlib
 import imp
 import os
 from StringIO import StringIO
@@ -6,12 +7,14 @@ import sys
 
 # third-party libraries (install with pip)
 from bson.objectid import ObjectId
+import mock
 from netaddr import IPAddress as ip
 import pytest
 
 # local libraries
 from common_fixtures import database
 from cyhy.core.common import TICKET_EVENT
+import cyhy.db.database as db_module
 from paths import REPO_ROOT
 
 # cyhy-domain is a script rather than an importable module, so it is loaded by
@@ -124,19 +127,22 @@ class Removal(object):
         )
 
 
-def run_remove(database, owner, domains, tickets):
-    """Call remove(), capturing what it prints.
-
-    pytest's capsys does not span another fixture's setup phase, so stdout is
-    redirected here instead.
-    """
+@contextlib.contextmanager
+def captured_stdout():
+    """Redirect stdout, since capsys does not span another fixture's setup."""
     original = sys.stdout
     sys.stdout = StringIO()
     try:
-        cyhy_domain.remove(database, owner, domains)
-        return Removal(database, tickets, sys.stdout.getvalue())
+        yield sys.stdout
     finally:
         sys.stdout = original
+
+
+def run_remove(database, owner, domains, tickets):
+    """Call remove(), capturing what it prints."""
+    with captured_stdout() as out:
+        cyhy_domain.remove(database, owner, domains)
+    return Removal(database, tickets, out.getvalue())
 
 
 def reset(database):
@@ -319,6 +325,58 @@ class TestRemoveRemainingTicketReport:
 
     def test_silent_when_nothing_remains(self, removal_with_nothing_left):
         assert "WARNING" not in removal_with_nothing_left.output
+
+
+class TestRemoveSurvivesAPartialHostFailure:
+    """A save failure while stripping the hostnames entries must be re-runnable.
+
+    Those entries are the only record of which IP addresses a domain resolved to,
+    so if the tickets were closed after the stripping, a failure part way through
+    would leave the tickets on the already-stripped IP addresses unfindable.
+    """
+
+    @pytest.fixture
+    def partial_failure(self, database):
+        reset(database)
+        for ip_address in (IP_CARRIED, IP_SECOND, IP_UNRELATED):
+            save_host(database, ip_address, [{"hostname": DOMAIN, "owner": OWNER}])
+        save_request(database, OWNER, [DOMAIN, KEPT_DOMAIN])
+        tickets = {
+            "first": save_ticket(database, IP_CARRIED, OWNER, DOMAIN),
+            "second": save_ticket(database, IP_SECOND, OWNER, DOMAIN),
+            "third": save_ticket(database, IP_UNRELATED, OWNER, DOMAIN),
+        }
+
+        original_save = db_module.HostDoc.save
+        calls = []
+
+        def failing_save(self, *args, **kwargs):
+            calls.append(1)
+            if len(calls) == 2:
+                raise RuntimeError("simulated host document write failure")
+            return original_save(self, *args, **kwargs)
+
+        with mock.patch.object(db_module.HostDoc, "save", failing_save):
+            with captured_stdout():
+                with pytest.raises(RuntimeError):
+                    cyhy_domain.remove(database, OWNER, [DOMAIN])
+        return Removal(database, tickets, "")
+
+    def test_tickets_are_closed_despite_the_failure(self, partial_failure):
+        for name in ("first", "second", "third"):
+            assert partial_failure.closed_for_scope_change(name)
+
+    def test_request_document_is_untouched(self, partial_failure):
+        hostnames = partial_failure.db.requests.find_one({"_id": OWNER})["hostnames"]
+        assert DOMAIN in hostnames
+
+    def test_rerun_completes(self, partial_failure):
+        # The second attempt finds fewer hostnames entries, which no longer
+        # matters because the tickets are already closed.
+        rerun = run_remove(partial_failure.db, OWNER, [DOMAIN], partial_failure.tickets)
+        assert rerun.db.requests.find_one({"_id": OWNER})["hostnames"] == [KEPT_DOMAIN]
+        assert rerun.db.hosts.find({"hostnames.hostname": DOMAIN}).count() == 0
+        assert rerun.db.tickets.find({"hostname": DOMAIN, "open": True}).count() == 0
 
 
 class TestRemoveRequestAndHosts:

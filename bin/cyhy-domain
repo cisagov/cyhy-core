@@ -179,30 +179,13 @@ def remove(db, owner, domains):
             print ("\t%s" % d)
         sys.exit(-1)
 
-    # Remove domains from any HostDocs that have them, before saving the request
-    # document, so a failure here leaves nothing committed to re-run against.
-    # Their IP addresses are captured here for the ticket closure below (#179).
+    # The hostnames entries stripped below are the only record of which IP
+    # addresses a domain resolved to, so gather them and close the tickets first.
+    # Otherwise a failure part way through the stripping would leave the tickets
+    # for the already-stripped IP addresses impossible to find on a re-run.
     ips_by_domain = {}
     for d in domains:
-        count = 0
-        for h in db.HostDoc.get_by_hostname(d):
-            # Filter on hostname alone, as get_by_hostname selected on.  The
-            # recorded owner can disagree with the request documents, and an
-            # exact dict match would break if the entry ever grew a field.
-            ips_by_domain.setdefault(d, []).append(int(h.ip))
-            h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
-            h.save()
-            count += 1
-        if count:
-            print "Removed %s from %d hosts documents" % (d, count)
-
-    for d in domains:
-        request["hostnames"].remove(d)
-    request.save()
-
-    print "Domains removed from %s (%s):" % (request["agency"]["name"], owner)
-    for d in domains:
-        print ("\t%s" % d)
+        ips_by_domain[d] = [int(h.ip) for h in db.HostDoc.get_by_hostname(d)]
 
     # Close open tickets for each removed domain on the IP addresses that carried
     # it, so coincidental FQDN matches on unrelated IPs stay open (#179).
@@ -210,7 +193,7 @@ def remove(db, owner, domains):
     count = 0
     for d in domains:
         for t in db.TicketDoc.find(
-            {"ip_int": {"$in": ips_by_domain.get(d, [])}, "hostname": d, "open": True}
+            {"ip_int": {"$in": ips_by_domain[d]}, "hostname": d, "open": True}
         ):
             t["open"] = False
             t["time_closed"] = ticket_closing_time
@@ -245,6 +228,28 @@ def remove(db, owner, domains):
                 "\t%s\t%s\t%s\t%s\t%s\t%s"
                 % (t["hostname"], t.ip, t["port"], t["protocol"], t["owner"], t["_id"])
             )
+
+    # Remove domains from any HostDocs that have them, before saving the request
+    # document, so a failure here leaves nothing committed to re-run against.
+    for d in domains:
+        count = 0
+        for h in db.HostDoc.get_by_hostname(d):
+            # Filter on hostname alone, as get_by_hostname selected on.  The
+            # recorded owner can disagree with the request documents, and an
+            # exact dict match would break if the entry ever grew a field.
+            h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
+            h.save()
+            count += 1
+        if count:
+            print "Removed %s from %d hosts documents" % (d, count)
+
+    for d in domains:
+        request["hostnames"].remove(d)
+    request.save()
+
+    print "Domains removed from %s (%s):" % (request["agency"]["name"], owner)
+    for d in domains:
+        print ("\t%s" % d)
 
     # Clear the latest flag so removed domains no longer appear on customer
     # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
