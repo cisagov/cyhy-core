@@ -227,7 +227,9 @@ def remove(db, owner, domains):
     # judge whether it needs attention.  This is the unscoped query (#179).
     remaining = list(db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}))
     if remaining:
-        print "\nWARNING - %d open ticket(s) reference a removed domain on an IP address it did not resolve to:" % len(remaining)
+        print "\nWARNING - %d open ticket(s) reference a removed domain on an IP address it did not resolve to:" % len(
+            remaining
+        )
         for t in sorted(
             remaining, key=lambda t: (t["hostname"], t["ip_int"], t["owner"])
         ):
