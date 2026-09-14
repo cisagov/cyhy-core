@@ -5,6 +5,7 @@ from StringIO import StringIO
 import sys
 
 # third-party libraries (install with pip)
+from bson.objectid import ObjectId
 from netaddr import IPAddress as ip
 import pytest
 
@@ -59,12 +60,14 @@ def save_request(database, owner, hostnames):
     return request
 
 
-def save_ticket(database, ip_address, owner, hostname, is_open=True):
+def save_ticket(database, ip_address, owner, hostname, is_open=True, port=80, id=None):
     ticket = database.TicketDoc()
+    if id is not None:
+        ticket["_id"] = id
     ticket["details"] = {"name": "test finding"}
     ticket["hostname"] = hostname
     ticket["owner"] = owner
-    ticket["port"] = 80
+    ticket["port"] = port
     ticket["protocol"] = "tcp"
     ticket["source"] = "test_source"
     ticket["source_id"] = 1
@@ -161,6 +164,30 @@ def removal(database):
 
 
 @pytest.fixture
+def removal_with_duplicate_shapes(database):
+    """Run remove() where remaining tickets share hostname, IP address and owner.
+
+    Tickets are per port, so this is the ordinary case of one host with two open
+    findings rather than a contrived one.
+    """
+    reset(database)
+    save_host(database, IP_CARRIED, [{"hostname": DOMAIN, "owner": OWNER}])
+    save_request(database, OWNER, [DOMAIN])
+    lower_id, higher_id = ObjectId(), ObjectId()
+    # Inserted with the higher id first, so the collection's natural order is the
+    # reverse of ascending id order.  Without that this test cannot fail.
+    tickets = {
+        "second": save_ticket(
+            database, IP_UNRELATED, OWNER, DOMAIN, port=443, id=higher_id
+        ),
+        "first": save_ticket(
+            database, IP_UNRELATED, OWNER, DOMAIN, port=80, id=lower_id
+        ),
+    }
+    return run_remove(database, OWNER, [DOMAIN], tickets)
+
+
+@pytest.fixture
 def removal_with_nothing_left(database):
     """Run remove() where every matching ticket is closed by the removal."""
     reset(database)
@@ -244,6 +271,16 @@ class TestRemoveRemainingTicketReport:
             )
         )
         assert expected in removal.output
+
+    def test_orders_tickets_sharing_a_shape_by_id(self, removal_with_duplicate_shapes):
+        # Hostname, IP address and owner do not distinguish two findings on
+        # different ports, so the ticket id breaks the tie.
+        report = removal_with_duplicate_shapes
+        expected = "\n".join(
+            report.report_line(DOMAIN, IP_UNRELATED, OWNER, name)
+            for name in ("first", "second")
+        )
+        assert expected in report.output
 
     def test_silent_when_nothing_remains(self, removal_with_nothing_left):
         assert "WARNING" not in removal_with_nothing_left.output

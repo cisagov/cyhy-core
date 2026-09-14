@@ -231,7 +231,7 @@ def remove(db, owner, domains):
             remaining
         )
         for t in sorted(
-            remaining, key=lambda t: (t["hostname"], t["ip_int"], t["owner"])
+            remaining, key=lambda t: (t["hostname"], t["ip_int"], t["owner"], t["_id"])
         ):
             print ("\t%s\t%s\t%s\t%s" % (t["hostname"], t.ip, t["owner"], t["_id"]))
 
