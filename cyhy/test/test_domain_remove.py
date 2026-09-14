@@ -1,6 +1,8 @@
 # built-in python libraries
 import imp
 import os
+from StringIO import StringIO
+import sys
 
 # third-party libraries (install with pip)
 from netaddr import IPAddress as ip
@@ -74,28 +76,59 @@ def save_ticket(database, ip_address, owner, hostname, is_open=True):
     return ticket["_id"]
 
 
-def is_open(database, ticket_id):
-    return database.tickets.find_one({"_id": ticket_id})["open"]
+class Removal(object):
+    """What a remove() run left behind, plus everything it printed."""
+
+    def __init__(self, database, tickets, output):
+        self.db = database
+        self.tickets = tickets
+        self.output = output
+
+    def is_open(self, name):
+        return self.db.tickets.find_one({"_id": self.tickets[name]})["open"]
+
+    def closed_events(self, name):
+        ticket = self.db.tickets.find_one({"_id": self.tickets[name]})
+        return [
+            e["reason"] for e in ticket["events"] if e["action"] == TICKET_EVENT.CLOSED
+        ]
+
+    def closed_for_scope_change(self, name):
+        """Whether the removal closed the ticket, rather than it being closed
+        beforehand."""
+        return not self.is_open(name) and self.closed_events(name) == [
+            "hostname moved out of scope"
+        ]
+
+    def report_line(self, hostname, ip_address, owner, name):
+        """The line the remaining-ticket report is expected to print."""
+        return "\t%s\t%s\t%s\t%s" % (hostname, ip_address, owner, self.tickets[name])
 
 
-def closed_for_scope_change(database, ticket_id):
-    """Whether the ticket was closed by the removal rather than beforehand."""
-    ticket = database.tickets.find_one({"_id": ticket_id})
-    reasons = [
-        e["reason"] for e in ticket["events"] if e["action"] == TICKET_EVENT.CLOSED
-    ]
-    return ticket["open"] is False and reasons == ["hostname moved out of scope"]
+def run_remove(database, owner, domains, tickets):
+    """Call remove(), capturing what it prints.
+
+    pytest's capsys does not span another fixture's setup phase, so stdout is
+    redirected here instead.
+    """
+    original = sys.stdout
+    sys.stdout = StringIO()
+    try:
+        cyhy_domain.remove(database, owner, domains)
+        return Removal(database, tickets, sys.stdout.getvalue())
+    finally:
+        sys.stdout = original
+
+
+def reset(database):
+    for collection in ALL_COLLECTIONS:
+        database[collection].remove()
 
 
 @pytest.fixture
 def removal(database):
-    """Run remove() over a fixture covering every shape of matching ticket.
-
-    Returns the database and a mapping of descriptive names to ticket ids.
-    """
-    for collection in ALL_COLLECTIONS:
-        database[collection].remove()
-
+    """Run remove() over every shape of ticket that can carry a removed domain."""
+    reset(database)
     save_host(database, IP_CARRIED, [{"hostname": DOMAIN, "owner": OWNER}])
     save_host(database, IP_SECOND, [{"hostname": SECOND_DOMAIN, "owner": OWNER}])
     save_host(database, IP_UNRELATED, [])
@@ -107,7 +140,7 @@ def removal(database):
         "carried": save_ticket(database, IP_CARRIED, OWNER, DOMAIN),
         # Same, but recording an owner that predates the request documents.
         "carried_stale": save_ticket(database, IP_CARRIED, STALE_OWNER, DOMAIN),
-        # A coincidental FQDN match on an IP address that does not carry the
+        # Coincidental FQDN matches on an IP address that does not carry the
         # domain, stamped with that IP address's owner.
         "unrelated_same_owner": save_ticket(database, IP_UNRELATED, OWNER, DOMAIN),
         "unrelated_other_owner": save_ticket(
@@ -124,65 +157,105 @@ def removal(database):
             database, IP_CARRIED, OWNER, DOMAIN, is_open=False
         ),
     }
+    return run_remove(database, OWNER, [DOMAIN, SECOND_DOMAIN], tickets)
 
-    cyhy_domain.remove(database, OWNER, [DOMAIN, SECOND_DOMAIN])
-    return database, tickets
+
+@pytest.fixture
+def removal_with_nothing_left(database):
+    """Run remove() where every matching ticket is closed by the removal."""
+    reset(database)
+    save_host(database, IP_CARRIED, [{"hostname": DOMAIN, "owner": OWNER}])
+    save_request(database, OWNER, [DOMAIN, KEPT_DOMAIN])
+    tickets = {
+        "carried": save_ticket(database, IP_CARRIED, OWNER, DOMAIN),
+        "kept": save_ticket(database, IP_CARRIED, OWNER, KEPT_DOMAIN),
+    }
+    return run_remove(database, OWNER, [DOMAIN], tickets)
 
 
 class TestRemoveTicketClosure:
     def test_ticket_on_carrying_ip_closed(self, removal):
-        database, tickets = removal
-        assert closed_for_scope_change(database, tickets["carried"])
+        assert removal.closed_for_scope_change("carried")
 
     def test_stale_owner_ticket_closed(self, removal):
         # The domain is leaving scope, so a ticket recording an owner that
         # predates the request documents still has to be closed.  Nothing else
         # would ever close it once the domain is in no request document.
-        database, tickets = removal
-        assert closed_for_scope_change(database, tickets["carried_stale"])
+        assert removal.closed_for_scope_change("carried_stale")
 
     def test_second_domain_closed(self, removal):
-        database, tickets = removal
-        assert closed_for_scope_change(database, tickets["second"])
+        assert removal.closed_for_scope_change("second")
 
     def test_coincidental_match_on_same_owner_left_open(self, removal):
         # The organization still owns this IP address and it never resolved from
         # the removed domain, so the finding is still in scope.
-        database, tickets = removal
-        assert is_open(database, tickets["unrelated_same_owner"])
+        assert removal.is_open("unrelated_same_owner")
 
     def test_coincidental_match_on_other_owner_left_open(self, removal):
-        database, tickets = removal
-        assert is_open(database, tickets["unrelated_other_owner"])
+        assert removal.is_open("unrelated_other_owner")
 
     def test_domain_on_another_removed_domains_ip_left_open(self, removal):
         # Both domains are removed in one command, so the IP addresses must be
         # matched per domain rather than pooled.
-        database, tickets = removal
-        assert is_open(database, tickets["crossed"])
+        assert removal.is_open("crossed")
 
     def test_unremoved_domain_left_open(self, removal):
-        database, tickets = removal
-        assert is_open(database, tickets["kept"])
+        assert removal.is_open("kept")
 
     def test_closure_counts(self, removal):
-        database, tickets = removal
-        assert database.tickets.find({"open": True}).count() == 4
-        assert database.tickets.find({"open": False}).count() == 4
+        assert removal.db.tickets.find({"open": True}).count() == 4
+        assert removal.db.tickets.find({"open": False}).count() == 4
 
     def test_already_closed_ticket_not_reclosed(self, removal):
-        database, tickets = removal
-        ticket = database.tickets.find_one({"_id": tickets["already_closed"]})
-        assert [e for e in ticket["events"] if e["action"] == TICKET_EVENT.CLOSED] == []
+        assert removal.closed_events("already_closed") == []
+
+
+class TestRemoveRemainingTicketReport:
+    def test_reports_how_many_remain(self, removal):
+        assert "WARNING - 3 open ticket(s)" in removal.output
+
+    def test_lists_each_remaining_ticket(self, removal):
+        # Hostname, IP address, owner and ticket id, so the operator can look
+        # them up.
+        for name, ip_address, owner in (
+            ("unrelated_same_owner", IP_UNRELATED, OWNER),
+            ("unrelated_other_owner", IP_UNRELATED, OTHER_OWNER),
+            ("crossed", IP_SECOND, OWNER),
+        ):
+            line = removal.report_line(DOMAIN, ip_address, owner, name)
+            assert line in removal.output
+
+    def test_omits_domains_that_were_not_removed(self, removal):
+        assert KEPT_DOMAIN not in removal.output
+
+    def test_omits_tickets_it_closed(self, removal):
+        for name in ("carried", "carried_stale", "second", "already_closed"):
+            assert str(removal.tickets[name]) not in removal.output
+
+    def test_lists_them_in_a_stable_order(self, removal):
+        # Sorted by hostname, IP address and owner, so repeated runs and
+        # different query orders produce identical output.
+        expected = "\n".join(
+            removal.report_line(DOMAIN, ip_address, owner, name)
+            for ip_address, owner, name in (
+                (IP_SECOND, OWNER, "crossed"),
+                (IP_UNRELATED, OTHER_OWNER, "unrelated_other_owner"),
+                (IP_UNRELATED, OWNER, "unrelated_same_owner"),
+            )
+        )
+        assert expected in removal.output
+
+    def test_silent_when_nothing_remains(self, removal_with_nothing_left):
+        assert "WARNING" not in removal_with_nothing_left.output
 
 
 class TestRemoveRequestAndHosts:
     def test_domains_removed_from_request(self, removal):
-        database, _ = removal
-        assert database.requests.find_one({"_id": OWNER})["hostnames"] == [KEPT_DOMAIN]
+        assert removal.db.requests.find_one({"_id": OWNER})["hostnames"] == [
+            KEPT_DOMAIN
+        ]
 
     def test_hostnames_entries_removed(self, removal):
-        database, _ = removal
         for ip_address in (IP_CARRIED, IP_SECOND):
-            host = database.hosts.find_one({"_id": long(ip_address)})
+            host = removal.db.hosts.find_one({"_id": long(ip_address)})
             assert host["hostnames"] == []

@@ -223,6 +223,16 @@ def remove(db, owner, domains):
             count += 1
     print "Closed %d open tickets for removed domain(s) on their resolved IPs" % count
 
+    # Report what the closure above deliberately left alone so the operator can
+    # judge whether it needs attention.  This is the unscoped query (#179).
+    remaining = list(db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}))
+    if remaining:
+        print "\nWARNING - %d open ticket(s) reference a removed domain on an IP address it did not resolve to:" % len(remaining)
+        for t in sorted(
+            remaining, key=lambda t: (t["hostname"], t["ip_int"], t["owner"])
+        ):
+            print ("\t%s\t%s\t%s\t%s" % (t["hostname"], t.ip, t["owner"], t["_id"]))
+
     # Clear the latest flag so removed domains no longer appear on customer
     # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
     # or Nessus-discovered hostname on another owner's IP.
