@@ -36,7 +36,7 @@ from netaddr import IPAddress
 
 # cisagov Libraries
 from cyhy.core.common import *
-from cyhy.db import database
+from cyhy.db import CHDatabase, database
 from cyhy.util import util
 
 
@@ -179,20 +179,14 @@ def remove(db, owner, domains):
             print ("\t%s" % d)
         sys.exit(-1)
 
-    # Remove domains from any HostDocs that have them.  This is done before the
-    # request document is saved so that a failure here cannot leave the domains
-    # removed from the request document but still attached to host documents,
-    # which would require manual recovery (the check above would reject a
-    # re-run).
+    # Remove domains from any HostDocs that have them, before saving the request
+    # document, so a failure here leaves nothing committed to re-run against.
     for d in domains:
         count = 0
         for h in db.HostDoc.get_by_hostname(d):
-            # Filter on hostname alone, which is what get_by_hostname selected
-            # on.  The owner recorded in a HostDoc hostnames entry can lag the
-            # request documents, since 'cyhy-domain move' does not touch HostDocs
-            # and cyhy-domainsync reconciles them on its next run.  Removing an
-            # exact {hostname, owner} dict would raise ValueError in that
-            # window, and would also break if the entry ever grows a field.
+            # Filter on hostname alone, as get_by_hostname selected on.  The
+            # recorded owner can disagree with the request documents, and an
+            # exact dict match would break if the entry ever grew a field.
             h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
             h.save()
             count += 1
@@ -220,12 +214,9 @@ def remove(db, owner, domains):
         count += 1
     print "Closed %d open tickets referencing removed domain(s)" % count
 
-    # Clear the latest flag on scans referencing the removed domains so the
-    # removed domains no longer appear on customer reports (see
-    # cisagov/cyhy-core#164).  The update is scoped by owner so that host_scans
-    # and vuln_scans stamped with an nmap- or Nessus-discovered hostname on some
-    # other owner's IP (which can coincidentally match a removed domain) are
-    # left untouched.
+    # Clear the latest flag so removed domains no longer appear on customer
+    # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
+    # or Nessus-discovered hostname on another owner's IP.
     for doc_class in (db.HostScanDoc, db.PortScanDoc, db.VulnScanDoc):
         result = doc_class.collection.update(
             {"latest": True, "owner": owner, "hostname": {"$in": domains}},
@@ -307,30 +298,6 @@ def compare(db, owner, new_domains):
     )
 
 
-def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
-    change_event = {
-        "time": util.utcnow(),
-        "action": TICKET_EVENT.CHANGED,
-        "reason": reason,
-        "reference": None,
-        "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
-    }
-
-    result = db.TicketDoc.collection.update(
-        {"owner": orig_owner, "hostname": {"$in": domains}},
-        {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
-        multi=True,
-        safe=True,
-        upsert=False,
-    )
-    modified = result.get("nModified", 0) if result else 0
-    print "%d tickets documents modified (%s -> %s)" % (
-        modified,
-        orig_owner,
-        new_owner,
-    )
-
-
 def move(db, orig_owner, new_owner, domains_to_move):
     if orig_owner == new_owner:
         print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
@@ -357,9 +324,12 @@ def move(db, orig_owner, new_owner, domains_to_move):
         print "\nEXITING without making any changes."
         sys.exit(-1)
 
-    # Change owner on all matching tickets
-    change_ticket_owner(
-        db, orig_owner, new_owner, "hostname owner changed", domains_to_move
+    # Change owner on all relevant documents.  This covers the hostnames entries
+    # in the host documents, the scan documents stamped with the hostname's
+    # owner, and the tickets that inherited it.
+    ch_db = CHDatabase(db)
+    ch_db.change_hostname_ownership(
+        orig_owner, new_owner, domains_to_move, "hostname owner changed"
     )
 
     # Remove the domains_to_move from orig_owner's request doc
