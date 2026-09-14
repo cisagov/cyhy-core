@@ -181,12 +181,15 @@ def remove(db, owner, domains):
 
     # Remove domains from any HostDocs that have them, before saving the request
     # document, so a failure here leaves nothing committed to re-run against.
+    # Their IP addresses are captured here for the ticket closure below (#179).
+    ips_by_domain = {}
     for d in domains:
         count = 0
         for h in db.HostDoc.get_by_hostname(d):
             # Filter on hostname alone, as get_by_hostname selected on.  The
             # recorded owner can disagree with the request documents, and an
             # exact dict match would break if the entry ever grew a field.
+            ips_by_domain.setdefault(d, []).append(int(h.ip))
             h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
             h.save()
             count += 1
@@ -201,18 +204,24 @@ def remove(db, owner, domains):
     for d in domains:
         print ("\t%s" % d)
 
-    # Close open tickets referencing the removed domains
+    # Close open tickets for each removed domain on the IP addresses that carried
+    # it, so coincidental FQDN matches on unrelated IPs stay open (#179).
     ticket_closing_time = util.utcnow()
     count = 0
-    for t in db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}):
-        t["open"] = False
-        t["time_closed"] = ticket_closing_time
-        t.add_event(
-            TICKET_EVENT.CLOSED, "hostname moved out of scope", time=ticket_closing_time
-        )
-        t.save()
-        count += 1
-    print "Closed %d open tickets referencing removed domain(s)" % count
+    for d in domains:
+        for t in db.TicketDoc.find(
+            {"ip_int": {"$in": ips_by_domain.get(d, [])}, "hostname": d, "open": True}
+        ):
+            t["open"] = False
+            t["time_closed"] = ticket_closing_time
+            t.add_event(
+                TICKET_EVENT.CLOSED,
+                "hostname moved out of scope",
+                time=ticket_closing_time,
+            )
+            t.save()
+            count += 1
+    print "Closed %d open tickets for removed domain(s) on their resolved IPs" % count
 
     # Clear the latest flag so removed domains no longer appear on customer
     # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
