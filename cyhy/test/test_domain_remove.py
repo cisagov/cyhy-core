@@ -1,4 +1,3 @@
-
 # built-in python libraries
 import imp
 import os
@@ -174,9 +173,7 @@ class TestRemoveTicketClosure:
     def test_already_closed_ticket_not_reclosed(self, removal):
         database, tickets = removal
         ticket = database.tickets.find_one({"_id": tickets["already_closed"]})
-        assert [
-            e for e in ticket["events"] if e["action"] == TICKET_EVENT.CLOSED
-        ] == []
+        assert [e for e in ticket["events"] if e["action"] == TICKET_EVENT.CLOSED] == []
 
 
 class TestRemoveRequestAndHosts:
