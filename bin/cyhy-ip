@@ -16,6 +16,7 @@ Options:
   --version                      Show version.
 
   -f FILENAME --file=FILENAME    Read addresses from a file.
+  -g FILE --geoip2-file=FILE     MaxMind GeoIP2 database file to use.
   -s SECTION --section=SECTION   Configuration section to use.
 
 Notes:
@@ -205,14 +206,14 @@ def do_list_all(db):
     print_cidrs(default_owner_ip_set, indent=1)
 
 
-def add(db, owner, cidrs):
+def add(db, owner, cidrs, geoip2_database=None):
     if owner == DEFAULT_OWNER:
         print "Cannot continue!\nNot allowed to add addresses to the default owner (%s)." % DEFAULT_OWNER
         sys.exit(-1)
 
     # Intersections with IPs owned by any owner other than the default owner
     intersections = db.RequestDoc.get_all_intersections(cidrs)
-    geo_loc_db = GeoLocDB()
+    geo_loc_db = GeoLocDB(database_path=geoip2_database)
     restricted_dict = defaultdict(lambda: IPSet())
     for ip in cidrs:
         country = geo_loc_db.check_restricted_ip(ip)
@@ -544,7 +545,7 @@ def setstage(db, stage, cidrs):
 
 
 def main():
-    args = docopt(__doc__, version="v1.0.0")
+    args = docopt(__doc__, version="v1.0.1")
 
     db = database.db_from_config(args["--section"])
 
@@ -569,7 +570,7 @@ def main():
         print "# %d" % len(nets)
         print_cidrs(nets, indent=0)
     elif args["add"]:
-        add(db, args["OWNER"], nets)
+        add(db, args["OWNER"], nets, geoip2_database=args["--geoip2-file"])
     elif args["remove"]:
         wrapped_remove(db, args["OWNER"], nets)
     elif args["compare"]:
