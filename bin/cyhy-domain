@@ -36,7 +36,7 @@ from netaddr import IPAddress
 
 # cisagov Libraries
 from cyhy.core.common import *
-from cyhy.db import database
+from cyhy.db import CHDatabase, database
 from cyhy.util import util
 
 
@@ -167,7 +167,7 @@ def remove(db, owner, domains):
 
     unowned_domains = []
     for d in domains:
-        if d not in request.get("hostnames"):
+        if d not in request.get("hostnames", []):
             unowned_domains.append(d)
 
     if unowned_domains:
@@ -179,6 +179,74 @@ def remove(db, owner, domains):
             print ("\t%s" % d)
         sys.exit(-1)
 
+    # The hostnames entries stripped below are the only record of which IP
+    # addresses a domain resolved to, so gather them and close the tickets first.
+    # Otherwise a failure part way through the stripping would leave the tickets
+    # for the already-stripped IP addresses impossible to find on a re-run.
+    ips_by_domain = {}
+    for d in domains:
+        ips_by_domain[d] = [int(h.ip) for h in db.HostDoc.get_by_hostname(d)]
+
+    # Close open tickets for each removed domain on the IP addresses that carried
+    # it, so coincidental FQDN matches on unrelated IPs stay open (#179).
+    ticket_closing_time = util.utcnow()
+    count = 0
+    for d in domains:
+        for t in db.TicketDoc.find(
+            {"ip_int": {"$in": ips_by_domain[d]}, "hostname": d, "open": True}
+        ):
+            # Force false_positive to False since the ticket is being closed, as
+            # cyhy-domainsync does; TicketDoc.save refuses to close a ticket that
+            # is still flagged, and such tickets are always open.
+            t["false_positive"] = False
+            t["open"] = False
+            t["time_closed"] = ticket_closing_time
+            t.add_event(
+                TICKET_EVENT.CLOSED,
+                "hostname moved out of scope",
+                time=ticket_closing_time,
+            )
+            t.save()
+            count += 1
+    print "Closed %d open tickets for removed domain(s) on their resolved IPs" % count
+
+    # Report what the closure above deliberately left alone so the operator can
+    # judge whether it needs attention.  This is the unscoped query (#179).
+    remaining = list(db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}))
+    if remaining:
+        print "\nWARNING - %d open ticket(s) reference a removed domain on an IP address it did not resolve to:" % len(
+            remaining
+        )
+        for t in sorted(
+            remaining,
+            key=lambda t: (
+                t["hostname"],
+                t["ip_int"],
+                t["port"],
+                t["protocol"],
+                t["owner"],
+                t["_id"],
+            ),
+        ):
+            print (
+                "\t%s\t%s\t%s\t%s\t%s\t%s"
+                % (t["hostname"], t.ip, t["port"], t["protocol"], t["owner"], t["_id"])
+            )
+
+    # Remove domains from any HostDocs that have them, before saving the request
+    # document, so a failure here leaves nothing committed to re-run against.
+    for d in domains:
+        count = 0
+        for h in db.HostDoc.get_by_hostname(d):
+            # Filter on hostname alone, as get_by_hostname selected on.  The
+            # recorded owner can disagree with the request documents, and an
+            # exact dict match would break if the entry ever grew a field.
+            h["hostnames"] = [i for i in h["hostnames"] if i["hostname"] != d]
+            h.save()
+            count += 1
+        if count:
+            print "Removed %s from %d hosts documents" % (d, count)
+
     for d in domains:
         request["hostnames"].remove(d)
     request.save()
@@ -187,35 +255,9 @@ def remove(db, owner, domains):
     for d in domains:
         print ("\t%s" % d)
 
-    # Remove domains from any HostDocs that have them
-    for d in domains:
-        count = 0
-        for h in db.HostDoc.get_by_hostname(d):
-            h["hostnames"].remove({"hostname": d, "owner": owner})
-            h.save()
-            count += 1
-        if count:
-            print "Removed %s from %d hosts documents" % (d, count)
-
-    # Close open tickets referencing the removed domains
-    ticket_closing_time = util.utcnow()
-    count = 0
-    for t in db.TicketDoc.find({"hostname": {"$in": domains}, "open": True}):
-        t["open"] = False
-        t["time_closed"] = ticket_closing_time
-        t.add_event(
-            TICKET_EVENT.CLOSED, "hostname moved out of scope", time=ticket_closing_time
-        )
-        t.save()
-        count += 1
-    print "Closed %d open tickets referencing removed domain(s)" % count
-
-    # Clear the latest flag on scans referencing the removed domains so the
-    # removed domains no longer appear on customer reports (see
-    # cisagov/cyhy-core#164).  The update is scoped by owner so that host_scans
-    # and vuln_scans stamped with an nmap- or Nessus-discovered hostname on some
-    # other owner's IP (which can coincidentally match a removed domain) are
-    # left untouched.
+    # Clear the latest flag so removed domains no longer appear on customer
+    # reports (#164).  Scoped by owner to leave alone scans stamped with an nmap-
+    # or Nessus-discovered hostname on another owner's IP.
     for doc_class in (db.HostScanDoc, db.PortScanDoc, db.VulnScanDoc):
         result = doc_class.collection.update(
             {"latest": True, "owner": owner, "hostname": {"$in": domains}},
@@ -297,29 +339,6 @@ def compare(db, owner, new_domains):
     )
 
 
-def change_ticket_owner(db, orig_owner, new_owner, reason, domains):
-    change_event = {
-        "time": util.utcnow(),
-        "action": TICKET_EVENT.CHANGED,
-        "reason": reason,
-        "reference": None,
-        "delta": [{"from": orig_owner, "to": new_owner, "key": "owner"}],
-    }
-
-    result = db.TicketDoc.collection.update(
-        {"owner": orig_owner, "hostname": {"$in": domains}},
-        {"$set": {"owner": new_owner}, "$push": {"events": change_event}},
-        multi=True,
-        safe=True,
-        upsert=False,
-    )
-    print "%d tickets documents modified (%s -> %s)" % (
-        result["nModified"],
-        orig_owner,
-        new_owner,
-    )
-
-
 def move(db, orig_owner, new_owner, domains_to_move):
     if orig_owner == new_owner:
         print "ERROR: OWNER is the same as NEW_OWNER (%s). EXITING without making any changes." % orig_owner
@@ -334,7 +353,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
             print "ERROR: Organization %s not found in DB" % org
             sys.exit(-1)
 
-    orig_owner_domains = set(orig_owner_request.get("hostnames"))
+    orig_owner_domains = set(orig_owner_request.get("hostnames", []))
     domains_not_in_orig_owner = set(domains_to_move) - orig_owner_domains
     if domains_not_in_orig_owner:
         print "\nERROR - The following domains are NOT owned by %s (%s):" % (
@@ -346,16 +365,19 @@ def move(db, orig_owner, new_owner, domains_to_move):
         print "\nEXITING without making any changes."
         sys.exit(-1)
 
-    # Change owner on all matching tickets
-    change_ticket_owner(
-        db, orig_owner, new_owner, "hostname owner changed", domains_to_move
+    # Change owner on all relevant documents.  This covers the hostnames entries
+    # in the host documents, the scan documents stamped with the hostname's
+    # owner, and the tickets that inherited it.
+    ch_db = CHDatabase(db)
+    ch_db.change_hostname_ownership(
+        orig_owner, new_owner, domains_to_move, "hostname owner changed"
     )
 
     # Remove the domains_to_move from orig_owner's request doc
     orig_owner_request["hostnames"] = sorted(orig_owner_domains - set(domains_to_move))
     # Add the domains_to_move to new_owner's request doc
     new_owner_request["hostnames"] = sorted(
-        set(new_owner_request.get("hostnames")) | set(domains_to_move)
+        set(new_owner_request.get("hostnames", [])) | set(domains_to_move)
     )
 
     # Save both request docs
@@ -375,7 +397,7 @@ def move(db, orig_owner, new_owner, domains_to_move):
 
 
 def main():
-    args = docopt(__doc__, version="v1.3.1")
+    args = docopt(__doc__, version="v1.3.2")
 
     db = database.db_from_config(args["--section"], args["--config-file"])
 
