@@ -36,6 +36,7 @@ import bson
 from dateutil.relativedelta import FR, MO, SA, SU, TH, TU, WE, relativedelta
 import dateutil.tz as tz
 import netaddr
+from pyIsEmail import is_email
 from validators import domain as valid_domain
 
 
@@ -304,3 +305,20 @@ def parse_domains(domains):
         else:
             valid_domains.add(d.lower())
     return valid_domains, invalid_domains
+
+
+def validate_email(email_address):
+    """Validate the provided email address.
+
+    Returns a boolean value for validity. Will print to stderr the diagnosed problem
+    with an invalid address.
+    """
+
+    result = is_email(email_address, diagnose=True)
+
+    if result.code != 0:
+        print >> sys.stderr, "Problem with email address %s:" % email_address
+        print >> sys.stderr, result.message
+        return False
+
+    return True

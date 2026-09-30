@@ -41,6 +41,7 @@ setup(
         "pandas >= 0.16.2",  # TODO: test with 0.19.1
         "progressbar >=2.3-dev",
         "pycrypto >= 2.6",
+        "pyIsEmail >= 1.4.0",
         "pymongo >= 2.9.2, < 3",
         "python-dateutil >= 2.2",
         "PyYAML >= 3.12",
