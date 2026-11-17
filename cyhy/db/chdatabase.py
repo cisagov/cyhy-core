@@ -587,6 +587,7 @@ class CHDatabase(object):
 
         # Silent ports are counted on host_scans, but port_scans still hold the
         # ones recorded before that change until each IP is rescanned.
+        # TODO Read from host_scans alone once those are gone (#184)
         silent_port_count = 0
         for pipeline_collection in (
             queries.silent_port_count_pl([owner] + descendants_included),
