@@ -719,6 +719,7 @@ class HostScanDoc(ScanDoc):
         "accuracy": int,
         "line": int,
         "classes": [dict],
+        "silent_port_count": int,
     }
     required_fields = ["accuracy", "name"]
     default_values = {"source": "nmap"}
