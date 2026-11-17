@@ -585,13 +585,21 @@ class CHDatabase(object):
             progress_callback()
         database.combine_results(snapshot_doc, results)
 
-        pipeline_collection = queries.silent_port_count_pl(
-            [owner] + descendants_included
-        )
-        results = database.run_pipeline_cursor(pipeline_collection, self.__db)
+        # Silent ports are counted on host_scans, but port_scans still hold the
+        # ones recorded before that change until each IP is rescanned.
+        silent_port_count = 0
+        for pipeline_collection in (
+            queries.silent_port_count_pl([owner] + descendants_included),
+            queries.host_scan_silent_port_count_pl([owner] + descendants_included),
+        ):
+            results = database.run_pipeline_cursor(pipeline_collection, self.__db)
+            if results:
+                silent_port_count += results[0]["silent_port_count"]
         if progress_callback:
             progress_callback()
-        database.combine_results(snapshot_doc, results)
+        # Left unset when zero, as before, so the report omits its note.
+        if silent_port_count:
+            snapshot_doc["silent_port_count"] = silent_port_count
 
         pipeline_collection = queries.severity_count_pl(snapshot_oid)
         results = database.run_pipeline_cursor(pipeline_collection, self.__db)
