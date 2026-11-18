@@ -170,6 +170,27 @@ def silent_port_count_pl(owners):
     )
 
 
+def host_scan_silent_port_count_pl(owners):
+    return (
+        [
+            {
+                "$match": {
+                    "latest": True,
+                    "owner": {"$in": owners},
+                    "silent_port_count": {"$gt": 0},
+                }
+            },
+            {
+                "$group": {
+                    "_id": {},
+                    "silent_port_count": {"$sum": "$silent_port_count"},
+                }
+            },
+        ],
+        database.HOST_SCAN_COLLECTION,
+    )
+
+
 def service_counts_simple_pl(snapshot_oid):
     # TODO report on unknown services.
     # TODO some nmap reports do not have a service field
